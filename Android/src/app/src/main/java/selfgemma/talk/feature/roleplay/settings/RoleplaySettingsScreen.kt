@@ -1,8 +1,5 @@
 package selfgemma.talk.feature.roleplay.settings
 
-import android.app.Activity
-import android.os.Build
-import android.os.LocaleList
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,14 +26,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.os.LocaleListCompat
 import selfgemma.talk.AppTopBar
 import selfgemma.talk.R
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,28 +43,7 @@ fun RoleplaySettingsScreen(
   contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
   var showLanguageDialog by remember { mutableStateOf(false) }
-  val context = LocalContext.current
-  val activity = context as? Activity
-  
-  val currentLocaleTag = remember {
-    val locales = AppCompatDelegate.getApplicationLocales()
-    if (locales.isEmpty) {
-      ""
-    } else {
-      val locale = locales.get(0)
-      if (locale != null) {
-        val lang = locale.language
-        val country = locale.country
-        if (country.isNullOrEmpty()) {
-          lang
-        } else {
-          "$lang-$country"
-        }
-      } else {
-        ""
-      }
-    }
-  }
+  val currentLocaleTag = AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore(',')
 
   Scaffold(
     modifier = modifier,
@@ -112,20 +86,13 @@ fun RoleplaySettingsScreen(
       currentLocaleTag = currentLocaleTag,
       onDismiss = { showLanguageDialog = false },
       onLanguageSelected = { localeTag ->
-        val localeList = if (localeTag.isEmpty()) {
+        val localeList = if (localeTag.isBlank()) {
           LocaleListCompat.getEmptyLocaleList()
         } else {
-          val parts = localeTag.split("-")
-          val locale = if (parts.size > 1) {
-            Locale(parts[0], parts[1])
-          } else {
-            Locale(localeTag)
-          }
-          LocaleListCompat.create(locale)
+          LocaleListCompat.forLanguageTags(localeTag)
         }
         AppCompatDelegate.setApplicationLocales(localeList)
         showLanguageDialog = false
-        activity?.recreate()
       },
     )
   }
@@ -144,8 +111,8 @@ private fun LanguageSelectionDialog(
     "ja" to stringResource(R.string.language_japanese),
     "ko" to stringResource(R.string.language_korean),
   )
-  
-  var selectedLanguage by remember { mutableStateOf(currentLocaleTag) }
+
+  var selectedLanguage by remember(currentLocaleTag) { mutableStateOf(currentLocaleTag) }
 
   AlertDialog(
     onDismissRequest = onDismiss,

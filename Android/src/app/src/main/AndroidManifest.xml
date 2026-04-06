@@ -90,6 +90,15 @@
             </intent-filter>
         </activity>
 
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
+
         <!-- Set themes for activities that are used for viewing open source licenses -->
         <activity
             android:name="com.google.android.gms.oss.licenses.OssLicensesMenuActivity"
