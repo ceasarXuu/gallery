@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.AlertDialog
@@ -105,6 +104,7 @@ fun RoleplaySettingsScreen(
         }
         AppCompatDelegate.setApplicationLocales(localeList)
         showLanguageDialog = false
+        (context as? android.app.Activity)?.recreate()
       },
     )
   }
