@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.theme
+package selfgemma.talk.ui.theme
 
 import android.app.Activity
 import android.os.Build
@@ -34,7 +34,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import com.google.ai.edge.gallery.proto.Theme
+import selfgemma.talk.proto.Theme
 
 private val lightScheme =
   lightColorScheme(
@@ -317,7 +317,7 @@ fun StatusBarColorController(useDarkTheme: Boolean) {
 }
 
 @Composable
-fun GalleryTheme(content: @Composable () -> Unit) {
+fun AppTheme(content: @Composable () -> Unit) {
   val themeOverride = ThemeSettings.themeOverride
   val darkTheme: Boolean =
     (isSystemInDarkTheme() || themeOverride.value == Theme.THEME_DARK) &&

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common
+package selfgemma.talk.ui.common
 
 import android.os.Bundle
 import androidx.compose.foundation.layout.Arrangement
@@ -38,8 +38,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.firebaseAnalytics
-import com.google.ai.edge.gallery.ui.theme.customColors
+import selfgemma.talk.firebaseAnalytics
+import selfgemma.talk.ui.theme.customColors
 
 @Composable
 fun buildTrackableUrlAnnotatedString(url: String, linkText: String): AnnotatedString {

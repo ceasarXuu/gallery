@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.customtasks.common
+package selfgemma.talk.customtasks.common
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 
 /**
  * Data class to hold information passed to the `MainScreen` composable of a custom task.

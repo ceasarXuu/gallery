@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.modelmanager
+package selfgemma.talk.ui.modelmanager
 
 // import androidx.compose.ui.tooling.preview.Preview
 // import com.google.ai.edge.gallery.ui.preview.PreviewModelManagerViewModel
@@ -31,11 +31,11 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import com.google.ai.edge.gallery.GalleryTopAppBar
-import com.google.ai.edge.gallery.data.AppBarAction
-import com.google.ai.edge.gallery.data.AppBarActionType
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.Task
+import selfgemma.talk.AppTopBar
+import selfgemma.talk.data.AppBarAction
+import selfgemma.talk.data.AppBarActionType
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.Task
 
 /** A screen to manage models. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,7 +75,7 @@ fun ModelManager(
   Scaffold(
     modifier = modifier,
     topBar = {
-      GalleryTopAppBar(
+      AppTopBar(
         title = title,
         leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = navigateUp),
       )

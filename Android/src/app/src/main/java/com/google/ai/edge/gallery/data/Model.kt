@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.data
+package selfgemma.talk.data
 
 import android.content.Context
 import com.google.gson.annotations.SerializedName
@@ -27,7 +27,7 @@ data class ModelDataFile(
   val sizeInBytes: Long,
 )
 
-const val IMPORTS_DIR = "__imports"
+const val IMPORTS_DIR = "__selfgemma_talk_imports"
 private val NORMALIZE_NAME_REGEX = Regex("[^a-zA-Z0-9]")
 
 data class PromptTemplate(val title: String, val description: String, val prompt: String)
@@ -170,14 +170,13 @@ data class Model(
    * manually manage model files instead of downloading them. This dir is relative to the app's
    * "External Files Directory", which is: /storage/emulated/0/Android/data/<app_id>/files/.
    *
-   * The <app_id> depends on how the app was built:
-   * - `com.google.aiedge.gallery` for builds from the GitHub source.
-   * - `com.google.ai.edge.gallery` for other builds (Play store, internal, etc).
+  * The <app_id> depends on how the app was built.
+  * For the current SelfGemma Talk package, it is `selfgemma.talk`.
    *
    * For example, if this field is set to "my_model/local_dir/", then the location you should push
    * files to is (assuming non-github builds):
    *
-   * /storage/emulated/0/Android/data/com.google.ai.edge.gallery/files/my_model/local_dir/
+  * /storage/emulated/0/Android/data/selfgemma.talk/files/my_model/local_dir/
    *
    * You can get the full path to a specific file within your code using `Model.getPath(Context,
    * fileNameToGet)`.

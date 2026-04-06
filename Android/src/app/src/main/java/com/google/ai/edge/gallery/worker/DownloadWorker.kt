@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.worker
+package selfgemma.talk.worker
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -28,23 +28,24 @@ import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
-import com.google.ai.edge.gallery.data.KEY_MODEL_COMMIT_HASH
-import com.google.ai.edge.gallery.data.KEY_MODEL_DOWNLOAD_ACCESS_TOKEN
-import com.google.ai.edge.gallery.data.KEY_MODEL_DOWNLOAD_ERROR_MESSAGE
-import com.google.ai.edge.gallery.data.KEY_MODEL_DOWNLOAD_FILE_NAME
-import com.google.ai.edge.gallery.data.KEY_MODEL_DOWNLOAD_MODEL_DIR
-import com.google.ai.edge.gallery.data.KEY_MODEL_DOWNLOAD_RATE
-import com.google.ai.edge.gallery.data.KEY_MODEL_DOWNLOAD_RECEIVED_BYTES
-import com.google.ai.edge.gallery.data.KEY_MODEL_DOWNLOAD_REMAINING_MS
-import com.google.ai.edge.gallery.data.KEY_MODEL_EXTRA_DATA_DOWNLOAD_FILE_NAMES
-import com.google.ai.edge.gallery.data.KEY_MODEL_EXTRA_DATA_URLS
-import com.google.ai.edge.gallery.data.KEY_MODEL_IS_ZIP
-import com.google.ai.edge.gallery.data.KEY_MODEL_NAME
-import com.google.ai.edge.gallery.data.KEY_MODEL_START_UNZIPPING
-import com.google.ai.edge.gallery.data.KEY_MODEL_TOTAL_BYTES
-import com.google.ai.edge.gallery.data.KEY_MODEL_UNZIPPED_DIR
-import com.google.ai.edge.gallery.data.KEY_MODEL_URL
-import com.google.ai.edge.gallery.data.TMP_FILE_EXT
+import selfgemma.talk.MainActivity
+import selfgemma.talk.data.KEY_MODEL_COMMIT_HASH
+import selfgemma.talk.data.KEY_MODEL_DOWNLOAD_ACCESS_TOKEN
+import selfgemma.talk.data.KEY_MODEL_DOWNLOAD_ERROR_MESSAGE
+import selfgemma.talk.data.KEY_MODEL_DOWNLOAD_FILE_NAME
+import selfgemma.talk.data.KEY_MODEL_DOWNLOAD_MODEL_DIR
+import selfgemma.talk.data.KEY_MODEL_DOWNLOAD_RATE
+import selfgemma.talk.data.KEY_MODEL_DOWNLOAD_RECEIVED_BYTES
+import selfgemma.talk.data.KEY_MODEL_DOWNLOAD_REMAINING_MS
+import selfgemma.talk.data.KEY_MODEL_EXTRA_DATA_DOWNLOAD_FILE_NAMES
+import selfgemma.talk.data.KEY_MODEL_EXTRA_DATA_URLS
+import selfgemma.talk.data.KEY_MODEL_IS_ZIP
+import selfgemma.talk.data.KEY_MODEL_NAME
+import selfgemma.talk.data.KEY_MODEL_START_UNZIPPING
+import selfgemma.talk.data.KEY_MODEL_TOTAL_BYTES
+import selfgemma.talk.data.KEY_MODEL_UNZIPPED_DIR
+import selfgemma.talk.data.KEY_MODEL_URL
+import selfgemma.talk.data.TMP_FILE_EXT
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -61,7 +62,7 @@ private const val TAG = "AGDownloadWorker"
 
 data class UrlAndFileName(val url: String, val fileName: String)
 
-private const val FOREGROUND_NOTIFICATION_CHANNEL_ID = "model_download_channel_foreground"
+private const val FOREGROUND_NOTIFICATION_CHANNEL_ID = "selfgemma_talk_download_foreground"
 private var channelCreated = false
 
 class DownloadWorker(context: Context, params: WorkerParameters) :
@@ -80,11 +81,11 @@ class DownloadWorker(context: Context, params: WorkerParameters) :
       val channel =
         NotificationChannel(
             FOREGROUND_NOTIFICATION_CHANNEL_ID,
-            "Model Downloading",
+            "SelfGemma Talk downloads",
             // Make it silent.
             NotificationManager.IMPORTANCE_LOW,
           )
-          .apply { description = "Notifications for model downloading" }
+          .apply { description = "Notifications for SelfGemma Talk model downloads" }
       notificationManager.createNotificationChannel(channel)
       channelCreated = true
     }
@@ -338,10 +339,9 @@ class DownloadWorker(context: Context, params: WorkerParameters) :
     }
     val content = "Downloading in progress: $progress%"
 
-    val intent =
-      Intent(applicationContext, Class.forName("com.google.ai.edge.gallery.MainActivity")).apply {
-        flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-      }
+    val intent = Intent(applicationContext, MainActivity::class.java).apply {
+      flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+    }
     val pendingIntent =
       PendingIntent.getActivity(
         applicationContext,

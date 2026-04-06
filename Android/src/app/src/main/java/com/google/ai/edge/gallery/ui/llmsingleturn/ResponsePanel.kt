@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.llmsingleturn
+package selfgemma.talk.ui.llmsingleturn
 
 import android.content.ClipData
 import android.util.Log
@@ -56,13 +56,13 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.ConfigKeys
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.MarkdownText
-import com.google.ai.edge.gallery.ui.common.chat.MessageBodyLoading
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.R
+import selfgemma.talk.data.ConfigKeys
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.MarkdownText
+import selfgemma.talk.ui.common.chat.MessageBodyLoading
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import kotlinx.coroutines.launch
 
 private const val TAG = "AGResponsePanel"

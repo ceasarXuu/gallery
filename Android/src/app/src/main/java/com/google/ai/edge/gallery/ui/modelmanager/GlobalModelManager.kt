@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.modelmanager
+package selfgemma.talk.ui.modelmanager
 
 import android.content.Context
 import android.content.Intent
@@ -86,13 +86,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.RuntimeType
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.proto.ImportedModel
-import com.google.ai.edge.gallery.ui.common.TaskIcon
-import com.google.ai.edge.gallery.ui.common.modelitem.ModelItem
+import selfgemma.talk.R
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.RuntimeType
+import selfgemma.talk.data.Task
+import selfgemma.talk.proto.ImportedModel
+import selfgemma.talk.ui.common.TaskIcon
+import selfgemma.talk.ui.common.modelitem.ModelItem
 import kotlin.text.endsWith
 import kotlin.text.lowercase
 import kotlinx.coroutines.delay

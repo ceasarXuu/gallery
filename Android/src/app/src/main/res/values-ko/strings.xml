@@ -1,0 +1,469 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+ Copyright 2025 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<resources>
+  <!-- App Info -->
+  <string name="app_name">SelfGemma Talk</string>
+  <string name="app_name_first_part">SelfGemma</string>
+  <string name="app_name_second_part">Talk</string>
+  <string name="app_intro">놀라운 온디바이스 모델의 세계를 탐험하세요</string>
+
+  <!-- Common Actions -->
+  <string name="all">전체</string>
+  <string name="add">추가</string>
+  <string name="added">추가됨</string>
+  <string name="cancel">취소</string>
+  <string name="close">닫기</string>
+  <string name="delete">삭제</string>
+  <string name="done">완료</string>
+  <string name="edit">편집</string>
+  <string name="save">저장</string>
+  <string name="reset">재설정</string>
+  <string name="clear">지우기</string>
+  <string name="copy">복사</string>
+  <string name="create">생성</string>
+  <string name="discard">취소</string>
+  <string name="dismiss">닫기</string>
+  <string name="download">다운로드</string>
+  <string name="name">이름</string>
+  <string name="ok">확인</string>
+  <string name="preview">미리보기</string>
+  <string name="replace">교체</string>
+  <string name="results">결과</string>
+  <string name="run">실행</string>
+  <string name="running">실행 중...</string>
+  <string name="run_again">다시 실행</string>
+  <string name="share">공유</string>
+  <string name="test">테스트</string>
+  <string name="try_it">사용해 보기</string>
+  <string name="undo">실행 취소</string>
+  <string name="view">보기</string>
+  <string name="error">오류</string>
+  <string name="disabled">비활성화됨</string>
+  <string name="continue_button_label">계속</string>
+
+  <!-- Navigation -->
+  <string name="drawer_settings_label">설정</string>
+  <string name="drawer_settings_description">애플리케이션 설정 관리</string>
+  <string name="drawer_models_label">모델</string>
+  <string name="drawer_models_description">모델 찾아보기, 체험 및 벤치마크</string>
+  <string name="navigate_back">뒤로 가기</string>
+
+  <!-- Tabs -->
+  <string name="tab_messages">메시지</string>
+  <string name="tab_roles">역할</string>
+  <string name="tab_settings">설정</string>
+
+  <!-- Sessions Screen -->
+  <string name="sessions_loading">세션 로드 중...</string>
+  <string name="sessions_empty_title">아직 세션이 없습니다</string>
+  <string name="sessions_empty_content">역할을 선택하여 첫 번째 대화를 시작하세요. 아직 로컬 모델을 다운로드하지 않았다면 먼저 모델 라이브러리를 열어주세요.</string>
+  <string name="sessions_delete_title">삭제 확인</string>
+  <string name="sessions_delete_content">세션 \"%s\"과(와) 모든 채팅 기록을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.</string>
+  <string name="sessions_pin">고정</string>
+  <string name="sessions_unpin">고정 해제</string>
+  <string name="sessions_choose_role">역할 선택</string>
+  <string name="sessions_model_library">모델 라이브러리</string>
+  <string name="sessions_new_session">새 세션</string>
+  <string name="sessions_just_now">방금</string>
+  <string name="sessions_minutes_ago">%d분 전</string>
+  <string name="sessions_hours_ago">%d시간 전</string>
+  <string name="sessions_days_ago">%d일 전</string>
+
+  <!-- Roles Screen -->
+  <string name="roles_create_tune_title">역할 생성 및 조정</string>
+  <string name="roles_create_tune_content_model">이제 역할 카드를 생성하고 편집할 수 있습니다. 세션을 시작하기 전에 로컬 모델을 다운로드하세요.</string>
+  <string name="roles_create_tune_content_no_model">텍스트 필드만으로 사용자 지정 역할을 생성한 다음 로컬 모델로 새 세션을 시작하세요.</string>
+  <string name="roles_create_button">역할 생성</string>
+  <string name="roles_model_library">모델 라이브러리</string>
+  <string name="roles_builtin_title">기본 제공 역할</string>
+  <string name="roles_custom_title">사용자 지정 역할</string>
+  <string name="roles_delete_title">역할 삭제</string>
+  <string name="roles_delete_content">%s을(를) 삭제하면 세션과 저장된 메모리도 제거됩니다.</string>
+  <string name="roles_start_session">세션 시작</string>
+  <string name="roles_no_model">모델 없음</string>
+  <string name="roles_default_tag">롤플레이</string>
+
+  <!-- Role Editor Screen -->
+  <string name="role_editor_create_title">역할 생성</string>
+  <string name="role_editor_edit_title">역할 편집</string>
+  <string name="role_editor_loading">역할 로드 중...</string>
+  <string name="role_editor_name_label">역할 이름</string>
+  <string name="role_editor_name_placeholder">캐릭터 이름 입력</string>
+  <string name="role_editor_summary_label">요약</string>
+  <string name="role_editor_summary_placeholder">짧은 한 줄 설명</string>
+  <string name="role_editor_system_prompt_label">시스템 프롬프트</string>
+  <string name="role_editor_system_prompt_placeholder">역할이 어떻게 말하고 행동해야 하는지 정확히 설명</string>
+  <string name="role_editor_persona_label">페르소나</string>
+  <string name="role_editor_world_settings_label">세계 설정</string>
+  <string name="role_editor_opening_line_label">오프닝 라인</string>
+  <string name="role_editor_safety_policy_label">안전 정책</string>
+  <string name="role_editor_tags_label">태그</string>
+  <string name="role_editor_tags_placeholder">쉼표, 구분, 태그</string>
+  <string name="role_editor_default_model_label">기본 모델</string>
+  <string name="role_editor_no_default_model">기본 모델 없음</string>
+  <string name="role_editor_create_button">역할 생성</string>
+  <string name="role_editor_save_button">변경 사항 저장</string>
+  <string name="role_editor_delete_button">역할 삭제</string>
+
+  <!-- Chat Screen -->
+  <string name="chat_title">채팅</string>
+  <string name="chat_loading_session">세션 로드 중...</string>
+  <string name="chat_missing_model_title">로컬 모델 없음</string>
+  <string name="chat_missing_model_content">이 세션에서 참조하는 모델을 현재 사용할 수 없습니다. 모델 라이브러리를 열어 로컬 LLM을 다운로드하거나 가져오거나, 기기에 이미 있는 다른 모델로 전환하세요.</string>
+  <string name="chat_use_model">%s 사용</string>
+  <string name="chat_open_model_library">모델 라이브러리 열기</string>
+  <string name="chat_you">나</string>
+  <string name="chat_assistant">어시스턴트</string>
+  <string name="chat_message_placeholder">캐릭터에게 메시지 보내기...</string>
+  <string name="chat_stop_response">응답 중지</string>
+  <string name="chat_send_message">메시지 보내기</string>
+  <string name="chat_response_stopped">응답이 중지되었습니다.</string>
+  <string name="chat_response_failed">응답에 실패했습니다.</string>
+  <string name="chat_empty_message">빈 메시지</string>
+  <string name="chat_switch_model">모델 전환</string>
+  <string name="chat_open_model_library_menu">모델 라이브러리 열기</string>
+  <string name="chat_select_model_title">모델 선택</string>
+  <string name="chat_current_model">현재 사용 중</string>
+
+  <!-- Settings Screen -->
+  <string name="settings_model_library_title">모델 라이브러리</string>
+  <string name="settings_model_library_summary">로컬 모델 다운로드, 가져오기 및 관리</string>
+  <string name="settings_legacy_home_title">이전 홈</string>
+  <string name="settings_legacy_home_summary">이전 Gallery 홈페이지를 백업 진입점으로 열기</string>
+
+  <!-- Model Manager -->
+  <string name="model_manager">모델 관리자</string>
+  <string name="model_manager_select_task_title">체험할 사용 사례 선택</string>
+  <string name="model_not_downloaded_msg">모델이 아직 다운로드되지 않음</string>
+  <string name="model_is_initializing_msg">모델 초기화 중...</string>
+  <string name="model_list_imported_models_title">가져온 모델</string>
+  <string name="model_list_recommended_models_title">추천 모델</string>
+  <string name="model_list_experimental_label">실험적</string>
+  <plurals name="model_list_number_of_models_available">
+    <item quantity="other">%d개 모델 사용 가능</item>
+  </plurals>
+  <string name="select_downloaded_model">다운로드한 모델 선택</string>
+  <string name="select_model">모델 선택</string>
+  <string name="downloaded_size">%1$s 다운로드됨</string>
+  <string name="confirm_delete_model_dialog_title">다운로드 삭제</string>
+  <string name="confirm_delete_model_dialog_content">다운로드한 모델 \"%s\"을(를) 삭제하시겠습니까?</string>
+  <string name="learn_more">자세히 알아보기 및 모델 라이선스 보기</string>
+  <string name="loading_model_list">모델 목록 로드 중...</string>
+
+  <!-- AI Chat -->
+  <string name="aichat_initializing_title">모델 초기화 중</string>
+  <string name="aichat_initializing_content">잠시 기다려 주세요. 최대 1분이 소요될 수 있습니다</string>
+  <string name="aichat_emptystate_title">AI 채팅</string>
+  <string name="aichat_emptystate_content">온디바이스 대규모 언어 모델과 채팅하세요.</string>
+  <string name="chat_textinput_placeholder">메시지 입력...</string>
+  <string name="chat_llm_agent_name">LLM</string>
+  <string name="chat_agent_agent_name">에이전트</string>
+  <string name="chat_generic_agent_name">모델</string>
+  <string name="chat_generic_result_name">결과</string>
+  <string name="show_thinking">사고 과정 표시</string>
+  <string name="conversation_reset_message">대화가 재설정되었습니다</string>
+  <string name="engin_reset_message">엔진이 재설정되었습니다</string>
+
+  <!-- Benchmark -->
+  <string name="benchmark">벤치마크</string>
+  <string name="baseline">베이스라인</string>
+  <string name="benchmark_model">벤치마크 모델</string>
+  <string name="benchmark_results">벤치마크 결과</string>
+  <string name="benchmark_no_results">벤치마크 결과 없음</string>
+  <string name="benchmark_comparison_help_title">벤치마크 실행 비교 방법</string>
+  <string name="benchmark_comparison_help_content">임의의 실행 결과 카드에서 **베이스라인** 칩을 탭하여 해당 실행을 비교 베이스라인으로 설정합니다. 다른 모든 실행 결과 카드에 백분율 차이가 자동으로 계산되어 표시됩니다.</string>
+  <string name="benchmark_tokens_limit_message">프리필과 디코드 토큰의 합이 모델의 최대 토큰 제한을 초과하지 않도록 하세요 (%d vs %d)</string>
+  <string name="best_overall">전체 최고</string>
+  <string name="run_benchmark">벤치마크 실행</string>
+  <string name="run_benchmark_confirmation_msg">이 프로세스는 일반적으로 몇 분이 소요되며 시작된 후에는 중단할 수 없습니다. 계속하시겠습니까?</string>
+  <string name="running_benchmark_msg">모델 벤치마크 실행 중...</string>
+  <string name="delete_benchmark_result_dialog_title">벤치마크 결과 삭제</string>
+  <string name="delete_benchmark_result_dialog_content">벤치마크 결과를 삭제하시겠습니까?</string>
+  <plurals name="runs">
+    <item quantity="other">%d회 실행</item>
+  </plurals>
+
+  <!-- Categories -->
+  <string name="category_unlabeled">라벨 없음</string>
+  <string name="category_llm">LLM</string>
+  <string name="category_agents">에이전트</string>
+  <string name="category_classical_ml">클래식 ML</string>
+  <string name="category_experimental">실험적</string>
+
+  <!-- Dialogs -->
+  <string name="discard_changes_dialog_title">변경 사항을 취소하시겠습니까?</string>
+  <string name="discard_changes_dialog_content">저장되지 않은 변경 사항이 있습니다. 취소하시겠습니까?</string>
+
+  <!-- Media -->
+  <string name="add_audio">+오디오</string>
+  <string name="take_a_picture">사진 찍기</string>
+  <string name="pick_from_album">앨범에서 선택</string>
+  <string name="record_audio_clip">오디오 녹음</string>
+  <string name="pick_wav_file">wav 파일 선택</string>
+  <string name="input_history">입력 기록</string>
+  <string name="askimage_emptystate_title">이미지 질문</string>
+  <string name="askimage_emptystate_content">시작하려면 아래 +를 탭하여 이미지를 추가(채팅당 최대 10장)하고 프롬프트를 입력하여 질문하세요!</string>
+  <string name="askaudio_emptystate_title">오디오 질문</string>
+  <string name="askaudio_emptystate_content">시작하려면 아래 +를 탭하여 오디오 클립을 추가(최대 30초의 1개 클립)하고 프롬프트를 입력하여 전사 또는 번역하세요!</string>
+
+  <!-- Voice Input -->
+  <string name="hold_down_to_talk">눌러서 말하기</string>
+  <string name="listening">듣고 있습니다...</string>
+  <string name="release_to_send">놓아서 전송</string>
+  <string name="slide_up_to_cancel">위로 스와이프하여 취소</string>
+  <string name="grant_permissions">권한 부여</string>
+  <string name="grant_record_audio_permission">녹음 권한 부여</string>
+
+  <!-- Memory Warning -->
+  <string name="memory_warning_title">메모리 경고</string>
+  <string name="memory_warning_content">선택한 모델이 기기의 메모리를 초과할 수 있어 앱이 충돌할 수 있습니다. 최상의 경험을 위해 더 작은 모델을 사용해 보세요.</string>
+  <string name="memory_warning_proceed_anyway">계속 진행</string>
+
+  <!-- Config -->
+  <string name="config_dialog_tab_model_configs">모델 설정</string>
+  <string name="config_dialog_tab_system_prompt">시스템 프롬프트</string>
+  <string name="system_prompt_updated">시스템 프롬프트가 업데이트되었습니다</string>
+  <string name="restore_default">기본값 복원</string>
+  <string name="max_tokens_warning_message">최대 토큰을 10000 이상으로 설정하면 앱이 불안정해질 수 있습니다.</string>
+
+  <!-- Logs -->
+  <string name="logs_viewer_filter_text_input_placeholder">로그 필터</string>
+  <string name="logs_viewer_title">로그 뷰어</string>
+  <string name="logs_viewer_no_matching_logs">필터와 일치하는 로그가 없습니다</string>
+
+  <!-- Terms of Service -->
+  <string name="tos_dialog_title_app">SelfGemma Talk에 오신 것을 환영합니다</string>
+  <string name="tos_dialog_title_gemma">Gemma 이용 약관</string>
+  <string name="tos_dialog_accept_and_continue_button_label">수락 및 계속</string>
+  <string name="tos_dialog_agree_and_continue_button_label">동의 및 계속</string>
+  <string name="settings_dialog_tos_title">서비스 약관</string>
+  <string name="settings_dialog_view_app_terms_of_service">앱 서비스 약관 보기</string>
+  <string name="settings_dialog_gemma_prohibited_use_policy">Gemma 금지 사용 정책</string>
+
+  <!-- Notifications -->
+  <string name="gallery_news_notification_title">SelfGemma Talk 뉴스</string>
+  <string name="notification_title_fail">모델 다운로드 실패</string>
+  <string name="notification_title_success">모델 다운로드 성공</string>
+  <string name="notification_content_fail">모델 \"%s\" 다운로드에 실패했습니다</string>
+  <string name="notification_content_success">모델 \"%s\"이(가) 다운로드되었습니다</string>
+
+  <!-- Mobile Actions -->
+  <string name="mobile_actions_title">모바일 액션</string>
+  <string name="mobile_actions_description">간단한 명령으로 기기 제어</string>
+  <string name="mobile_actions_supported_actions">지원되는 샘플 액션:</string>
+  <string name="mobile_actions_tab_model_response">모델 응답</string>
+  <string name="mobile_actions_tab_function_called">호출된 함수</string>
+  <string name="flashlight_off_message">손전등을 껐습니다.</string>
+  <string name="flashlight_on_message">손전등을 켰습니다.</string>
+  <string name="set_screen_brightness_message">화면 밝기를 %1$d%%로 설정했습니다.</string>
+  <string name="set_timer_message">%1$d초 타이머를 설정하고 있습니다.</string>
+  <string name="add_calendar_event_message">캘린더에 \"팀 회의 (오전 10시-11시)\"를 추가하고 있습니다.</string>
+  <string name="take_picture_message">카메라 앱을 열고 있습니다.</string>
+  <string name="view_results">결과 보기</string>
+  <string name="view_console_logs">콘솔 로그 보기</string>
+  <string name="warming_up">준비 중...</string>
+  <string name="warning_no_function_call">인식된 함수 없음</string>
+  <string name="snackbar_no_function_call">인식된 함수 없음</string>
+  <string name="unknown_error">알 수 없는 오류</string>
+  <string name="view_in_full_screen">전체 화면으로 보기</string>
+
+  <!-- Mobile Actions Challenge -->
+  <string name="mobile_actions_challenge_title">모바일 액션 파인튜닝 챌린지</string>
+  <string name="mobile_actions_challenge_subtitle">만들어서 플레이하세요!</string>
+  <string name="mobile_actions_challenge_description">이 데모는 잠겨 있습니다. 모바일 액션 에이전트의 잠금을 해제하려면 오픈 소스 레시피를 사용하여 직접 모델을 컴파일해야 합니다.</string>
+  <string name="mobile_actions_challenge_instructions_title">지침:</string>
+  <string name="mobile_actions_challenge_instruction_1">1. <![CDATA[<b>컴퓨터에서</b>]]> <![CDATA[<a href="https://ai.google.dev/gemma/docs/mobile-actions">이 가이드</a>]]>를 엽니다</string>
+  <string name="mobile_actions_challenge_instruction_2">2. 지침에 따라 모델을 파인튜닝하고 .litertlm 형식으로 변환합니다.</string>
+  <string name="mobile_actions_challenge_instruction_3">3. 파일을 이 전화기로 전송합니다.</string>
+  <string name="mobile_actions_challenge_instruction_4">4. 아래 <![CDATA[<b>모델 로드</b>]]>를 탭하여 데모의 잠금을 해제합니다.</string>
+  <string name="mobile_actions_challenge_email_colab">가이드를 이메일로 보내기</string>
+  <string name="mobile_actions_challenge_load_model">모델 로드</string>
+
+  <!-- Prompt Templates -->
+  <plurals name="parameter">
+    <item quantity="other">매개변수</item>
+  </plurals>
+  <string name="prompt_template_label_flash_on_off">손전등 켜기/끄기</string>
+  <string name="prompt_template_label_flash_on">손전등 켜기</string>
+  <string name="prompt_template_label_flash_off">손전등 끄기</string>
+  <string name="prompt_template_label_create_contact">연락처 생성</string>
+  <string name="prompt_template_label_send_email">이메일 보내기</string>
+  <string name="prompt_template_label_create_calendar_event">캘린더 이벤트 생성</string>
+  <string name="prompt_template_label_show_location_on_map">지도에 위치 표시</string>
+  <string name="prompt_template_label_open_wifi_settings">WiFi 설정 열기</string>
+  <string name="text_image_generation_text_field_placeholder">프롬프트 입력...</string>
+  <string name="text_input_placeholder_llm_chat">프롬프트 입력...</string>
+
+  <!-- Skills -->
+  <string name="add_script">스크립트 추가</string>
+  <string name="add_default_script">기본 스크립트 추가</string>
+  <string name="add_skill">스킬 추가</string>
+  <string name="add_skill_option_featured_list_title">추천 목록에서 스킬 추가</string>
+  <string name="add_skill_option_featured_list_description">커뮤니티 기여 추천 스킬 목록에서 스킬 추가</string>
+  <string name="add_skill_option_url_title">URL에서 스킬 로드</string>
+  <string name="add_skill_option_url_description">웹에 호스팅된 스킬 디렉터리의 URL 입력</string>
+  <string name="add_skill_option_local_title">로컬 스킬 가져오기</string>
+  <string name="add_skill_option_local_description">스킬 디렉터리를 로컬에서 가져오기</string>
+  <string name="add_skill_option_skill_creator_title">스킬 생성기</string>
+  <string name="add_skill_option_skill_creator_description">앱 내에서 처음부터 스킬 생성</string>
+  <string name="add_skill_from_url_dialog_title">URL에서 스킬 추가</string>
+  <string name="add_skill_dialog_title_from_local_import">로컬 스킬 가져오기</string>
+  <string name="add_skill_dialog_subtitle_from_local_import">먼저 전체 스킬 디렉터리를 /sdcard/Download로 \"adb push\"하세요</string>
+  <string name="add_skill_manual_input_sheet_title">스킬 생성</string>
+  <string name="agent_skills">에이전트 스킬</string>
+  <string name="agent_skills_description">다양한 스킬을 로드하거나 직접 만들어 전문화된 고차원 추론을 사용하세요.\n\n아래 샘플 프롬프트를 탭하여 에이전트 스킬을 체험해 보세요!</string>
+  <string name="disclaimer_dialog_content">타사 스킬은 Google이 작성하거나 보증하지 않습니다. Google은 해당 콘텐츠, 보안 또는 데이터 처리 방식에 대해 책임을 지지 않습니다.\n\n개인 식별 정보, 토큰 또는 API 키와 같은 민감한 정보를 제공하기 전에 주의하세요.\n\n에이전트 스킬 사용은 해당 스킬의 적용 가능한 약관을 따릅니다.</string>
+  <string name="disclaimer_dialog_title">타사 스킬 추가</string>
+  <string name="disclaimer_dialog_agree">동의</string>
+  <string name="delete_script_dialog_title">스크립트 삭제</string>
+  <string name="delete_skill_dialog_title">스킬 삭제</string>
+  <string name="delete_skill_dialog_content">스킬을 삭제하시겠습니까?</string>
+  <string name="delete_selected_skills_title">선택한 스킬 삭제</string>
+  <plurals name="delete_selected_skills_content">
+    <item quantity="other">%d개 스킬을 삭제하시겠습니까?</item>
+  </plurals>
+  <plurals name="selected_custom_skills_count">
+    <item quantity="other">%d개 선택됨</item>
+  </plurals>
+  <string name="built_in_skills_title">기본 제공 스킬</string>
+  <string name="custom_skills_title">사용자 지정 스킬</string>
+  <string name="describe_requirements">요구 사항 설명</string>
+  <string name="describe_input_data">입력 데이터 설명</string>
+  <string name="describe_input_data_support_text">필드 이름은 지침의 이름과 일치해야 합니다.</string>
+  <string name="describe_output_data">출력 데이터 설명</string>
+  <string name="duplicated_script_name">중복된 스크립트 이름</string>
+  <string name="enable_skill_dialog_content">아래 스킬 버튼을 탭하여 스킬을 활성화하세요.</string>
+  <string name="edit_skill">스킬 편집</string>
+  <string name="enter_skill_url">스킬 루트 디렉터리의 URL 입력</string>
+  <string name="featured_skills_title">추천 스킬</string>
+  <string name="featured_skills_description">커뮤니티 기여 추천 스킬 목록</string>
+  <string name="generate_llm_prompt_title">LLM 프롬프트 생성</string>
+  <string name="generate_llm_prompt_button_label">LLM 프롬프트</string>
+  <string name="learn_how_to_write_skills">스킬 작성 방법 배우기</string>
+  <string name="loading_skills_allowlist">추천 스킬 로드 중...</string>
+  <string name="manage_skills">스킬 관리</string>
+  <string name="manage_skills_description">스킬 보기, 생성 및 관리</string>
+  <string name="skill_limit_warning">%s 이상 활성화하면 성능에 영향을 줄 수 있습니다.</string>
+  <string name="no_directory_selected">선택된 디렉터리 없음</string>
+  <string name="pick_skill_dir">스킬 루트 디렉터리 선택</string>
+  <string name="prompt_copied_message">프롬프트가 클립보드에 복사되었습니다. 즐겨 사용하는 LLM 앱에 붙여넣어 코드를 생성한 다음 코드를 여기에 복사/붙여넣기 하세요.</string>
+  <string name="prompt_chip_kitchen_adventure">주방 모험</string>
+  <string name="prompt_chip_calculate_hash">해시 계산</string>
+  <string name="prompt_chip_query_wikipedia">위키백과 검색</string>
+  <string name="prompt_chip_plot_chart">차트 그리기</string>
+  <string name="prompt_chip_interactive_map">인터랙티브 맵</string>
+  <string name="prompt_chip_text_spinner">내 머리의 라벨 회전</string>
+  <string name="prompt_chip_send_email">이메일 보내기</string>
+  <string name="replace_skill_dialog_title">기존 스킬 교체</string>
+  <string name="replace_skill_dialog_content">같은 이름의 스킬이 이미 존재합니다. 교체하시겠습니까?</string>
+  <string name="search_skill">스킬 검색</string>
+  <string name="select_script">스크립트 선택</string>
+  <string name="script_name">스크립트 이름</string>
+  <string name="script_content">스크립트 내용</string>
+  <string name="skills">스킬</string>
+  <plurals name="skills_count">
+    <item quantity="other">%d개 스킬</item>
+  </plurals>
+  <string name="skill_name_input_description">필수. my-skill-name 형식</string>
+  <string name="skill_description_input_description">필수. 스킬의 기능과 트리거 조건 또는 키워드에 대한 간략한 설명.</string>
+  <string name="skill_instructions_input_description">LLM이 작업을 수행하기 위해 따라야 하는 Markdown 형식의 상세 지침.</string>
+  <string name="use_call_js_template">Call JS 템플릿 사용</string>
+
+  <!-- Tiny Garden -->
+  <string name="conversation_history">대화 기록</string>
+  <string name="collect">수집</string>
+  <string name="color">색상</string>
+  <string name="tap_to_change_color">탭하여 색상 변경</string>
+  <string name="no_cutouts_collected">수집된 잘라내기 없음</string>
+  <string name="reset_note">\"재설정\"을 탭하면 LiteRT-LM 엔진만 재설정됩니다. 게임 진행 상황은 영향을 받지 않습니다.</string>
+  <string name="resetting_engine">엔진 재설정 중...</string>
+  <string name="reinitializing_description">게임 진행 상황은 영향을 받지 않습니다</string>
+  <string name="introducing">소개</string>
+  <string name="litert_community_label">LiteRT 커뮤니티</string>
+
+  <!-- Misc -->
+  <string name="checking_access">액세스 확인 중...</string>
+  <string name="collapse_all">모두 접기</string>
+  <string name="expand_all">모두 펼치기</string>
+  <string name="failed_to_save">저장 실패</string>
+  <string name="function_name">함수 이름</string>
+  <string name="generate_and_copy">생성 및 복사</string>
+  <string name="instructions">지침</string>
+  <string name="invalid_response">잘못된 응답</string>
+  <string name="paste_from_clipboard">클립보드에서 붙여넣기</string>
+  <string name="selected_count">%d개 선택됨</string>
+  <string name="turn_on_all">모두 켜기</string>
+  <string name="turn_off_all">모두 끄기</string>
+  <string name="unsupported_action">지원되지 않는 작업</string>
+  <string name="basic_info">기본 정보</string>
+  <string name="description_required">설명*</string>
+  <string name="enter_instruction">지침 입력</string>
+  <string name="edit_secret">비밀 편집</string>
+  <string name="secret">비밀</string>
+
+  <!-- Accessibility Content Descriptions -->
+  <string name="cd_add_icon">추가</string>
+  <string name="cd_import_model_button">모델 가져오기</string>
+  <string name="cd_task_card">%1$s 작업, %2$d개 모델</string>
+  <string name="cd_error">오류</string>
+  <string name="cd_import_model_from_local_file_button">로컬 파일에서 모델 가져오기</string>
+  <string name="cd_navigate_back_icon">뒤로 가기</string>
+  <string name="cd_app_settings_icon">설정</string>
+  <string name="cd_done_icon">완료</string>
+  <string name="cd_collapse_icon">접기</string>
+  <string name="cd_expand_icon">펼치기</string>
+  <string name="cd_stop_icon">중지</string>
+  <string name="cd_delete_icon">삭제</string>
+  <string name="cd_close_icon">닫기</string>
+  <string name="cd_selected_icon">선택됨</string>
+  <string name="cd_model_settings_icon">모델 설정</string>
+  <string name="cd_reset_session_icon">세션 재설정</string>
+  <string name="cd_change_model">현재 모델은 %1$s입니다. 탭하여 모델 변경.</string>
+  <string name="cd_close_image_viewer_icon">이미지 뷰어 닫기</string>
+  <string name="cd_copy_to_clipboard_icon">클립보드에 복사</string>
+  <string name="cd_prompt_input_text_field">프롬프트 입력</string>
+  <string name="cd_send_prompt_icon">프롬프트 보내기</string>
+  <string name="cd_model_response_text">모델 응답 텍스트</string>
+  <string name="cd_clear_input_history_icon">입력 기록 지우기</string>
+  <string name="cd_delete_input_history_entry_icon">입력 기록 항목 삭제</string>
+  <string name="cd_content_input_field">콘텐츠 입력</string>
+  <string name="cd_add_example_prompt_icon">예제 프롬프트 추가</string>
+  <string name="cd_image_thumbnail">이미지 썸네일</string>
+  <string name="cd_user_image">사용자 이미지 %1$d</string>
+  <string name="cd_user_image_in_group">사용자 이미지 %1$d / %2$d</string>
+  <string name="cd_add_content_icon">콘텐츠 추가</string>
+  <string name="cd_camera_shutter_icon">카메라 셔터</string>
+  <string name="cd_toggle_front_back_camera_icon">전면/후면 카메라 전환</string>
+  <string name="cd_pick_file">파일 선택</string>
+  <string name="cd_play_audio_icon">오디오 재생</string>
+  <string name="cd_stop_playback_icon">재생 중지</string>
+  <string name="cd_send_audio_clip_icon">오디오 클립 보내기</string>
+  <string name="cd_start_recording">녹음 시작</string>
+  <string name="cd_downloaded_icon">다운로드됨</string>
+  <string name="cd_not_downloaded_icon">다운로드되지 않음</string>
+  <string name="cd_downloading_icon">다운로드 중</string>
+  <string name="cd_download_failed_icon">다운로드 실패</string>
+  <string name="cd_chat_panel">채팅 패널</string>
+  <string name="cd_switch_to_keyboard">키보드로 전환</string>
+  <string name="cd_switch_to_voice">음성으로 전환</string>
+  <string name="cd_show_history">기록 표시</string>
+  <string name="cd_more_options">더 많은 옵션</string>
+  <string name="cd_help">도움말</string>
+  <string name="cd_menu">메뉴</string>
+  <string name="tap_to_see_value">그래프를 탭하여 값 보기</string>
+</resources>

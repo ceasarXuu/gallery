@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common.chat
+package selfgemma.talk.ui.common.chat
 
 import android.Manifest
 import android.content.Context
@@ -44,7 +44,16 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.lifecycle.awaitInstance
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -86,6 +95,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -119,19 +129,19 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.common.AudioClip
-import com.google.ai.edge.gallery.common.convertWavToMonoWithMaxSeconds
-import com.google.ai.edge.gallery.common.decodeSampledBitmapFromUri
-import com.google.ai.edge.gallery.common.rotateBitmap
-import com.google.ai.edge.gallery.data.MAX_AUDIO_CLIP_COUNT
-import com.google.ai.edge.gallery.data.MAX_IMAGE_COUNT
-import com.google.ai.edge.gallery.data.RuntimeType
-import com.google.ai.edge.gallery.data.SAMPLE_RATE
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.getTaskIconColor
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.bodyLargeNarrow
+import selfgemma.talk.R
+import selfgemma.talk.common.AudioClip
+import selfgemma.talk.common.convertWavToMonoWithMaxSeconds
+import selfgemma.talk.common.decodeSampledBitmapFromUri
+import selfgemma.talk.common.rotateBitmap
+import selfgemma.talk.data.MAX_AUDIO_CLIP_COUNT
+import selfgemma.talk.data.MAX_IMAGE_COUNT
+import selfgemma.talk.data.RuntimeType
+import selfgemma.talk.data.SAMPLE_RATE
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.getTaskIconColor
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.bodyLargeNarrow
 import java.io.FileInputStream
 import java.util.concurrent.Executors
 import kotlinx.coroutines.Dispatchers
@@ -353,78 +363,89 @@ fun MessageInputText(
         when (curShowAudioRecorder) {
           // Input
           false ->
-            Column(
-              modifier =
-                Modifier.padding(horizontal = 12.dp)
-                  .padding(vertical = 8.dp)
-                  .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
-            ) {
-              // First row: text field for input.
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-              ) {
-                // Text field.
-                val cdPromptInput = stringResource(R.string.cd_prompt_input_text_field)
-                TextField(
-                  value = curMessage,
-                  minLines = 1,
-                  maxLines = 3,
-                  onValueChange = onValueChanged,
-                  colors =
-                    TextFieldDefaults.colors(
-                      unfocusedContainerColor = Color.Transparent,
-                      focusedContainerColor = Color.Transparent,
-                      focusedIndicatorColor = Color.Transparent,
-                      unfocusedIndicatorColor = Color.Transparent,
-                      disabledIndicatorColor = Color.Transparent,
-                      disabledContainerColor = Color.Transparent,
-                    ),
-                  textStyle = bodyLargeNarrow,
-                  modifier = Modifier.weight(1f).semantics { contentDescription = cdPromptInput },
-                  placeholder = { Text(stringResource(textFieldPlaceHolderRes)) },
+            Surface(
+              shape = RoundedCornerShape(24.dp),
+              tonalElevation = 2.dp,
+              shadowElevation = 3.dp,
+              color = MaterialTheme.colorScheme.surface,
+              modifier = Modifier
+                .padding(horizontal = 12.dp)
+                .padding(vertical = 8.dp)
+                .fillMaxWidth()
+                .shadow(
+                  elevation = 4.dp,
+                  shape = RoundedCornerShape(24.dp),
+                  ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                  spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.04f)
                 )
-                Spacer(modifier = Modifier.width(4.dp))
-              }
-
-              // Second row: buttons to add extra content, and the action button.
-              Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).offset(y = (-8).dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                .border(
+                  width = 1.dp,
+                  color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f),
+                  shape = RoundedCornerShape(24.dp)
+                )
+            ) {
+              Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
               ) {
+                // First row: text field for input.
                 Row(
+                  modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp),
                   verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                  // A plus button to show a popup menu to add stuff to the chat.
-                  Box() {
-                    val enableAddButton = !inProgress && !isResettingSession && !modelInitializing
-                    OutlinedIconButton(
-                      enabled = enableAddButton,
-                      onClick = { showAddContentMenu = true },
-                      colors =
-                        IconButtonDefaults.iconButtonColors(
-                          disabledContentColor =
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-                        ),
-                      border =
-                        IconButtonDefaults.outlinedIconButtonBorder(true)
-                          .copy(
-                            brush =
-                              SolidColor(
-                                MaterialTheme.colorScheme.outlineVariant.copy(
-                                  alpha = if (enableAddButton) 1f else 0.1f
-                                )
-                              )
-                          ),
-                    ) {
-                      Icon(
-                        Icons.Outlined.Add,
-                        contentDescription = stringResource(R.string.cd_add_content_icon),
-                        modifier = Modifier.size(24.dp),
-                      )
-                    }
+                  // Text field.
+                  val cdPromptInput = stringResource(R.string.cd_prompt_input_text_field)
+                  TextField(
+                    value = curMessage,
+                    minLines = 1,
+                    maxLines = 3,
+                    onValueChange = onValueChanged,
+                    colors =
+                      TextFieldDefaults.colors(
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                      ),
+                    textStyle = bodyLargeNarrow,
+                    modifier = Modifier.weight(1f).semantics { contentDescription = cdPromptInput },
+                    placeholder = { Text(stringResource(textFieldPlaceHolderRes)) },
+                  )
+                  Spacer(modifier = Modifier.width(4.dp))
+                }
+
+                // Second row: buttons to add extra content, and the action button.
+                Row(
+                  modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).padding(bottom = 6.dp),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                  ) {
+                    // A plus button to show a popup menu to add stuff to the chat.
+                    Box() {
+                      val enableAddButton = !inProgress && !isResettingSession && !modelInitializing
+                      Surface(
+                        shape = CircleShape,
+                        color = if (enableAddButton) MaterialTheme.colorScheme.surfaceContainerLowest
+                                    else MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                        onClick = if (enableAddButton) ({ showAddContentMenu = true }) else ({}),
+                        modifier = Modifier.size(40.dp)
+                      ) {
+                        Icon(
+                          Icons.Outlined.Add,
+                          contentDescription = stringResource(R.string.cd_add_content_icon),
+                          modifier = Modifier.size(20.dp),
+                          tint = if (enableAddButton) MaterialTheme.colorScheme.onSurface
+                                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        )
+                      }
 
                     DropdownMenu(
                       expanded = showAddContentMenu,
@@ -580,11 +601,19 @@ fun MessageInputText(
 
                   // Skills.
                   if (showSkillsPicker) {
-                    OutlinedButton(
+                    Surface(
+                      shape = RoundedCornerShape(20.dp),
+                      color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
                       onClick = onSkillsClicked,
                       enabled = !inProgress && !isResettingSession && !modelInitializing,
                     ) {
-                      Text(stringResource(R.string.skills))
+                      Text(
+                        stringResource(R.string.skills),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                      )
                     }
                   }
                 }
@@ -592,56 +621,74 @@ fun MessageInputText(
                 // Stop button.
                 if (inProgress && showStopButtonWhenInProgress) {
                   if (!modelInitializing && !modelPreparing) {
-                    IconButton(
-                      onClick = onStopButtonClicked,
-                      colors =
-                        IconButtonDefaults.iconButtonColors(
-                          containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    Surface(
+                      shape = CircleShape,
+                      color = MaterialTheme.colorScheme.secondaryContainer,
+                      modifier = Modifier
+                        .size(44.dp)
+                        .shadow(
+                          elevation = 4.dp,
+                          shape = CircleShape,
+                          ambientColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
+                          spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
                         ),
+                      onClick = onStopButtonClicked
                     ) {
                       Icon(
                         Icons.Rounded.Stop,
                         contentDescription = stringResource(R.string.cd_stop_icon),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(22.dp)
                       )
                     }
                   }
                 }
                 // Send button.
                 else {
-                  IconButton(
-                    enabled =
-                      !inProgress &&
-                        !isResettingSession &&
-                        (curMessage.isNotEmpty() || pickedAudioClips.isNotEmpty()),
-                    onClick = {
-                      var message = curMessage.trim()
-                      onSendMessage(
-                        createMessagesToSend(
-                          pickedImages = pickedImages,
-                          audioClips = pickedAudioClips,
-                          text = message,
-                        )
-                      )
-                      pickedImages = listOf()
-                      pickedAudioClips = listOf()
-                    },
-                    colors =
-                      IconButtonDefaults.iconButtonColors(
-                        containerColor = getTaskIconColor(task = task),
-                        disabledContainerColor = getTaskIconColor(task = task).copy(alpha = 0.3f),
+                  val canSend = !inProgress &&
+                    !isResettingSession &&
+                    (curMessage.isNotEmpty() || pickedAudioClips.isNotEmpty())
+
+                  Surface(
+                    shape = CircleShape,
+                    color = if (canSend) getTaskIconColor(task = task)
+                             else getTaskIconColor(task = task).copy(alpha = 0.3f),
+                    modifier = Modifier
+                      .size(44.dp)
+                      .shadow(
+                        elevation = if (canSend) 6.dp else 2.dp,
+                        shape = CircleShape,
+                        ambientColor = if (canSend) getTaskIconColor(task = task).copy(alpha = 0.3f)
+                                        else Color.Transparent,
+                        spotColor = if (canSend) getTaskIconColor(task = task).copy(alpha = 0.2f)
+                                    else Color.Transparent
                       ),
-                  ) {
-                    Icon(
-                      Icons.AutoMirrored.Rounded.Send,
-                      contentDescription = stringResource(R.string.cd_send_prompt_icon),
-                      modifier = Modifier.offset(x = 2.dp),
-                      tint = Color.White,
-                    )
-                  }
+                      onClick = {
+                        if (canSend) {
+                          var message = curMessage.trim()
+                          onSendMessage(
+                            createMessagesToSend(
+                              pickedImages = pickedImages,
+                              audioClips = pickedAudioClips,
+                              text = message,
+                            )
+                          )
+                          pickedImages = listOf()
+                          pickedAudioClips = listOf()
+                        }
+                      }
+                    ) {
+                      Icon(
+                        Icons.AutoMirrored.Rounded.Send,
+                        contentDescription = stringResource(R.string.cd_send_prompt_icon),
+                        modifier = Modifier.size(22.dp),
+                      tint = Color.White
+                      )
+                    }
                 }
               }
             }
+          }
 
           // Audio recorder.
           true ->

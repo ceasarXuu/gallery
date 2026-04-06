@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common.modelitem
+package selfgemma.talk.ui.common.modelitem
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.layout.Arrangement
@@ -38,17 +38,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.MODEL_INFO_ICON_SIZE
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.ModelDownloadStatus
-import com.google.ai.edge.gallery.data.ModelDownloadStatusType
-import com.google.ai.edge.gallery.data.RuntimeType
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.ClickableLink
-import com.google.ai.edge.gallery.ui.common.humanReadableSize
-import com.google.ai.edge.gallery.ui.theme.customColors
-import com.google.ai.edge.gallery.ui.theme.labelSmallNarrow
+import selfgemma.talk.R
+import selfgemma.talk.data.MODEL_INFO_ICON_SIZE
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.ModelDownloadStatus
+import selfgemma.talk.data.ModelDownloadStatusType
+import selfgemma.talk.data.RuntimeType
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.ClickableLink
+import selfgemma.talk.ui.common.humanReadableSize
+import selfgemma.talk.ui.theme.customColors
+import selfgemma.talk.ui.theme.labelSmallNarrow
 
 /**
  * Composable function to display the model name and its download status information.

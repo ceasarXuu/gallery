@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common.chat
+package selfgemma.talk.ui.common.chat
 
 import android.graphics.Bitmap
 import android.util.Log
@@ -23,9 +23,9 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
-import com.google.ai.edge.gallery.common.Classification
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.PromptTemplate
+import selfgemma.talk.common.Classification
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.PromptTemplate
 
 private const val TAG = "AGChatMessage"
 

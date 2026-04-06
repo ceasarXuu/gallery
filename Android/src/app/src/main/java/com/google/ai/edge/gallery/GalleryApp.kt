@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery
+package selfgemma.talk
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.navigation.GalleryNavHost
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.navigation.AppNavHost
 
 /** Top level composable representing the main screen of the application. */
 @Composable
-fun GalleryApp(
+fun SelfGemmaTalkApp(
   navController: NavHostController = rememberNavController(),
   modelManagerViewModel: ModelManagerViewModel,
 ) {
-  GalleryNavHost(navController = navController, modelManagerViewModel = modelManagerViewModel)
+  AppNavHost(navController = navController, modelManagerViewModel = modelManagerViewModel)
 }

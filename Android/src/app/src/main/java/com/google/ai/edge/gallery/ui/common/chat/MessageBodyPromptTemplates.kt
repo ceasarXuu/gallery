@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common.chat
+package selfgemma.talk.ui.common.chat
 
 // import androidx.compose.ui.tooling.preview.Preview
 // import com.google.ai.edge.gallery.ui.preview.ALL_PREVIEW_TASKS
@@ -46,9 +46,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.data.PromptTemplate
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.getTaskIconColor
+import selfgemma.talk.data.PromptTemplate
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.getTaskIconColor
 
 private const val CARD_HEIGHT = 100
 

@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common.chat
+package selfgemma.talk.ui.common.chat
 
 // import androidx.compose.ui.tooling.preview.Preview
 // import com.google.ai.edge.gallery.ui.theme.GalleryTheme
 import androidx.compose.runtime.Composable
-import com.google.ai.edge.gallery.data.Config
-import com.google.ai.edge.gallery.data.ConfigKeys
-import com.google.ai.edge.gallery.data.NumberSliderConfig
-import com.google.ai.edge.gallery.data.ValueType
-import com.google.ai.edge.gallery.data.convertValueToTargetType
-import com.google.ai.edge.gallery.ui.common.ConfigDialog
+import selfgemma.talk.data.Config
+import selfgemma.talk.data.ConfigKeys
+import selfgemma.talk.data.NumberSliderConfig
+import selfgemma.talk.data.ValueType
+import selfgemma.talk.data.convertValueToTargetType
+import selfgemma.talk.ui.common.ConfigDialog
 
 private const val DEFAULT_BENCHMARK_WARM_UP_ITERATIONS = 50f
 private const val DEFAULT_BENCHMARK_ITERATIONS = 200f

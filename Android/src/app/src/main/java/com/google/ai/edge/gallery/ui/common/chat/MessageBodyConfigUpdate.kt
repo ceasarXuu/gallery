@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common.chat
+package selfgemma.talk.ui.common.chat
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -42,10 +42,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.ai.edge.gallery.data.convertValueToTargetType
-import com.google.ai.edge.gallery.data.getConfigValueString
-import com.google.ai.edge.gallery.ui.theme.bodySmallNarrow
-import com.google.ai.edge.gallery.ui.theme.titleSmaller
+import selfgemma.talk.data.convertValueToTargetType
+import selfgemma.talk.data.getConfigValueString
+import selfgemma.talk.ui.theme.bodySmallNarrow
+import selfgemma.talk.ui.theme.titleSmaller
 
 private data class ConfigRowData(
   val label: String,
@@ -134,7 +134,7 @@ fun MessageBodyConfigUpdate(message: ChatMessageConfigValuesChange) {
                     append(rowData.oldValueDisplay)
                   }
                   withStyle(style = bodySmallNarrow.copy(fontSize = 12.sp).toSpanStyle()) {
-                    append(" ▸ ") // Added spaces for visual separation
+                    append(" -> ")
                   }
                   withStyle(
                     style =

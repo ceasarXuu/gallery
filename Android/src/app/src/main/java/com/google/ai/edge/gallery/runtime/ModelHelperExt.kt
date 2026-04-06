@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.runtime
+package selfgemma.talk.runtime
 
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.RuntimeType
-import com.google.ai.edge.gallery.ui.llmchat.LlmChatModelHelper
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.RuntimeType
+import selfgemma.talk.ui.llmchat.LlmChatModelHelper
 
 val Model.runtimeHelper: LlmModelHelper
   get() {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common.chat
+package selfgemma.talk.ui.common.chat
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -60,13 +60,13 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.common.calculatePeakAmplitude
-import com.google.ai.edge.gallery.data.MAX_AUDIO_CLIP_DURATION_SEC
-import com.google.ai.edge.gallery.data.SAMPLE_RATE
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.getTaskIconColor
-import com.google.ai.edge.gallery.ui.theme.customColors
+import selfgemma.talk.R
+import selfgemma.talk.common.calculatePeakAmplitude
+import selfgemma.talk.data.MAX_AUDIO_CLIP_DURATION_SEC
+import selfgemma.talk.data.SAMPLE_RATE
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.getTaskIconColor
+import selfgemma.talk.ui.theme.customColors
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope

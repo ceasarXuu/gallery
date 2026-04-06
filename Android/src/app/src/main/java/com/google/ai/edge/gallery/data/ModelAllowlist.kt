@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.data
+package selfgemma.talk.data
 
 import android.os.Build
 import android.util.Log
-import com.google.ai.edge.gallery.common.isPixel10
+import selfgemma.talk.common.isPixel10
 import com.google.gson.annotations.SerializedName
 
 private const val TAG = "AGModelAllowlist"

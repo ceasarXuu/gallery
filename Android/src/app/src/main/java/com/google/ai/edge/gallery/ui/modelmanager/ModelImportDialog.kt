@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.modelmanager
+package selfgemma.talk.ui.modelmanager
 
 import android.content.Context
 import android.net.Uri
@@ -60,28 +60,28 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.common.isPixel10
-import com.google.ai.edge.gallery.data.Accelerator
-import com.google.ai.edge.gallery.data.BooleanSwitchConfig
-import com.google.ai.edge.gallery.data.Config
-import com.google.ai.edge.gallery.data.ConfigKey
-import com.google.ai.edge.gallery.data.ConfigKeys
-import com.google.ai.edge.gallery.data.DEFAULT_MAX_TOKEN
-import com.google.ai.edge.gallery.data.DEFAULT_TEMPERATURE
-import com.google.ai.edge.gallery.data.DEFAULT_TOPK
-import com.google.ai.edge.gallery.data.DEFAULT_TOPP
-import com.google.ai.edge.gallery.data.IMPORTS_DIR
-import com.google.ai.edge.gallery.data.LabelConfig
-import com.google.ai.edge.gallery.data.NumberSliderConfig
-import com.google.ai.edge.gallery.data.SegmentedButtonConfig
-import com.google.ai.edge.gallery.data.ValueType
-import com.google.ai.edge.gallery.data.convertValueToTargetType
-import com.google.ai.edge.gallery.proto.ImportedModel
-import com.google.ai.edge.gallery.proto.LlmConfig
-import com.google.ai.edge.gallery.ui.common.ConfigEditorsPanel
-import com.google.ai.edge.gallery.ui.common.ensureValidFileName
-import com.google.ai.edge.gallery.ui.common.humanReadableSize
+import selfgemma.talk.R
+import selfgemma.talk.common.isPixel10
+import selfgemma.talk.data.Accelerator
+import selfgemma.talk.data.BooleanSwitchConfig
+import selfgemma.talk.data.Config
+import selfgemma.talk.data.ConfigKey
+import selfgemma.talk.data.ConfigKeys
+import selfgemma.talk.data.DEFAULT_MAX_TOKEN
+import selfgemma.talk.data.DEFAULT_TEMPERATURE
+import selfgemma.talk.data.DEFAULT_TOPK
+import selfgemma.talk.data.DEFAULT_TOPP
+import selfgemma.talk.data.IMPORTS_DIR
+import selfgemma.talk.data.LabelConfig
+import selfgemma.talk.data.NumberSliderConfig
+import selfgemma.talk.data.SegmentedButtonConfig
+import selfgemma.talk.data.ValueType
+import selfgemma.talk.data.convertValueToTargetType
+import selfgemma.talk.proto.ImportedModel
+import selfgemma.talk.proto.LlmConfig
+import selfgemma.talk.ui.common.ConfigEditorsPanel
+import selfgemma.talk.ui.common.ensureValidFileName
+import selfgemma.talk.ui.common.humanReadableSize
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URLDecoder

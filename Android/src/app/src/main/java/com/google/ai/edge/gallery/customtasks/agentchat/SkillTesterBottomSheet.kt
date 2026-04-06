@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.customtasks.agentchat
+package selfgemma.talk.customtasks.agentchat
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
@@ -48,13 +48,13 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.common.CallJsAgentAction
-import com.google.ai.edge.gallery.common.CallJsSkillResult
-import com.google.ai.edge.gallery.common.CallJsSkillResultWebview
-import com.google.ai.edge.gallery.proto.Skill
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageWebView
-import com.google.ai.edge.gallery.ui.common.chat.MessageBodyWebview
+import selfgemma.talk.R
+import selfgemma.talk.common.CallJsAgentAction
+import selfgemma.talk.common.CallJsSkillResult
+import selfgemma.talk.common.CallJsSkillResultWebview
+import selfgemma.talk.proto.Skill
+import selfgemma.talk.ui.common.chat.ChatMessageWebView
+import selfgemma.talk.ui.common.chat.MessageBodyWebview
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.Dispatchers

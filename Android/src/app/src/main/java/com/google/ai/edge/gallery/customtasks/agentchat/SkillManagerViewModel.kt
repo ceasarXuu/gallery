@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.customtasks.agentchat
+package selfgemma.talk.customtasks.agentchat
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -35,13 +35,13 @@ import androidx.compose.material.icons.outlined.Tag
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.ai.edge.gallery.common.LOCAL_URL_BASE
-import com.google.ai.edge.gallery.common.SkillTryOutChip
-import com.google.ai.edge.gallery.common.getJsonResponse
-import com.google.ai.edge.gallery.data.AllowedSkill
-import com.google.ai.edge.gallery.data.DataStoreRepository
-import com.google.ai.edge.gallery.data.SkillAllowlist
-import com.google.ai.edge.gallery.proto.Skill
+import selfgemma.talk.common.LOCAL_URL_BASE
+import selfgemma.talk.common.SkillTryOutChip
+import selfgemma.talk.common.getJsonResponse
+import selfgemma.talk.data.AllowedSkill
+import selfgemma.talk.data.DataStoreRepository
+import selfgemma.talk.data.SkillAllowlist
+import selfgemma.talk.proto.Skill
 import com.google.ai.edge.litertlm.Contents
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext

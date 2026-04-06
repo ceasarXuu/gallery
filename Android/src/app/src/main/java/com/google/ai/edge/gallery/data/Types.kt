@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.data
+package selfgemma.talk.data
 
 enum class Accelerator(val label: String) {
   CPU(label = "CPU"),

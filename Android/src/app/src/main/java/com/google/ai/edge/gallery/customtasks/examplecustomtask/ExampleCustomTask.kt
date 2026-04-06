@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.customtasks.examplecustomtask
+package selfgemma.talk.customtasks.examplecustomtask
 
 import android.content.Context
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.runtime.Composable
-import com.google.ai.edge.gallery.customtasks.common.CustomTask
-import com.google.ai.edge.gallery.customtasks.common.CustomTaskData
-import com.google.ai.edge.gallery.data.CategoryInfo
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.customtasks.common.CustomTask
+import selfgemma.talk.customtasks.common.CustomTaskData
+import selfgemma.talk.data.CategoryInfo
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import java.io.File
 import javax.inject.Inject
 import kotlin.math.min

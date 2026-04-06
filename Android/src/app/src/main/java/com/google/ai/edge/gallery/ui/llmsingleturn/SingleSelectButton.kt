@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.llmsingleturn
+package selfgemma.talk.ui.llmsingleturn
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

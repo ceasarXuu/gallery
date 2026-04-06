@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common.modelitem
+package selfgemma.talk.ui.common.modelitem
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -51,14 +51,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.ModelDownloadStatusType
-import com.google.ai.edge.gallery.data.RuntimeType
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.MarkdownText
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.customColors
+import selfgemma.talk.R
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.ModelDownloadStatusType
+import selfgemma.talk.data.RuntimeType
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.MarkdownText
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.customColors
 
 /**
  * Composable function to display a model item in the model manager list.

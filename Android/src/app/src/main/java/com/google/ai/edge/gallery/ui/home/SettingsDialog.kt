@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.home
+package selfgemma.talk.ui.home
 
 import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
 import android.app.UiModeManager
@@ -71,14 +71,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.google.ai.edge.gallery.BuildConfig
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.proto.Theme
-import com.google.ai.edge.gallery.ui.common.ClickableLink
-import com.google.ai.edge.gallery.ui.common.tos.AppTosDialog
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.ThemeSettings
-import com.google.ai.edge.gallery.ui.theme.labelSmallNarrow
+import selfgemma.talk.BuildConfig
+import selfgemma.talk.R
+import selfgemma.talk.proto.Theme
+import selfgemma.talk.ui.common.ClickableLink
+import selfgemma.talk.ui.common.tos.AppTosDialog
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.ThemeSettings
+import selfgemma.talk.ui.theme.labelSmallNarrow
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

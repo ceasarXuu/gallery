@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common
+package selfgemma.talk.ui.common
 
 // import androidx.compose.ui.tooling.preview.Preview
 // import com.google.ai.edge.gallery.ui.preview.PreviewModelManagerViewModel
@@ -51,13 +51,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.RuntimeType
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.modelitem.StatusIcon
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.labelSmallNarrow
+import selfgemma.talk.R
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.RuntimeType
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.modelitem.StatusIcon
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.labelSmallNarrow
 
 @Composable
 fun ModelPicker(

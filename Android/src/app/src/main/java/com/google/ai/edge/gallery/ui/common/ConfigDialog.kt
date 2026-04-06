@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common
+package selfgemma.talk.ui.common
 
 // import androidx.compose.ui.tooling.preview.Preview
 // import com.google.ai.edge.gallery.ui.preview.MODEL_TEST1
@@ -91,17 +91,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.BooleanSwitchConfig
-import com.google.ai.edge.gallery.data.BottomSheetSelectorConfig
-import com.google.ai.edge.gallery.data.BottomSheetSelectorItem
-import com.google.ai.edge.gallery.data.Config
-import com.google.ai.edge.gallery.data.ConfigKeys
-import com.google.ai.edge.gallery.data.LabelConfig
-import com.google.ai.edge.gallery.data.NumberSliderConfig
-import com.google.ai.edge.gallery.data.SegmentedButtonConfig
-import com.google.ai.edge.gallery.data.ValueType
-import com.google.ai.edge.gallery.ui.theme.labelSmallNarrow
+import selfgemma.talk.R
+import selfgemma.talk.data.BooleanSwitchConfig
+import selfgemma.talk.data.BottomSheetSelectorConfig
+import selfgemma.talk.data.BottomSheetSelectorItem
+import selfgemma.talk.data.Config
+import selfgemma.talk.data.ConfigKeys
+import selfgemma.talk.data.LabelConfig
+import selfgemma.talk.data.NumberSliderConfig
+import selfgemma.talk.data.SegmentedButtonConfig
+import selfgemma.talk.data.ValueType
+import selfgemma.talk.ui.theme.labelSmallNarrow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

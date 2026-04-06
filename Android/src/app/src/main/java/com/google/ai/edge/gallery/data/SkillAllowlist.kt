@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.data
+package selfgemma.talk.data
 
 import com.google.gson.annotations.SerializedName
 

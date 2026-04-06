@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.home
+package selfgemma.talk.ui.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,7 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
-import com.google.ai.edge.gallery.R
+import selfgemma.talk.R
 import kotlinx.coroutines.delay
 
 private const val DISMISS_DELAY_SECONDS = 5

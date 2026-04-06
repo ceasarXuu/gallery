@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.customtasks.agentchat
+package selfgemma.talk.customtasks.agentchat
 
 import android.content.Context
 import android.os.Bundle
@@ -71,32 +71,32 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.google.ai.edge.gallery.GalleryEvent
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.common.AskInfoAgentAction
-import com.google.ai.edge.gallery.common.CallJsAgentAction
-import com.google.ai.edge.gallery.common.SkillProgressAgentAction
-import com.google.ai.edge.gallery.data.BuiltInTaskId
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.firebaseAnalytics
-import com.google.ai.edge.gallery.ui.common.BaseGalleryWebViewClient
-import com.google.ai.edge.gallery.ui.common.GalleryWebView
-import com.google.ai.edge.gallery.ui.common.buildTrackableUrlAnnotatedString
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageCollapsableProgressPanel
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageImage
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageInfo
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageText
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageType
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageWebView
-import com.google.ai.edge.gallery.ui.common.chat.ChatSide
-import com.google.ai.edge.gallery.ui.common.chat.LogMessage
-import com.google.ai.edge.gallery.ui.common.chat.LogMessageLevel
-import com.google.ai.edge.gallery.ui.common.chat.SendMessageTrigger
-import com.google.ai.edge.gallery.ui.llmchat.LlmChatScreen
-import com.google.ai.edge.gallery.ui.llmchat.LlmChatViewModel
-import com.google.ai.edge.gallery.ui.modelmanager.ModelInitializationStatusType
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.AnalyticsEvent
+import selfgemma.talk.R
+import selfgemma.talk.common.AskInfoAgentAction
+import selfgemma.talk.common.CallJsAgentAction
+import selfgemma.talk.common.SkillProgressAgentAction
+import selfgemma.talk.data.BuiltInTaskId
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.Task
+import selfgemma.talk.firebaseAnalytics
+import selfgemma.talk.ui.common.AppWebView
+import selfgemma.talk.ui.common.BaseAppWebViewClient
+import selfgemma.talk.ui.common.buildTrackableUrlAnnotatedString
+import selfgemma.talk.ui.common.chat.ChatMessageCollapsableProgressPanel
+import selfgemma.talk.ui.common.chat.ChatMessageImage
+import selfgemma.talk.ui.common.chat.ChatMessageInfo
+import selfgemma.talk.ui.common.chat.ChatMessageText
+import selfgemma.talk.ui.common.chat.ChatMessageType
+import selfgemma.talk.ui.common.chat.ChatMessageWebView
+import selfgemma.talk.ui.common.chat.ChatSide
+import selfgemma.talk.ui.common.chat.LogMessage
+import selfgemma.talk.ui.common.chat.LogMessageLevel
+import selfgemma.talk.ui.common.chat.SendMessageTrigger
+import selfgemma.talk.ui.llmchat.LlmChatScreen
+import selfgemma.talk.ui.llmchat.LlmChatViewModel
+import selfgemma.talk.ui.modelmanager.ModelInitializationStatusType
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import com.google.ai.edge.litertlm.tool
 import java.lang.Exception
 import kotlin.coroutines.resume
@@ -284,7 +284,7 @@ fun AgentChatScreen(
         }
       }
 
-      GalleryWebView(
+      AppWebView(
         modifier = Modifier.size(300.dp),
         onWebViewCreated = { webView ->
           webViewRef = webView
@@ -414,7 +414,7 @@ fun AgentChatScreen(
                         listOf(ChatMessageText(content = promptChip.prompt, side = ChatSide.USER)),
                     )
                   firebaseAnalytics?.logEvent(
-                    GalleryEvent.BUTTON_CLICKED.id,
+                    AnalyticsEvent.BUTTON_CLICKED.id,
                     Bundle().apply {
                       putString("event_type", "agent_skills_prompt_chip")
                       putString("button_id", promptChip.label)
@@ -568,7 +568,7 @@ class ChatWebViewJavascriptInterface {
   }
 }
 
-class ChatWebViewClient(val context: Context) : BaseGalleryWebViewClient(context = context) {
+class ChatWebViewClient(val context: Context) : BaseAppWebViewClient(context = context) {
   private var onPageLoaded: (() -> Unit)? = null
 
   fun setPageLoadListener(listener: (() -> Unit)?) {

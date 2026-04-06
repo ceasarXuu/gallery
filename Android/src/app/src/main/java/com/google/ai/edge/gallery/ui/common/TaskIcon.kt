@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common
+package selfgemma.talk.ui.common
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -40,8 +40,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.Task
+import selfgemma.talk.R
+import selfgemma.talk.data.Task
 
 private val SHAPES: List<Int> =
   listOf(

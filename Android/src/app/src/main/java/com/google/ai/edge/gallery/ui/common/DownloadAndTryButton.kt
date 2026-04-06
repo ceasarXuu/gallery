@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common
+package selfgemma.talk.ui.common
 
 import android.content.Intent
 import android.util.Log
@@ -74,17 +74,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.ModelDownloadStatus
-import com.google.ai.edge.gallery.data.ModelDownloadStatusType
-import com.google.ai.edge.gallery.data.RuntimeType
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.tos.GemmaTermsOfUseDialog
-import com.google.ai.edge.gallery.ui.common.tos.TosViewModel
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.modelmanager.TokenRequestResultType
-import com.google.ai.edge.gallery.ui.modelmanager.TokenStatus
+import selfgemma.talk.R
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.ModelDownloadStatus
+import selfgemma.talk.data.ModelDownloadStatusType
+import selfgemma.talk.data.RuntimeType
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.tos.GemmaTermsOfUseDialog
+import selfgemma.talk.ui.common.tos.TosViewModel
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.modelmanager.TokenRequestResultType
+import selfgemma.talk.ui.modelmanager.TokenStatus
 import java.net.HttpURLConnection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

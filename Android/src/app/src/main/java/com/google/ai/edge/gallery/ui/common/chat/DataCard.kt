@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common.chat
+package selfgemma.talk.ui.common.chat
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,11 +30,11 @@ import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.ui.theme.GalleryTheme
-import com.google.ai.edge.gallery.ui.theme.bodySmallMediumNarrow
-import com.google.ai.edge.gallery.ui.theme.bodySmallMediumNarrowBold
-import com.google.ai.edge.gallery.ui.theme.labelSmallNarrow
-import com.google.ai.edge.gallery.ui.theme.labelSmallNarrowMedium
+import selfgemma.talk.ui.theme.AppTheme
+import selfgemma.talk.ui.theme.bodySmallMediumNarrow
+import selfgemma.talk.ui.theme.bodySmallMediumNarrowBold
+import selfgemma.talk.ui.theme.labelSmallNarrow
+import selfgemma.talk.ui.theme.labelSmallNarrowMedium
 
 /**
  * Composable function to display a data card with a label and a numeric value.
@@ -72,7 +72,7 @@ fun DataCard(
 @Preview(showBackground = true)
 @Composable
 fun DataCardPreview() {
-  GalleryTheme {
+  AppTheme {
     Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
       DataCard(
         label = "sum",

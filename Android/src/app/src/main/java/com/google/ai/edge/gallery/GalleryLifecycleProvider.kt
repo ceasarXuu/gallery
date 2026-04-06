@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery
+package selfgemma.talk
 
 interface AppLifecycleProvider {
   var isAppInForeground: Boolean
 }
 
-class GalleryLifecycleProvider : AppLifecycleProvider {
+class DefaultAppLifecycleProvider : AppLifecycleProvider {
   private var _isAppInForeground = false
 
   override var isAppInForeground: Boolean

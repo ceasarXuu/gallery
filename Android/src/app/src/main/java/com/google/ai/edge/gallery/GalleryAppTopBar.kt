@@ -16,7 +16,7 @@
 
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package com.google.ai.edge.gallery
+package selfgemma.talk
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,13 +45,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.ai.edge.gallery.data.AppBarAction
-import com.google.ai.edge.gallery.data.AppBarActionType
+import selfgemma.talk.data.AppBarAction
+import selfgemma.talk.data.AppBarActionType
 
 /** The top app bar. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GalleryTopAppBar(
+fun AppTopBar(
   title: String,
   modifier: Modifier = Modifier,
   leftAction: AppBarAction? = null,
@@ -134,6 +135,17 @@ fun GalleryTopAppBar(
         // Click a button to navigate up.
         AppBarActionType.NAVIGATE_UP -> {
           TextButton(onClick = rightAction.actionFn) { Text("Done") }
+        }
+
+        // Click an icon to open menu (three dots).
+        AppBarActionType.MENU -> {
+          IconButton(onClick = rightAction.actionFn) {
+            Icon(
+              imageVector = Icons.Rounded.MoreVert,
+              contentDescription = stringResource(R.string.cd_menu),
+              tint = MaterialTheme.colorScheme.onSurface,
+            )
+          }
         }
 
         else -> {}

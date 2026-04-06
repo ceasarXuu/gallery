@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common
+package selfgemma.talk.ui.common
 
 import android.Manifest
 import android.content.Context
@@ -38,10 +38,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
-import com.google.ai.edge.gallery.common.LOCAL_URL_BASE
+import selfgemma.talk.common.LOCAL_URL_BASE
 import java.io.File
 
-private const val TAG = "AGGalleryWebView"
+private const val TAG = "AGAppWebView"
 private val iframeWrapper =
   """
   <html>
@@ -59,10 +59,10 @@ private val iframeWrapper =
     .trimIndent()
 
 /**
- * A base [WebViewClient] for [GalleryWebView] that handles local asset loading and logs page
+ * A base [WebViewClient] for [AppWebView] that handles local asset loading and logs page
  * finishing.
  */
-open class BaseGalleryWebViewClient(private val context: Context) : WebViewClient() {
+open class BaseAppWebViewClient(private val context: Context) : WebViewClient() {
   private val localFileAssetsLoader =
     WebViewAssetLoader.Builder()
       .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(context))
@@ -93,7 +93,7 @@ open class BaseGalleryWebViewClient(private val context: Context) : WebViewClien
  * for permissions, local asset loading, and JavaScript interfaces.
  */
 @Composable
-fun GalleryWebView(
+fun AppWebView(
   modifier: Modifier = Modifier,
   initialUrl: String? = null,
   useIframeWrapper: Boolean = false,
@@ -107,7 +107,7 @@ fun GalleryWebView(
   val context = LocalContext.current
 
   val curWebViewClient = remember {
-    customWebViewClient ?: BaseGalleryWebViewClient(context = context)
+    customWebViewClient ?: BaseAppWebViewClient(context = context)
   }
   var pendingCameraPermissionRequest by remember { mutableStateOf<PermissionRequest?>(null) }
   var pendingAudioPermissionRequest by remember { mutableStateOf<PermissionRequest?>(null) }

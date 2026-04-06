@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.ai.edge.gallery.ui.common.textandvoiceinput
+package selfgemma.talk.ui.common.textandvoiceinput
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -38,10 +38,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.AudioAnimation
-import com.google.ai.edge.gallery.ui.common.getTaskBgGradientColors
+import selfgemma.talk.R
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.AudioAnimation
+import selfgemma.talk.ui.common.getTaskBgGradientColors
 
 private const val TAG = "AGVROverlay"
 

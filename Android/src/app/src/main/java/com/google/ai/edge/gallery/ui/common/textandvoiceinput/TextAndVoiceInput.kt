@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.ai.edge.gallery.ui.common.textandvoiceinput
+package selfgemma.talk.ui.common.textandvoiceinput
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
@@ -53,10 +53,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.getTaskIconColor
-import com.google.ai.edge.gallery.ui.theme.bodyLargeNarrow
+import selfgemma.talk.R
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.getTaskIconColor
+import selfgemma.talk.ui.theme.bodyLargeNarrow
 
 @Composable
 fun TextAndVoiceInput(

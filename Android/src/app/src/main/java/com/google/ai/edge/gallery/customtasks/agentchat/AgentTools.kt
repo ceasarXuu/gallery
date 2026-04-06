@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.ai.edge.gallery.customtasks.agentchat
+package selfgemma.talk.customtasks.agentchat
 
 import android.content.Context
 import android.util.Log
-import com.google.ai.edge.gallery.common.AgentAction
-import com.google.ai.edge.gallery.common.AskInfoAgentAction
-import com.google.ai.edge.gallery.common.CallJsAgentAction
-import com.google.ai.edge.gallery.common.CallJsSkillResult
-import com.google.ai.edge.gallery.common.CallJsSkillResultImage
-import com.google.ai.edge.gallery.common.CallJsSkillResultWebview
-import com.google.ai.edge.gallery.common.LOCAL_URL_BASE
-import com.google.ai.edge.gallery.common.SkillProgressAgentAction
+import selfgemma.talk.common.AgentAction
+import selfgemma.talk.common.AskInfoAgentAction
+import selfgemma.talk.common.CallJsAgentAction
+import selfgemma.talk.common.CallJsSkillResult
+import selfgemma.talk.common.CallJsSkillResultImage
+import selfgemma.talk.common.CallJsSkillResultWebview
+import selfgemma.talk.common.LOCAL_URL_BASE
+import selfgemma.talk.common.SkillProgressAgentAction
 import com.google.ai.edge.litertlm.Tool
 import com.google.ai.edge.litertlm.ToolParam
 import com.google.ai.edge.litertlm.ToolSet

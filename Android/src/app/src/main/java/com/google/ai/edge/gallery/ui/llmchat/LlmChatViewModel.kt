@@ -14,26 +14,26 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.llmchat
+package selfgemma.talk.ui.llmchat
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.viewModelScope
-import com.google.ai.edge.gallery.data.ConfigKeys
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.runtime.runtimeHelper
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageAudioClip
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageError
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageLoading
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageText
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageThinking
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageType
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageWarning
-import com.google.ai.edge.gallery.ui.common.chat.ChatSide
-import com.google.ai.edge.gallery.ui.common.chat.ChatViewModel
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.data.ConfigKeys
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.Task
+import selfgemma.talk.runtime.runtimeHelper
+import selfgemma.talk.ui.common.chat.ChatMessageAudioClip
+import selfgemma.talk.ui.common.chat.ChatMessageError
+import selfgemma.talk.ui.common.chat.ChatMessageLoading
+import selfgemma.talk.ui.common.chat.ChatMessageText
+import selfgemma.talk.ui.common.chat.ChatMessageThinking
+import selfgemma.talk.ui.common.chat.ChatMessageType
+import selfgemma.talk.ui.common.chat.ChatMessageWarning
+import selfgemma.talk.ui.common.chat.ChatSide
+import selfgemma.talk.ui.common.chat.ChatViewModel
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.ExperimentalApi
 import com.google.ai.edge.litertlm.ToolProvider

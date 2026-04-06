@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.benchmark
+package selfgemma.talk.ui.benchmark
 
 import android.os.Bundle
 import androidx.compose.animation.AnimatedVisibility
@@ -64,22 +64,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.google.ai.edge.gallery.GalleryEvent
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.Accelerator
-import com.google.ai.edge.gallery.data.Config
-import com.google.ai.edge.gallery.data.ConfigKey
-import com.google.ai.edge.gallery.data.ConfigKeys
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.NumberSliderConfig
-import com.google.ai.edge.gallery.data.SegmentedButtonConfig
-import com.google.ai.edge.gallery.data.ValueType
-import com.google.ai.edge.gallery.data.convertValueToTargetType
-import com.google.ai.edge.gallery.firebaseAnalytics
-import com.google.ai.edge.gallery.ui.common.ConfigEditorsPanel
-import com.google.ai.edge.gallery.ui.common.SMALL_BUTTON_CONTENT_PADDING
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.customColors
+import selfgemma.talk.AnalyticsEvent
+import selfgemma.talk.R
+import selfgemma.talk.data.Accelerator
+import selfgemma.talk.data.Config
+import selfgemma.talk.data.ConfigKey
+import selfgemma.talk.data.ConfigKeys
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.NumberSliderConfig
+import selfgemma.talk.data.SegmentedButtonConfig
+import selfgemma.talk.data.ValueType
+import selfgemma.talk.data.convertValueToTargetType
+import selfgemma.talk.firebaseAnalytics
+import selfgemma.talk.ui.common.ConfigEditorsPanel
+import selfgemma.talk.ui.common.SMALL_BUTTON_CONTENT_PADDING
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.customColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -241,7 +241,7 @@ fun BenchmarkScreen(
               onClick = {
                 viewModel.setShowResultsViewer(showResultsViewer = true)
                 firebaseAnalytics?.logEvent(
-                  GalleryEvent.BUTTON_CLICKED.id,
+                  AnalyticsEvent.BUTTON_CLICKED.id,
                   Bundle().apply {
                     putString("event_type", "view_benchmark_results")
                     putString("model_id", selectedModelName)
@@ -313,7 +313,7 @@ fun BenchmarkScreen(
               runCount = getIntConfigValue(values = values, key = ConfigKeys.NUMBER_OF_RUNS),
             )
             firebaseAnalytics?.logEvent(
-              GalleryEvent.BUTTON_CLICKED.id,
+              AnalyticsEvent.BUTTON_CLICKED.id,
               Bundle().apply {
                 putString("event_type", "run_benchmark")
                 putString("model_id", selectedModelName)

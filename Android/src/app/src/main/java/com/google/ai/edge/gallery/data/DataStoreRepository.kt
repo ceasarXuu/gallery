@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.data
+package selfgemma.talk.data
 
 import androidx.datastore.core.DataStore
-import com.google.ai.edge.gallery.proto.AccessTokenData
-import com.google.ai.edge.gallery.proto.BenchmarkResult
-import com.google.ai.edge.gallery.proto.BenchmarkResults
-import com.google.ai.edge.gallery.proto.Cutout
-import com.google.ai.edge.gallery.proto.CutoutCollection
-import com.google.ai.edge.gallery.proto.ImportedModel
-import com.google.ai.edge.gallery.proto.Settings
-import com.google.ai.edge.gallery.proto.Skill
-import com.google.ai.edge.gallery.proto.Skills
-import com.google.ai.edge.gallery.proto.Theme
-import com.google.ai.edge.gallery.proto.UserData
+import selfgemma.talk.proto.AccessTokenData
+import selfgemma.talk.proto.BenchmarkResult
+import selfgemma.talk.proto.BenchmarkResults
+import selfgemma.talk.proto.Cutout
+import selfgemma.talk.proto.CutoutCollection
+import selfgemma.talk.proto.ImportedModel
+import selfgemma.talk.proto.Settings
+import selfgemma.talk.proto.Skill
+import selfgemma.talk.proto.Skills
+import selfgemma.talk.proto.Theme
+import selfgemma.talk.proto.UserData
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 

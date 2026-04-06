@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.llmchat
+package selfgemma.talk.ui.llmchat
 
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
@@ -34,16 +34,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.customtasks.common.CustomTask
-import com.google.ai.edge.gallery.customtasks.common.CustomTaskDataForBuiltinTask
-import com.google.ai.edge.gallery.data.BuiltInTaskId
-import com.google.ai.edge.gallery.data.Category
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.runtime.runtimeHelper
-import com.google.ai.edge.gallery.ui.theme.emptyStateContent
-import com.google.ai.edge.gallery.ui.theme.emptyStateTitle
+import selfgemma.talk.R
+import selfgemma.talk.customtasks.common.CustomTask
+import selfgemma.talk.customtasks.common.CustomTaskDataForBuiltinTask
+import selfgemma.talk.data.BuiltInTaskId
+import selfgemma.talk.data.Category
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.Task
+import selfgemma.talk.runtime.runtimeHelper
+import selfgemma.talk.ui.theme.emptyStateContent
+import selfgemma.talk.ui.theme.emptyStateTitle
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

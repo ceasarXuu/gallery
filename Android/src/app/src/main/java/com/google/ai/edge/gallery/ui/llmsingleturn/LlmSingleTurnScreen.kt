@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.llmsingleturn
+package selfgemma.talk.ui.llmsingleturn
 
 import androidx.hilt.navigation.compose.hiltViewModel
 
@@ -51,16 +51,16 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.core.os.bundleOf
-import com.google.ai.edge.gallery.GalleryEvent
-import com.google.ai.edge.gallery.data.BuiltInTaskId
-import com.google.ai.edge.gallery.data.ModelDownloadStatusType
-import com.google.ai.edge.gallery.firebaseAnalytics
-import com.google.ai.edge.gallery.ui.common.ErrorDialog
-import com.google.ai.edge.gallery.ui.common.ModelPageAppBar
-import com.google.ai.edge.gallery.ui.common.chat.ModelDownloadStatusInfoPanel
-import com.google.ai.edge.gallery.ui.modelmanager.ModelInitializationStatusType
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.customColors
+import selfgemma.talk.AnalyticsEvent
+import selfgemma.talk.data.BuiltInTaskId
+import selfgemma.talk.data.ModelDownloadStatusType
+import selfgemma.talk.firebaseAnalytics
+import selfgemma.talk.ui.common.ErrorDialog
+import selfgemma.talk.ui.common.ModelPageAppBar
+import selfgemma.talk.ui.common.chat.ModelDownloadStatusInfoPanel
+import selfgemma.talk.ui.modelmanager.ModelInitializationStatusType
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.customColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -193,7 +193,7 @@ fun LlmSingleTurnScreen(
                 viewModel.generateResponse(task = task, model = selectedModel, input = fullPrompt)
 
                 firebaseAnalytics?.logEvent(
-                  GalleryEvent.GENERATE_ACTION.id,
+                  AnalyticsEvent.GENERATE_ACTION.id,
                   bundleOf("capability_name" to task.id, "model_id" to selectedModel.name),
                 )
               },

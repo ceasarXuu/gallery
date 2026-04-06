@@ -13,20 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.ai.edge.gallery.ui.benchmark
+package selfgemma.talk.ui.benchmark
 
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.ai.edge.gallery.BuildConfig
-import com.google.ai.edge.gallery.data.DataStoreRepository
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.proto.BenchmarkResult
-import com.google.ai.edge.gallery.proto.LlmBenchmarkBasicInfo
-import com.google.ai.edge.gallery.proto.LlmBenchmarkResult
-import com.google.ai.edge.gallery.proto.LlmBenchmarkStats
-import com.google.ai.edge.gallery.proto.ValueSeries
+import selfgemma.talk.BuildConfig
+import selfgemma.talk.data.DataStoreRepository
+import selfgemma.talk.data.Model
+import selfgemma.talk.proto.BenchmarkResult
+import selfgemma.talk.proto.LlmBenchmarkBasicInfo
+import selfgemma.talk.proto.LlmBenchmarkResult
+import selfgemma.talk.proto.LlmBenchmarkStats
+import selfgemma.talk.proto.ValueSeries
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.ExperimentalApi
 import com.google.ai.edge.litertlm.benchmark

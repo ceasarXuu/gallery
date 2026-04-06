@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery
+package selfgemma.talk
 
 import android.util.Log
 import com.google.firebase.Firebase
@@ -35,7 +35,7 @@ val firebaseAnalytics: FirebaseAnalytics?
       }
       .getOrNull()
 
-enum class GalleryEvent(val id: String) {
+enum class AnalyticsEvent(val id: String) {
   CAPABILITY_SELECT(id = "capability_select"),
   MODEL_DOWNLOAD(id = "model_download"),
   GENERATE_ACTION(id = "generate_action"),

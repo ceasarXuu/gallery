@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery
+package selfgemma.talk
 
 import android.animation.ObjectAnimator
 import android.os.Build
@@ -47,8 +47,8 @@ import androidx.core.animation.doOnEnd
 import androidx.core.os.bundleOf
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.GalleryTheme
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.AppTheme
 import com.google.ai.edge.litertlm.ExperimentalApi
 import com.google.ai.edge.litertlm.ExperimentalFlags
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -72,9 +72,9 @@ class MainActivity : ComponentActivity() {
       }
 
       setContent {
-        GalleryTheme {
+          AppTheme {
           Surface(modifier = Modifier.fillMaxSize()) {
-            GalleryApp(modelManagerViewModel = modelManagerViewModel)
+            SelfGemmaTalkApp(modelManagerViewModel = modelManagerViewModel)
 
             // Fade out a "mask" that has the same color as the background of the splash screen
             // to reveal the actual app content.

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.ai.edge.gallery.customtasks.tinygarden
+package selfgemma.talk.customtasks.tinygarden
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -91,23 +91,23 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.webkit.WebViewAssetLoader
-import com.google.ai.edge.gallery.GalleryEvent
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.ConfigKeys
-import com.google.ai.edge.gallery.data.ModelDownloadStatusType
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.data.ValueType
-import com.google.ai.edge.gallery.data.convertValueToTargetType
-import com.google.ai.edge.gallery.firebaseAnalytics
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageText
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageWarning
-import com.google.ai.edge.gallery.ui.common.chat.ChatSide
-import com.google.ai.edge.gallery.ui.common.getTaskBgGradientColors
-import com.google.ai.edge.gallery.ui.common.textandvoiceinput.HoldToDictateViewModel
-import com.google.ai.edge.gallery.ui.common.textandvoiceinput.TextAndVoiceInput
-import com.google.ai.edge.gallery.ui.common.textandvoiceinput.VoiceRecognizerOverlay
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.customColors
+import selfgemma.talk.AnalyticsEvent
+import selfgemma.talk.R
+import selfgemma.talk.data.ConfigKeys
+import selfgemma.talk.data.ModelDownloadStatusType
+import selfgemma.talk.data.Task
+import selfgemma.talk.data.ValueType
+import selfgemma.talk.data.convertValueToTargetType
+import selfgemma.talk.firebaseAnalytics
+import selfgemma.talk.ui.common.chat.ChatMessageText
+import selfgemma.talk.ui.common.chat.ChatMessageWarning
+import selfgemma.talk.ui.common.chat.ChatSide
+import selfgemma.talk.ui.common.getTaskBgGradientColors
+import selfgemma.talk.ui.common.textandvoiceinput.HoldToDictateViewModel
+import selfgemma.talk.ui.common.textandvoiceinput.TextAndVoiceInput
+import selfgemma.talk.ui.common.textandvoiceinput.VoiceRecognizerOverlay
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.customColors
 import com.google.ai.edge.litertlm.ToolProvider
 import com.google.common.io.BaseEncoding
 import java.security.MessageDigest
@@ -399,7 +399,7 @@ fun MainUi(
       }
 
       firebaseAnalytics?.logEvent(
-        GalleryEvent.GENERATE_ACTION.id,
+        AnalyticsEvent.GENERATE_ACTION.id,
         Bundle().apply {
           putString("capability_name", task.id)
           putString("model_id", model.name)

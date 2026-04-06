@@ -1,0 +1,196 @@
+package selfgemma.talk.data.roleplay.db.dao
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
+import androidx.room.Upsert
+import kotlinx.coroutines.flow.Flow
+import selfgemma.talk.data.roleplay.db.entity.MemoryEntity
+import selfgemma.talk.data.roleplay.db.entity.MessageEntity
+import selfgemma.talk.data.roleplay.db.entity.RoleEntity
+import selfgemma.talk.data.roleplay.db.entity.SessionEntity
+import selfgemma.talk.data.roleplay.db.entity.SessionEventEntity
+import selfgemma.talk.data.roleplay.db.entity.SessionSummaryEntity
+import selfgemma.talk.domain.roleplay.model.MessageSide
+import selfgemma.talk.domain.roleplay.model.MessageStatus
+
+@Dao
+interface RoleDao {
+  @Query(
+    """
+    SELECT * FROM roles
+    WHERE archived = 0
+    ORDER BY builtIn DESC, updatedAt DESC
+    """
+  )
+  fun observeActiveRoles(): Flow<List<RoleEntity>>
+
+  @Query("SELECT * FROM roles WHERE id = :roleId LIMIT 1")
+  suspend fun getById(roleId: String): RoleEntity?
+
+  @Upsert
+  suspend fun upsert(entity: RoleEntity)
+
+  @Query("DELETE FROM roles WHERE id = :roleId")
+  suspend fun delete(roleId: String): Int
+}
+
+@Dao
+interface SessionDao {
+  @Query(
+    """
+    SELECT * FROM sessions
+    WHERE archived = 0
+    ORDER BY pinned DESC, updatedAt DESC
+    """
+  )
+  fun observeActiveSessions(): Flow<List<SessionEntity>>
+
+  @Query("SELECT * FROM sessions WHERE id = :sessionId LIMIT 1")
+  suspend fun getById(sessionId: String): SessionEntity?
+
+  @Upsert
+  suspend fun upsert(entity: SessionEntity)
+
+  @Query("UPDATE sessions SET archived = 1, updatedAt = :updatedAt WHERE id = :sessionId")
+  suspend fun archive(sessionId: String, updatedAt: Long): Int
+
+  @Query("DELETE FROM sessions WHERE id = :sessionId")
+  suspend fun delete(sessionId: String): Int
+}
+
+@Dao
+interface MessageDao {
+  @Query(
+    """
+    SELECT * FROM messages
+    WHERE sessionId = :sessionId
+    ORDER BY seq ASC
+    """
+  )
+  fun observeBySession(sessionId: String): Flow<List<MessageEntity>>
+
+  @Query(
+    """
+    SELECT * FROM messages
+    WHERE sessionId = :sessionId
+    ORDER BY seq DESC
+    LIMIT :limit
+    """
+  )
+  suspend fun listLatest(sessionId: String, limit: Int): List<MessageEntity>
+
+  @Query("SELECT COALESCE(MAX(seq), 0) FROM messages WHERE sessionId = :sessionId")
+  suspend fun getMaxSeq(sessionId: String): Int
+
+  @Query(
+    """
+    SELECT COUNT(*) FROM messages
+    WHERE sessionId = :sessionId AND side = :side AND status = :status
+    """
+  )
+  suspend fun countBySideAndStatus(
+    sessionId: String,
+    side: MessageSide,
+    status: MessageStatus,
+  ): Int
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insert(entity: MessageEntity)
+
+  @Update
+  suspend fun update(entity: MessageEntity)
+
+  @Query(
+    """
+    UPDATE messages
+    SET content = :content, updatedAt = :updatedAt, status = :status
+    WHERE id = :messageId
+    """
+  )
+  suspend fun updateStreamingContent(
+    messageId: String,
+    content: String,
+    status: MessageStatus,
+    updatedAt: Long,
+  ): Int
+}
+
+@Dao
+interface SessionSummaryDao {
+  @Query("SELECT * FROM session_summaries WHERE sessionId = :sessionId LIMIT 1")
+  suspend fun getBySessionId(sessionId: String): SessionSummaryEntity?
+
+  @Upsert
+  suspend fun upsert(entity: SessionSummaryEntity)
+
+  @Query("DELETE FROM session_summaries WHERE sessionId = :sessionId")
+  suspend fun delete(sessionId: String): Int
+}
+
+@Dao
+interface MemoryDao {
+  @Query(
+    """
+    SELECT * FROM memories
+    WHERE roleId = :roleId AND active = 1
+    ORDER BY pinned DESC, updatedAt DESC
+    """
+  )
+  suspend fun listByRole(roleId: String): List<MemoryEntity>
+
+  @Query(
+    """
+    SELECT * FROM memories
+    WHERE sessionId = :sessionId AND active = 1
+    ORDER BY pinned DESC, updatedAt DESC
+    """
+  )
+  suspend fun listBySession(sessionId: String): List<MemoryEntity>
+
+  @Upsert
+  suspend fun upsert(entity: MemoryEntity)
+
+  @Query("UPDATE memories SET active = 0, updatedAt = :updatedAt WHERE id = :memoryId")
+  suspend fun deactivate(memoryId: String, updatedAt: Long): Int
+
+  @Query("UPDATE memories SET lastUsedAt = :usedAt WHERE id IN (:memoryIds)")
+  suspend fun markUsed(memoryIds: List<String>, usedAt: Long): Int
+
+  @Query(
+    """
+    SELECT * FROM memories
+    WHERE roleId = :roleId
+      AND active = 1
+      AND (:query = '' OR LOWER(content) LIKE '%' || LOWER(:query) || '%')
+    ORDER BY pinned DESC,
+      CASE WHEN sessionId = :sessionId THEN 1 ELSE 0 END DESC,
+      confidence DESC,
+      updatedAt DESC
+    LIMIT :limit
+    """
+  )
+  suspend fun searchRelevant(
+    roleId: String,
+    sessionId: String?,
+    query: String,
+    limit: Int,
+  ): List<MemoryEntity>
+}
+
+@Dao
+interface SessionEventDao {
+  @Query(
+    """
+    SELECT * FROM session_events
+    WHERE sessionId = :sessionId
+    ORDER BY createdAt DESC
+    """
+  )
+  suspend fun listBySession(sessionId: String): List<SessionEventEntity>
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insert(entity: SessionEventEntity)
+}

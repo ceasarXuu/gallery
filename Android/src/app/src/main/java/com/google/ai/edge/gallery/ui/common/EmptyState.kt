@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common
+package selfgemma.talk.ui.common
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement

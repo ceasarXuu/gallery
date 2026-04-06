@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.ai.edge.gallery.customtasks.mobileactions
+package selfgemma.talk.customtasks.mobileactions
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -113,23 +113,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.google.ai.edge.gallery.GalleryEvent
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.ModelDownloadStatusType
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.firebaseAnalytics
-import com.google.ai.edge.gallery.ui.common.MarkdownText
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageWarning
-import com.google.ai.edge.gallery.ui.common.chat.MessageBodyLoading
-import com.google.ai.edge.gallery.ui.common.chat.MessageBodyWarning
-import com.google.ai.edge.gallery.ui.common.getTaskBgGradientColors
-import com.google.ai.edge.gallery.ui.common.getTaskIconColor
-import com.google.ai.edge.gallery.ui.common.textandvoiceinput.HoldToDictateViewModel
-import com.google.ai.edge.gallery.ui.common.textandvoiceinput.TextAndVoiceInput
-import com.google.ai.edge.gallery.ui.common.textandvoiceinput.VoiceRecognizerOverlay
-import com.google.ai.edge.gallery.ui.modelmanager.ModelInitializationStatus
-import com.google.ai.edge.gallery.ui.modelmanager.ModelInitializationStatusType
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.AnalyticsEvent
+import selfgemma.talk.R
+import selfgemma.talk.data.ModelDownloadStatusType
+import selfgemma.talk.data.Task
+import selfgemma.talk.firebaseAnalytics
+import selfgemma.talk.ui.common.MarkdownText
+import selfgemma.talk.ui.common.chat.ChatMessageWarning
+import selfgemma.talk.ui.common.chat.MessageBodyLoading
+import selfgemma.talk.ui.common.chat.MessageBodyWarning
+import selfgemma.talk.ui.common.getTaskBgGradientColors
+import selfgemma.talk.ui.common.getTaskIconColor
+import selfgemma.talk.ui.common.textandvoiceinput.HoldToDictateViewModel
+import selfgemma.talk.ui.common.textandvoiceinput.TextAndVoiceInput
+import selfgemma.talk.ui.common.textandvoiceinput.VoiceRecognizerOverlay
+import selfgemma.talk.ui.modelmanager.ModelInitializationStatus
+import selfgemma.talk.ui.modelmanager.ModelInitializationStatusType
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import com.google.ai.edge.litertlm.ToolProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -411,7 +411,7 @@ fun MainUi(
       )
 
       firebaseAnalytics?.logEvent(
-        GalleryEvent.GENERATE_ACTION.id,
+        AnalyticsEvent.GENERATE_ACTION.id,
         Bundle().apply {
           putString("capability_name", task.id)
           putString("model_id", model.name)

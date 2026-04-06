@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.ai.edge.gallery.customtasks.mobileactions
+package selfgemma.talk.customtasks.mobileactions
 
-import com.google.ai.edge.gallery.customtasks.common.CustomTask
+import selfgemma.talk.customtasks.common.CustomTask
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

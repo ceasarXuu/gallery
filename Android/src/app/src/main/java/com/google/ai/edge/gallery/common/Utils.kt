@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.common
+package selfgemma.talk.common
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -36,7 +36,7 @@ import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.exifinterface.media.ExifInterface
-import com.google.ai.edge.gallery.data.SAMPLE_RATE
+import selfgemma.talk.data.SAMPLE_RATE
 import com.google.gson.Gson
 import java.io.File
 import java.io.FileInputStream

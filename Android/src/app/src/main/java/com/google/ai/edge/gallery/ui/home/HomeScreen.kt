@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.home
+package selfgemma.talk.ui.home
 
 // import androidx.compose.ui.tooling.preview.Preview
 // import com.google.ai.edge.gallery.ui.theme.GalleryTheme
@@ -112,24 +112,24 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.google.ai.edge.gallery.GalleryTopAppBar
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.AppBarAction
-import com.google.ai.edge.gallery.data.AppBarActionType
-import com.google.ai.edge.gallery.data.BuiltInTaskId
-import com.google.ai.edge.gallery.data.Category
-import com.google.ai.edge.gallery.data.CategoryInfo
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.RevealingText
-import com.google.ai.edge.gallery.ui.common.SwipingText
-import com.google.ai.edge.gallery.ui.common.TaskIcon
-import com.google.ai.edge.gallery.ui.common.buildTrackableUrlAnnotatedString
-import com.google.ai.edge.gallery.ui.common.rememberDelayedAnimationProgress
-import com.google.ai.edge.gallery.ui.common.tos.AppTosDialog
-import com.google.ai.edge.gallery.ui.common.tos.TosViewModel
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.customColors
-import com.google.ai.edge.gallery.ui.theme.homePageTitleStyle
+import selfgemma.talk.AppTopBar
+import selfgemma.talk.R
+import selfgemma.talk.data.AppBarAction
+import selfgemma.talk.data.AppBarActionType
+import selfgemma.talk.data.BuiltInTaskId
+import selfgemma.talk.data.Category
+import selfgemma.talk.data.CategoryInfo
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.RevealingText
+import selfgemma.talk.ui.common.SwipingText
+import selfgemma.talk.ui.common.TaskIcon
+import selfgemma.talk.ui.common.buildTrackableUrlAnnotatedString
+import selfgemma.talk.ui.common.rememberDelayedAnimationProgress
+import selfgemma.talk.ui.common.tos.AppTosDialog
+import selfgemma.talk.ui.common.tos.TosViewModel
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.customColors
+import selfgemma.talk.ui.theme.homePageTitleStyle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -351,7 +351,7 @@ fun HomeScreen(
                   translationY = ((-16).dp * (1 - progress)).toPx()
                 }
             ) {
-              GalleryTopAppBar(
+              AppTopBar(
                 title = stringResource(HomeScreenDestination.titleRes),
                 leftAction =
                   AppBarAction(
@@ -579,7 +579,7 @@ private fun AppTitle(enableAnimation: Boolean) {
       animationDurationMs = if (enableAnimation) TITLE_FIRST_LINE_ANIMATION_DURATION else 0,
     )
   }
-  // Second line text "Edge Gallery" and its animation.
+  // Second line text and its animation.
   //
   // The initial animation is the same as the first line text. Right before it is done, the final
   // text with a gradient is revealed.
@@ -620,8 +620,8 @@ private fun AppTitle(enableAnimation: Boolean) {
 
 @Composable
 fun AppTitleGm4(enableAnimation: Boolean) {
-  val text1 = "Google"
-  val text2 = "AI Edge Gallery"
+  val text1 = "SelfGemma"
+  val text2 = "Talk"
   val annotatedText = buildAnnotatedString {
     withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSurface)) { append(text1) }
     append(" ")

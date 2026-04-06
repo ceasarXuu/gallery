@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.benchmark
+package selfgemma.talk.ui.benchmark
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.home
+package selfgemma.talk.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,8 +40,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.ui.common.buildTrackableUrlAnnotatedString
+import selfgemma.talk.R
+import selfgemma.talk.ui.common.buildTrackableUrlAnnotatedString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

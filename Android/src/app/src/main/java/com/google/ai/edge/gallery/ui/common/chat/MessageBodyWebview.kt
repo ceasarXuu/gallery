@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common.chat
+package selfgemma.talk.ui.common.chat
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,8 +47,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.ui.common.GalleryWebView
+import selfgemma.talk.R
+import selfgemma.talk.ui.common.AppWebView
 import kotlinx.coroutines.launch
 
 private const val TAG = "AGMessageBodyWebview"
@@ -62,7 +62,7 @@ fun MessageBodyWebview(message: ChatMessageWebView, modifier: Modifier = Modifie
   val scope = rememberCoroutineScope()
 
   Column(modifier = modifier) {
-    GalleryWebView(
+    AppWebView(
       modifier = Modifier.fillMaxWidth().aspectRatio(message.aspectRatio),
       initialUrl = message.url,
       useIframeWrapper = message.iframe,
@@ -90,7 +90,7 @@ fun MessageBodyWebview(message: ChatMessageWebView, modifier: Modifier = Modifie
       modifier = Modifier.fillMaxSize(),
     ) {
       Box(modifier = Modifier.fillMaxSize()) {
-        GalleryWebView(
+        AppWebView(
           modifier = Modifier.fillMaxSize(),
           initialUrl = message.url,
           useIframeWrapper = message.iframe,

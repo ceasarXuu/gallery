@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.modelmanager
+package selfgemma.talk.ui.modelmanager
 
 import android.content.Context
 import android.util.Log
@@ -22,36 +22,36 @@ import androidx.activity.result.ActivityResult
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.ai.edge.gallery.AppLifecycleProvider
-import com.google.ai.edge.gallery.BuildConfig
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.common.ProjectConfig
-import com.google.ai.edge.gallery.common.getJsonResponse
-import com.google.ai.edge.gallery.customtasks.common.CustomTask
-import com.google.ai.edge.gallery.data.Accelerator
-import com.google.ai.edge.gallery.data.BuiltInTaskId
-import com.google.ai.edge.gallery.data.Category
-import com.google.ai.edge.gallery.data.CategoryInfo
-import com.google.ai.edge.gallery.data.Config
-import com.google.ai.edge.gallery.data.ConfigKeys
-import com.google.ai.edge.gallery.data.DataStoreRepository
-import com.google.ai.edge.gallery.data.DownloadRepository
-import com.google.ai.edge.gallery.data.EMPTY_MODEL
-import com.google.ai.edge.gallery.data.IMPORTS_DIR
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.ModelAllowlist
-import com.google.ai.edge.gallery.data.ModelDownloadStatus
-import com.google.ai.edge.gallery.data.ModelDownloadStatusType
-import com.google.ai.edge.gallery.data.NumberSliderConfig
-import com.google.ai.edge.gallery.data.RuntimeType
-import com.google.ai.edge.gallery.data.SOC
-import com.google.ai.edge.gallery.data.TMP_FILE_EXT
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.data.ValueType
-import com.google.ai.edge.gallery.data.createLlmChatConfigs
-import com.google.ai.edge.gallery.proto.AccessTokenData
-import com.google.ai.edge.gallery.proto.ImportedModel
-import com.google.ai.edge.gallery.proto.Theme
+import selfgemma.talk.AppLifecycleProvider
+import selfgemma.talk.BuildConfig
+import selfgemma.talk.R
+import selfgemma.talk.common.ProjectConfig
+import selfgemma.talk.common.getJsonResponse
+import selfgemma.talk.customtasks.common.CustomTask
+import selfgemma.talk.data.Accelerator
+import selfgemma.talk.data.BuiltInTaskId
+import selfgemma.talk.data.Category
+import selfgemma.talk.data.CategoryInfo
+import selfgemma.talk.data.Config
+import selfgemma.talk.data.ConfigKeys
+import selfgemma.talk.data.DataStoreRepository
+import selfgemma.talk.data.DownloadRepository
+import selfgemma.talk.data.EMPTY_MODEL
+import selfgemma.talk.data.IMPORTS_DIR
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.ModelAllowlist
+import selfgemma.talk.data.ModelDownloadStatus
+import selfgemma.talk.data.ModelDownloadStatusType
+import selfgemma.talk.data.NumberSliderConfig
+import selfgemma.talk.data.RuntimeType
+import selfgemma.talk.data.SOC
+import selfgemma.talk.data.TMP_FILE_EXT
+import selfgemma.talk.data.Task
+import selfgemma.talk.data.ValueType
+import selfgemma.talk.data.createLlmChatConfigs
+import selfgemma.talk.proto.AccessTokenData
+import selfgemma.talk.proto.ImportedModel
+import selfgemma.talk.proto.Theme
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -74,8 +74,8 @@ import net.openid.appauth.ResponseTypeValues
 
 private const val TAG = "AGModelManagerViewModel"
 private const val TEXT_INPUT_HISTORY_MAX_SIZE = 50
-private const val MODEL_ALLOWLIST_FILENAME = "model_allowlist.json"
-private const val MODEL_ALLOWLIST_TEST_FILENAME = "model_allowlist_test.json"
+private const val MODEL_ALLOWLIST_FILENAME = "selfgemma_talk_model_allowlist.json"
+private const val MODEL_ALLOWLIST_TEST_FILENAME = "selfgemma_talk_model_allowlist_test.json"
 private const val ALLOWLIST_BASE_URL =
   "https://raw.githubusercontent.com/google-ai-edge/gallery/refs/heads/main/model_allowlists"
 

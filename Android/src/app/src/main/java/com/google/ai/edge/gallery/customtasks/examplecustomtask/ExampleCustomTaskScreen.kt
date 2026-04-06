@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.customtasks.examplecustomtask
+package selfgemma.talk.customtasks.examplecustomtask
 
 import androidx.hilt.navigation.compose.hiltViewModel
 
@@ -50,10 +50,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.ai.edge.gallery.data.ConfigKey
-import com.google.ai.edge.gallery.data.NumberSliderConfig
-import com.google.ai.edge.gallery.data.ValueType
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.data.ConfigKey
+import selfgemma.talk.data.NumberSliderConfig
+import selfgemma.talk.data.ValueType
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 
 data class ExampleCustomTaskModelInstance(val content: String)
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery
+package selfgemma.talk
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -28,7 +28,7 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
-class GalleryFcmMessagingService : FirebaseMessagingService() {
+class SelfGemmaTalkFcmMessagingService : FirebaseMessagingService() {
   override fun onMessageReceived(remoteMessage: RemoteMessage) {
     // TODO(developer): Handle FCM messages here.
     // Not getting messages here? See why this may be: https://goo.gl/39bRNJ
@@ -66,7 +66,7 @@ class GalleryFcmMessagingService : FirebaseMessagingService() {
     val pendingIntent =
       PendingIntent.getActivity(this, requestCode, intent, PendingIntent.FLAG_IMMUTABLE)
 
-    val channelId = "gallery_high_priority_push_channel"
+    val channelId = "selfgemma_talk_high_priority_channel"
     val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
     val notificationBuilder =
       NotificationCompat.Builder(this, channelId)

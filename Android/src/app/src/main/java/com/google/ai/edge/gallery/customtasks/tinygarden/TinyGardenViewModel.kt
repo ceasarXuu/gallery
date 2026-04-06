@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.customtasks.tinygarden
+package selfgemma.talk.customtasks.tinygarden
 
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.DataStoreRepository
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessage
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageText
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageWarning
-import com.google.ai.edge.gallery.ui.common.chat.ChatSide
-import com.google.ai.edge.gallery.ui.llmchat.LlmChatModelHelper
-import com.google.ai.edge.gallery.ui.llmchat.LlmModelInstance
+import selfgemma.talk.R
+import selfgemma.talk.data.DataStoreRepository
+import selfgemma.talk.data.Model
+import selfgemma.talk.ui.common.chat.ChatMessage
+import selfgemma.talk.ui.common.chat.ChatMessageText
+import selfgemma.talk.ui.common.chat.ChatMessageWarning
+import selfgemma.talk.ui.common.chat.ChatSide
+import selfgemma.talk.ui.llmchat.LlmChatModelHelper
+import selfgemma.talk.ui.llmchat.LlmModelInstance
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.ToolProvider

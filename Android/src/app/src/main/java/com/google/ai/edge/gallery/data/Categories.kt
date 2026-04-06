@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.data
+package selfgemma.talk.data
 
 import androidx.annotation.StringRes
-import com.google.ai.edge.gallery.R
+import selfgemma.talk.R
 
 /**
  * Stores basic info about a Category

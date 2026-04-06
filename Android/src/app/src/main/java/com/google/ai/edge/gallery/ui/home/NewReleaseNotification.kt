@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.home
+package selfgemma.talk.ui.home
 
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
@@ -44,9 +44,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.ai.edge.gallery.BuildConfig
-import com.google.ai.edge.gallery.common.getJsonResponse
-import com.google.ai.edge.gallery.ui.common.ClickableLink
+import selfgemma.talk.BuildConfig
+import selfgemma.talk.common.getJsonResponse
+import selfgemma.talk.ui.common.ClickableLink
 import kotlin.math.max
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

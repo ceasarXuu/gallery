@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.theme
+package selfgemma.talk.ui.theme
 
 import androidx.compose.ui.text.font.Font
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.google.ai.edge.gallery.R
+import selfgemma.talk.R
 
 val appFontFamily =
   FontFamily(

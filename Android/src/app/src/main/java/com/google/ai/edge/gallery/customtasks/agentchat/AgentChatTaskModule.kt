@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.customtasks.agentchat
+package selfgemma.talk.customtasks.agentchat
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.customtasks.common.CustomTask
-import com.google.ai.edge.gallery.customtasks.common.CustomTaskDataForBuiltinTask
-import com.google.ai.edge.gallery.data.BuiltInTaskId
-import com.google.ai.edge.gallery.data.Category
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.llmchat.LlmChatModelHelper
+import selfgemma.talk.R
+import selfgemma.talk.customtasks.common.CustomTask
+import selfgemma.talk.customtasks.common.CustomTaskDataForBuiltinTask
+import selfgemma.talk.data.BuiltInTaskId
+import selfgemma.talk.data.Category
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.llmchat.LlmChatModelHelper
 import com.google.ai.edge.litertlm.tool
 import dagger.Module
 import dagger.Provides

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.modelmanager
+package selfgemma.talk.ui.modelmanager
 
 // import androidx.compose.ui.tooling.preview.Preview
 // import com.google.ai.edge.gallery.ui.preview.PreviewModelManagerViewModel
@@ -61,18 +61,18 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.ClickableLink
-import com.google.ai.edge.gallery.ui.common.RevealingText
-import com.google.ai.edge.gallery.ui.common.TaskIcon
-import com.google.ai.edge.gallery.ui.common.getTaskBgColor
-import com.google.ai.edge.gallery.ui.common.getTaskBgGradientColors
-import com.google.ai.edge.gallery.ui.common.modelitem.ModelItem
-import com.google.ai.edge.gallery.ui.common.rememberDelayedAnimationProgress
-import com.google.ai.edge.gallery.ui.theme.bodyLargeNarrow
-import com.google.ai.edge.gallery.ui.theme.headlineLargeMedium
+import selfgemma.talk.R
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.ClickableLink
+import selfgemma.talk.ui.common.RevealingText
+import selfgemma.talk.ui.common.TaskIcon
+import selfgemma.talk.ui.common.getTaskBgColor
+import selfgemma.talk.ui.common.getTaskBgGradientColors
+import selfgemma.talk.ui.common.modelitem.ModelItem
+import selfgemma.talk.ui.common.rememberDelayedAnimationProgress
+import selfgemma.talk.ui.theme.bodyLargeNarrow
+import selfgemma.talk.ui.theme.headlineLargeMedium
 
 private const val TAG = "AGModelList"
 private val CONTENT_ANIMATION_OFFSET = 16.dp

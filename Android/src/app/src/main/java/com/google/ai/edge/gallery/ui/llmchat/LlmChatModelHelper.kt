@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.llmchat
+package selfgemma.talk.ui.llmchat
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
-import com.google.ai.edge.gallery.common.cleanUpMediapipeTaskErrorMessage
-import com.google.ai.edge.gallery.data.Accelerator
-import com.google.ai.edge.gallery.data.ConfigKeys
-import com.google.ai.edge.gallery.data.DEFAULT_MAX_TOKEN
-import com.google.ai.edge.gallery.data.DEFAULT_TEMPERATURE
-import com.google.ai.edge.gallery.data.DEFAULT_TOPK
-import com.google.ai.edge.gallery.data.DEFAULT_TOPP
-import com.google.ai.edge.gallery.data.DEFAULT_VISION_ACCELERATOR
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.runtime.CleanUpListener
-import com.google.ai.edge.gallery.runtime.LlmModelHelper
-import com.google.ai.edge.gallery.runtime.ResultListener
+import selfgemma.talk.common.cleanUpMediapipeTaskErrorMessage
+import selfgemma.talk.data.Accelerator
+import selfgemma.talk.data.ConfigKeys
+import selfgemma.talk.data.DEFAULT_MAX_TOKEN
+import selfgemma.talk.data.DEFAULT_TEMPERATURE
+import selfgemma.talk.data.DEFAULT_TOPK
+import selfgemma.talk.data.DEFAULT_TOPP
+import selfgemma.talk.data.DEFAULT_VISION_ACCELERATOR
+import selfgemma.talk.data.Model
+import selfgemma.talk.runtime.CleanUpListener
+import selfgemma.talk.runtime.LlmModelHelper
+import selfgemma.talk.runtime.ResultListener
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents

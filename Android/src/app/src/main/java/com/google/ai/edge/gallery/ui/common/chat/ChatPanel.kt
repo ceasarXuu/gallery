@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common.chat
+package selfgemma.talk.ui.common.chat
 
 import android.graphics.Bitmap
 import androidx.compose.animation.AnimatedVisibility
@@ -53,6 +53,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -67,6 +68,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -85,17 +89,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.BuiltInTaskId
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.AudioAnimation
-import com.google.ai.edge.gallery.ui.common.ErrorDialog
-import com.google.ai.edge.gallery.ui.common.FloatingBanner
-import com.google.ai.edge.gallery.ui.common.RotationalLoader
-import com.google.ai.edge.gallery.ui.modelmanager.ModelInitializationStatusType
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.customColors
+import selfgemma.talk.R
+import selfgemma.talk.data.BuiltInTaskId
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.AudioAnimation
+import selfgemma.talk.ui.common.ErrorDialog
+import selfgemma.talk.ui.common.FloatingBanner
+import selfgemma.talk.ui.common.RotationalLoader
+import selfgemma.talk.ui.modelmanager.ModelInitializationStatusType
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.customColors
 import kotlinx.coroutines.delay
 
 /** Composable function for the main chat panel, displaying messages and handling user input. */
@@ -499,30 +503,81 @@ fun ChatPanel(
         ) {
           AnimatedVisibility(
             isFirstInitializing,
-            enter = fadeIn() + scaleIn(initialScale = 0.9f),
-            exit = fadeOut() + scaleOut(targetScale = 0.9f),
+            enter = fadeIn(
+              animationSpec = spring(
+                stiffness = Spring.StiffnessMediumLow,
+                dampingRatio = Spring.DampingRatioLowBouncy
+              )
+            ) + scaleIn(
+              animationSpec = spring(
+                stiffness = Spring.StiffnessMediumLow,
+                dampingRatio = Spring.DampingRatioLowBouncy
+              ),
+              initialScale = 0.8f
+            ) + slideInVertically(
+              animationSpec = spring(
+                stiffness = Spring.StiffnessMediumLow,
+                dampingRatio = Spring.DampingRatioMediumBouncy
+              ),
+              initialOffsetY = { it / 4 }
+            ),
+            exit = fadeOut(
+              animationSpec = spring(stiffness = Spring.StiffnessHigh)
+            ) + scaleOut(
+              targetScale = 0.9f,
+              animationSpec = spring(stiffness = Spring.StiffnessHigh)
+            )
           ) {
-            Box(modifier = Modifier.background(MaterialTheme.colorScheme.surface).fillMaxSize()) {
+            Surface(
+              shape = RoundedCornerShape(24.dp),
+              tonalElevation = 2.dp,
+              shadowElevation = 3.dp,
+              color = MaterialTheme.colorScheme.surfaceContainerLowest,
+              modifier = Modifier
+                .fillMaxSize()
+                .shadow(
+                  elevation = 6.dp,
+                  shape = RoundedCornerShape(24.dp),
+                  ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                  spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.04f)
+                )
+            ) {
               Column(
-                modifier = Modifier.align(Alignment.Center),
+                modifier = Modifier.padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
               ) {
-                RotationalLoader(size = 32.dp)
+                Box(
+                  contentAlignment = Alignment.Center,
+                  modifier = Modifier.size(80.dp)
+                ) {
+                  RotationalLoader(size = 40.dp)
+                }
+
                 Text(
                   stringResource(R.string.aichat_initializing_title),
                   style =
                     MaterialTheme.typography.headlineLarge.copy(
-                      fontSize = 24.sp,
+                      fontSize = 26.sp,
                       fontWeight = FontWeight.Bold,
                     ),
+                  color = MaterialTheme.colorScheme.onSurface,
                 )
-                Text(
-                  stringResource(R.string.aichat_initializing_content),
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  textAlign = TextAlign.Center,
-                )
+
+                Surface(
+                  shape = RoundedCornerShape(16.dp),
+                  color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                  modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                  Text(
+                    stringResource(R.string.aichat_initializing_content),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 20.dp),
+                    lineHeight = 22.sp,
+                  )
+                }
               }
             }
           }

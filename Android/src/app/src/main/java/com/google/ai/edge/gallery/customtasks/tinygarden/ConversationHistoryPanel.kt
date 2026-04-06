@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.ai.edge.gallery.customtasks.tinygarden
+package selfgemma.talk.customtasks.tinygarden
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -43,18 +43,18 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageError
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageText
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageWarning
-import com.google.ai.edge.gallery.ui.common.chat.ChatSide
-import com.google.ai.edge.gallery.ui.common.chat.MessageBodyError
-import com.google.ai.edge.gallery.ui.common.chat.MessageBodyText
-import com.google.ai.edge.gallery.ui.common.chat.MessageBodyWarning
-import com.google.ai.edge.gallery.ui.common.chat.MessageBubbleShape
-import com.google.ai.edge.gallery.ui.common.chat.MessageSender
-import com.google.ai.edge.gallery.ui.theme.customColors
+import selfgemma.talk.R
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.chat.ChatMessageError
+import selfgemma.talk.ui.common.chat.ChatMessageText
+import selfgemma.talk.ui.common.chat.ChatMessageWarning
+import selfgemma.talk.ui.common.chat.ChatSide
+import selfgemma.talk.ui.common.chat.MessageBodyError
+import selfgemma.talk.ui.common.chat.MessageBodyText
+import selfgemma.talk.ui.common.chat.MessageBodyWarning
+import selfgemma.talk.ui.common.chat.MessageBubbleShape
+import selfgemma.talk.ui.common.chat.MessageSender
+import selfgemma.talk.ui.theme.customColors
 
 /** A panel to show the conversation history. */
 @Composable

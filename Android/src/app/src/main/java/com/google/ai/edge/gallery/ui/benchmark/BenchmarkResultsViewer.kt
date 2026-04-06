@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.benchmark
+package selfgemma.talk.ui.benchmark
 
 import android.content.ClipData
 import androidx.activity.compose.BackHandler
@@ -95,14 +95,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.proto.LlmBenchmarkResult
-import com.google.ai.edge.gallery.proto.ValueSeries
-import com.google.ai.edge.gallery.ui.common.Accordions
-import com.google.ai.edge.gallery.ui.common.MarkdownText
-import com.google.ai.edge.gallery.ui.common.SMALL_BUTTON_CONTENT_PADDING
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.customColors
+import selfgemma.talk.R
+import selfgemma.talk.proto.LlmBenchmarkResult
+import selfgemma.talk.proto.ValueSeries
+import selfgemma.talk.ui.common.Accordions
+import selfgemma.talk.ui.common.MarkdownText
+import selfgemma.talk.ui.common.SMALL_BUTTON_CONTENT_PADDING
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.customColors
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

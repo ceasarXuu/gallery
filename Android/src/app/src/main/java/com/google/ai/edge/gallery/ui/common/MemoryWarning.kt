@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common
+package selfgemma.talk.ui.common
 
 import android.app.ActivityManager
 import android.content.Context
@@ -25,8 +25,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.Model
+import selfgemma.talk.R
+import selfgemma.talk.data.Model
 
 private const val TAG = "AGMemoryWarning"
 private const val BYTES_IN_GB = 1024f * 1024 * 1024

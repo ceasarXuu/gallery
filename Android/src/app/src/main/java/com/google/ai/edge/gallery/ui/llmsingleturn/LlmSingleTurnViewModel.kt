@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.llmsingleturn
+package selfgemma.talk.ui.llmsingleturn
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.ai.edge.gallery.common.processLlmResponse
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.runtime.runtimeHelper
+import selfgemma.talk.common.processLlmResponse
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.Task
+import selfgemma.talk.runtime.runtimeHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -67,10 +67,10 @@ class LlmSingleTurnViewModel @Inject constructor() : ViewModel() {
 
       val supportImage =
         model.llmSupportImage &&
-          task.id == com.google.ai.edge.gallery.data.BuiltInTaskId.LLM_ASK_IMAGE
+          task.id == selfgemma.talk.data.BuiltInTaskId.LLM_ASK_IMAGE
       val supportAudio =
         model.llmSupportAudio &&
-          task.id == com.google.ai.edge.gallery.data.BuiltInTaskId.LLM_ASK_AUDIO
+          task.id == selfgemma.talk.data.BuiltInTaskId.LLM_ASK_AUDIO
       model.runtimeHelper.resetConversation(
         model = model,
         supportImage = supportImage,

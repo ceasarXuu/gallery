@@ -1,0 +1,68 @@
+package selfgemma.talk.domain.roleplay.repository
+
+import kotlinx.coroutines.flow.Flow
+import selfgemma.talk.domain.roleplay.model.MemoryItem
+import selfgemma.talk.domain.roleplay.model.Message
+import selfgemma.talk.domain.roleplay.model.RoleCard
+import selfgemma.talk.domain.roleplay.model.Session
+import selfgemma.talk.domain.roleplay.model.SessionEvent
+import selfgemma.talk.domain.roleplay.model.SessionSummary
+
+interface ConversationRepository {
+  fun observeSessions(): Flow<List<Session>>
+
+  fun observeMessages(sessionId: String): Flow<List<Message>>
+
+  suspend fun getSession(sessionId: String): Session?
+
+  suspend fun createSession(roleId: String, modelId: String): Session
+
+  suspend fun updateSession(session: Session)
+
+  suspend fun archiveSession(sessionId: String)
+
+  suspend fun deleteSession(sessionId: String)
+
+  suspend fun appendMessage(message: Message)
+
+  suspend fun updateMessage(message: Message)
+
+  suspend fun nextMessageSeq(sessionId: String): Int
+
+  suspend fun getSummary(sessionId: String): SessionSummary?
+
+  suspend fun upsertSummary(summary: SessionSummary)
+
+  suspend fun listEvents(sessionId: String): List<SessionEvent>
+
+  suspend fun appendEvent(event: SessionEvent)
+}
+
+interface RoleRepository {
+  fun observeRoles(): Flow<List<RoleCard>>
+
+  suspend fun getRole(roleId: String): RoleCard?
+
+  suspend fun saveRole(role: RoleCard)
+
+  suspend fun deleteRole(roleId: String)
+}
+
+interface MemoryRepository {
+  suspend fun listRoleMemories(roleId: String): List<MemoryItem>
+
+  suspend fun listSessionMemories(sessionId: String): List<MemoryItem>
+
+  suspend fun upsert(memory: MemoryItem)
+
+  suspend fun deactivate(memoryId: String)
+
+  suspend fun markUsed(memoryIds: List<String>, usedAt: Long)
+
+  suspend fun searchRelevant(
+    roleId: String,
+    sessionId: String?,
+    query: String,
+    limit: Int,
+  ): List<MemoryItem>
+}

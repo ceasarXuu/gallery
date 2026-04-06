@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.llmchat
+package selfgemma.talk.ui.llmchat
 
 import androidx.hilt.navigation.compose.hiltViewModel
 
@@ -34,21 +34,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
-import com.google.ai.edge.gallery.GalleryEvent
-import com.google.ai.edge.gallery.R
-import com.google.ai.edge.gallery.data.BuiltInTaskId
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.RuntimeType
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.firebaseAnalytics
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageAudioClip
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageImage
-import com.google.ai.edge.gallery.ui.common.chat.ChatMessageText
-import com.google.ai.edge.gallery.ui.common.chat.ChatView
-import com.google.ai.edge.gallery.ui.common.chat.SendMessageTrigger
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.emptyStateContent
-import com.google.ai.edge.gallery.ui.theme.emptyStateTitle
+import selfgemma.talk.AnalyticsEvent
+import selfgemma.talk.R
+import selfgemma.talk.data.BuiltInTaskId
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.RuntimeType
+import selfgemma.talk.data.Task
+import selfgemma.talk.firebaseAnalytics
+import selfgemma.talk.ui.common.chat.ChatMessageAudioClip
+import selfgemma.talk.ui.common.chat.ChatMessageImage
+import selfgemma.talk.ui.common.chat.ChatMessageText
+import selfgemma.talk.ui.common.chat.ChatView
+import selfgemma.talk.ui.common.chat.SendMessageTrigger
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.emptyStateContent
+import selfgemma.talk.ui.theme.emptyStateTitle
 
 private const val TAG = "AGLlmChatScreen"
 
@@ -237,7 +237,7 @@ fun ChatViewWrapper(
         )
 
         firebaseAnalytics?.logEvent(
-          GalleryEvent.GENERATE_ACTION.id,
+          AnalyticsEvent.GENERATE_ACTION.id,
           bundleOf("capability_name" to task.id, "model_id" to model.name),
         )
       }

@@ -14,29 +14,29 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.di
+package selfgemma.talk.di
 
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.Serializer
 import androidx.datastore.dataStoreFile
-import com.google.ai.edge.gallery.AppLifecycleProvider
-import com.google.ai.edge.gallery.BenchmarkResultsSerializer
-import com.google.ai.edge.gallery.CutoutsSerializer
-import com.google.ai.edge.gallery.GalleryLifecycleProvider
-import com.google.ai.edge.gallery.SettingsSerializer
-import com.google.ai.edge.gallery.SkillsSerializer
-import com.google.ai.edge.gallery.UserDataSerializer
-import com.google.ai.edge.gallery.data.DataStoreRepository
-import com.google.ai.edge.gallery.data.DefaultDataStoreRepository
-import com.google.ai.edge.gallery.data.DefaultDownloadRepository
-import com.google.ai.edge.gallery.data.DownloadRepository
-import com.google.ai.edge.gallery.proto.BenchmarkResults
-import com.google.ai.edge.gallery.proto.CutoutCollection
-import com.google.ai.edge.gallery.proto.Settings
-import com.google.ai.edge.gallery.proto.Skills
-import com.google.ai.edge.gallery.proto.UserData
+import selfgemma.talk.AppLifecycleProvider
+import selfgemma.talk.BenchmarkResultsSerializer
+import selfgemma.talk.CutoutsSerializer
+import selfgemma.talk.DefaultAppLifecycleProvider
+import selfgemma.talk.SettingsSerializer
+import selfgemma.talk.SkillsSerializer
+import selfgemma.talk.UserDataSerializer
+import selfgemma.talk.data.DataStoreRepository
+import selfgemma.talk.data.DefaultDataStoreRepository
+import selfgemma.talk.data.DefaultDownloadRepository
+import selfgemma.talk.data.DownloadRepository
+import selfgemma.talk.proto.BenchmarkResults
+import selfgemma.talk.proto.CutoutCollection
+import selfgemma.talk.proto.Settings
+import selfgemma.talk.proto.Skills
+import selfgemma.talk.proto.UserData
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -92,7 +92,7 @@ internal object AppModule {
   ): DataStore<Settings> {
     return DataStoreFactory.create(
       serializer = settingsSerializer,
-      produceFile = { context.dataStoreFile("settings.pb") },
+      produceFile = { context.dataStoreFile("selfgemma_talk_settings.pb") },
     )
   }
 
@@ -105,7 +105,7 @@ internal object AppModule {
   ): DataStore<CutoutCollection> {
     return DataStoreFactory.create(
       serializer = cutoutsSerializer,
-      produceFile = { context.dataStoreFile("cutouts.pb") },
+      produceFile = { context.dataStoreFile("selfgemma_talk_cutouts.pb") },
     )
   }
 
@@ -118,7 +118,7 @@ internal object AppModule {
   ): DataStore<UserData> {
     return DataStoreFactory.create(
       serializer = userDataSerializer,
-      produceFile = { context.dataStoreFile("user_data.pb") },
+      produceFile = { context.dataStoreFile("selfgemma_talk_user_data.pb") },
     )
   }
 
@@ -131,7 +131,7 @@ internal object AppModule {
   ): DataStore<BenchmarkResults> {
     return DataStoreFactory.create(
       serializer = benchmarkResultsSerializer,
-      produceFile = { context.dataStoreFile("benchmark_results.pb") },
+      produceFile = { context.dataStoreFile("selfgemma_talk_benchmark_results.pb") },
     )
   }
 
@@ -144,7 +144,7 @@ internal object AppModule {
   ): DataStore<Skills> {
     return DataStoreFactory.create(
       serializer = skillsSerializer,
-      produceFile = { context.dataStoreFile("skills.pb") },
+      produceFile = { context.dataStoreFile("selfgemma_talk_skills.pb") },
     )
   }
 
@@ -152,7 +152,7 @@ internal object AppModule {
   @Provides
   @Singleton
   fun provideAppLifecycleProvider(): AppLifecycleProvider {
-    return GalleryLifecycleProvider()
+    return DefaultAppLifecycleProvider()
   }
 
   // Provides DataStoreRepository

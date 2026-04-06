@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.common.chat
+package selfgemma.talk.ui.common.chat
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,14 +33,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.google.ai.edge.gallery.data.Model
-import com.google.ai.edge.gallery.data.ModelDownloadStatusType
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.ui.common.RotationalLoader
-import com.google.ai.edge.gallery.ui.common.formatToHourMinSecond
-import com.google.ai.edge.gallery.ui.common.humanReadableSize
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
-import com.google.ai.edge.gallery.ui.theme.labelSmallNarrow
+import selfgemma.talk.data.Model
+import selfgemma.talk.data.ModelDownloadStatusType
+import selfgemma.talk.data.Task
+import selfgemma.talk.ui.common.RotationalLoader
+import selfgemma.talk.ui.common.formatToHourMinSecond
+import selfgemma.talk.ui.common.humanReadableSize
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.ui.theme.labelSmallNarrow
 
 /**
  * Composable function to display a loading animation using a 2x2 grid of images with a synchronized

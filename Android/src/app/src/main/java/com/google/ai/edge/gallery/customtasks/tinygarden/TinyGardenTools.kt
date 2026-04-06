@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.ai.edge.gallery.customtasks.tinygarden
+package selfgemma.talk.customtasks.tinygarden
 
 import android.util.Log
 import com.google.ai.edge.litertlm.Tool
@@ -77,7 +77,7 @@ class TinyGardenTools(val onFunctionCalled: (command: TinyGardenCommand) -> Unit
         "daisy" -> TinyGardenItem.DAISY.ordinal
         "rose" -> TinyGardenItem.ROSE.ordinal
         "special",
-        "edge gallery",
+        "selfgemma talk",
         "secret" -> TinyGardenItem.SPECIAL.ordinal
         else -> -1
       } + 1

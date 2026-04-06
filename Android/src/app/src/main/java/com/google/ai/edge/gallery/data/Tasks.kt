@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.data
+package selfgemma.talk.data
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.google.ai.edge.gallery.R
+import selfgemma.talk.R
 
 /**
  * Data class for a task displayed on the home screen

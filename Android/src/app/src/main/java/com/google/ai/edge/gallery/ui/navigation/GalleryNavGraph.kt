@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.ai.edge.gallery.ui.navigation
+package selfgemma.talk.ui.navigation
 
 import android.os.Bundle
 import android.util.Log
@@ -69,28 +69,35 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.google.ai.edge.gallery.GalleryEvent
-import com.google.ai.edge.gallery.customtasks.common.CustomTaskData
-import com.google.ai.edge.gallery.customtasks.common.CustomTaskDataForBuiltinTask
-import com.google.ai.edge.gallery.data.ModelDownloadStatusType
-import com.google.ai.edge.gallery.data.Task
-import com.google.ai.edge.gallery.data.isLegacyTasks
-import com.google.ai.edge.gallery.firebaseAnalytics
-import com.google.ai.edge.gallery.ui.benchmark.BenchmarkScreen
-import com.google.ai.edge.gallery.ui.common.ErrorDialog
-import com.google.ai.edge.gallery.ui.common.ModelPageAppBar
-import com.google.ai.edge.gallery.ui.common.chat.ModelDownloadStatusInfoPanel
-import com.google.ai.edge.gallery.ui.home.HomeScreen
-import com.google.ai.edge.gallery.ui.home.PromoScreenGm4
-import com.google.ai.edge.gallery.ui.modelmanager.GlobalModelManager
-import com.google.ai.edge.gallery.ui.modelmanager.ModelInitializationStatusType
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManager
-import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.feature.roleplay.chat.RoleplayChatScreen
+import selfgemma.talk.feature.roleplay.navigation.RoleplayRoutes
+import selfgemma.talk.feature.roleplay.roles.RoleEditorScreen
+import selfgemma.talk.feature.roleplay.roles.RoleCatalogScreen
+import selfgemma.talk.feature.roleplay.maintab.MainTabScreen
+import selfgemma.talk.feature.roleplay.sessions.SessionsScreen
+import selfgemma.talk.feature.roleplay.settings.RoleplaySettingsScreen
+import selfgemma.talk.AnalyticsEvent
+import selfgemma.talk.customtasks.common.CustomTaskData
+import selfgemma.talk.customtasks.common.CustomTaskDataForBuiltinTask
+import selfgemma.talk.data.ModelDownloadStatusType
+import selfgemma.talk.data.Task
+import selfgemma.talk.data.isLegacyTasks
+import selfgemma.talk.firebaseAnalytics
+import selfgemma.talk.ui.benchmark.BenchmarkScreen
+import selfgemma.talk.ui.common.ErrorDialog
+import selfgemma.talk.ui.common.ModelPageAppBar
+import selfgemma.talk.ui.common.chat.ModelDownloadStatusInfoPanel
+import selfgemma.talk.ui.home.HomeScreen
+import selfgemma.talk.ui.home.PromoScreenGm4
+import selfgemma.talk.ui.modelmanager.GlobalModelManager
+import selfgemma.talk.ui.modelmanager.ModelInitializationStatusType
+import selfgemma.talk.ui.modelmanager.ModelManager
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private const val TAG = "AGGalleryNavGraph"
+private const val TAG = "AGAppNavGraph"
 private const val ROUTE_HOMESCREEN = "homepage"
 private const val ROUTE_MODEL_LIST = "model_list"
 private const val ROUTE_MODEL = "route_model"
@@ -145,7 +152,7 @@ private fun AnimatedContentTransitionScope<*>.slideDownExit(): ExitTransition {
 
 /** Navigation routes. */
 @Composable
-fun GalleryNavHost(
+fun AppNavHost(
   navController: NavHostController,
   modifier: Modifier = Modifier,
   modelManagerViewModel: ModelManagerViewModel,
@@ -182,10 +189,76 @@ fun GalleryNavHost(
 
   NavHost(
     navController = navController,
-    startDestination = ROUTE_HOMESCREEN,
+    startDestination = RoleplayRoutes.SESSIONS,
     enterTransition = { EnterTransition.None },
     exitTransition = { ExitTransition.None },
   ) {
+    composable(route = RoleplayRoutes.SESSIONS) {
+      MainTabScreen(
+        modelManagerViewModel = modelManagerViewModel,
+        onOpenSession = { sessionId -> navController.navigate(RoleplayRoutes.chat(sessionId)) },
+        onOpenRoleCatalog = { navController.navigate(RoleplayRoutes.ROLE_CATALOG) },
+        onOpenSettings = { navController.navigate(RoleplayRoutes.SETTINGS) },
+        onOpenModelLibrary = { navController.navigate(ROUTE_MODEL_MANAGER) },
+        onOpenChat = { sessionId ->
+          navController.navigate(RoleplayRoutes.chat(sessionId)) {
+            popUpTo(RoleplayRoutes.SESSIONS) { inclusive = true }
+          }
+        },
+        onCreateRole = { navController.navigate(RoleplayRoutes.roleEditor()) },
+        onEditRole = { roleId -> navController.navigate(RoleplayRoutes.roleEditor(roleId)) },
+        navigateUp = { navController.navigateUp() },
+      )
+    }
+
+    composable(route = RoleplayRoutes.ROLE_CATALOG, enterTransition = { slideEnter() }, exitTransition = { slideExit() }) {
+      RoleCatalogScreen(
+        modelManagerViewModel = modelManagerViewModel,
+        navigateUp = { navController.navigateUp() },
+        onOpenChat = { sessionId ->
+          navController.navigate(RoleplayRoutes.chat(sessionId)) {
+            popUpTo(RoleplayRoutes.ROLE_CATALOG) { inclusive = true }
+          }
+        },
+        onCreateRole = { navController.navigate(RoleplayRoutes.roleEditor()) },
+        onEditRole = { roleId -> navController.navigate(RoleplayRoutes.roleEditor(roleId)) },
+        onOpenModelLibrary = { navController.navigate(ROUTE_MODEL_MANAGER) },
+      )
+    }
+
+    composable(
+      route = RoleplayRoutes.ROLE_EDITOR,
+      arguments = listOf(navArgument("roleId") { type = NavType.StringType; nullable = true; defaultValue = null }),
+      enterTransition = { slideEnter() },
+      exitTransition = { slideExit() },
+    ) {
+      RoleEditorScreen(
+        modelManagerViewModel = modelManagerViewModel,
+        navigateUp = { navController.navigateUp() },
+      )
+    }
+
+    composable(
+      route = RoleplayRoutes.CHAT,
+      arguments = listOf(navArgument("sessionId") { type = NavType.StringType }),
+      enterTransition = { slideEnter() },
+      exitTransition = { slideExit() },
+    ) {
+      RoleplayChatScreen(
+        modelManagerViewModel = modelManagerViewModel,
+        navigateUp = { navController.navigateUp() },
+        onOpenModelLibrary = { navController.navigate(ROUTE_MODEL_MANAGER) },
+      )
+    }
+
+    composable(route = RoleplayRoutes.SETTINGS, enterTransition = { slideUpEnter() }, exitTransition = { slideDownExit() }) {
+      RoleplaySettingsScreen(
+        navigateUp = { navController.navigateUp() },
+        onOpenModelLibrary = { navController.navigate(ROUTE_MODEL_MANAGER) },
+        onOpenLegacyHome = { navController.navigate(ROUTE_HOMESCREEN) },
+      )
+    }
+
     // Home screen.
     composable(route = ROUTE_HOMESCREEN) {
       // Create a state to trigger PromoScreen fade in animation.
@@ -203,7 +276,7 @@ fun GalleryNavHost(
               enableModelListAnimation = true
               navController.navigate(ROUTE_MODEL_LIST)
               firebaseAnalytics?.logEvent(
-                GalleryEvent.CAPABILITY_SELECT.id,
+                AnalyticsEvent.CAPABILITY_SELECT.id,
                 Bundle().apply { putString("capability_name", task.id) },
               )
             },
@@ -402,7 +475,7 @@ fun GalleryNavHost(
         },
         onBenchmarkClicked = { model ->
           firebaseAnalytics?.logEvent(
-            GalleryEvent.CAPABILITY_SELECT.id,
+            AnalyticsEvent.CAPABILITY_SELECT.id,
             Bundle().apply { putString("capability_name", "benchmark_${model.name}") },
           )
           navController.navigate("$ROUTE_BENCHMARK/${model.name}")
@@ -438,7 +511,7 @@ fun GalleryNavHost(
   if (data != null) {
     intent.data = null
     Log.d(TAG, "navigation link clicked: $data")
-    if (data.toString().startsWith("com.google.ai.edge.gallery://model/")) {
+    if (data.toString().startsWith("selfgemma.talk://model/")) {
       if (data.pathSegments.size >= 2) {
         val taskId = data.pathSegments.get(data.pathSegments.size - 2)
         val modelName = data.pathSegments.last()
@@ -448,7 +521,7 @@ fun GalleryNavHost(
       } else {
         Log.e(TAG, "Malformed deep link URI received: $data")
       }
-    } else if (data.toString() == "com.google.ai.edge.gallery://global_model_manager") {
+    } else if (data.toString() == "selfgemma.talk://global_model_manager") {
       navController.navigate(ROUTE_MODEL_MANAGER)
     }
   }
