@@ -1,5 +1,8 @@
 package selfgemma.talk.feature.roleplay.settings
 
+import android.app.Activity
+import android.os.Build
+import android.os.LocaleList
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,13 +49,25 @@ fun RoleplaySettingsScreen(
 ) {
   var showLanguageDialog by remember { mutableStateOf(false) }
   val context = LocalContext.current
+  val activity = context as? Activity
   
-  val currentLocale = remember {
+  val currentLocaleTag = remember {
     val locales = AppCompatDelegate.getApplicationLocales()
     if (locales.isEmpty) {
-      Locale.getDefault().language
+      ""
     } else {
-      locales.get(0)?.language ?: ""
+      val locale = locales.get(0)
+      if (locale != null) {
+        val lang = locale.language
+        val country = locale.country
+        if (country.isNullOrEmpty()) {
+          lang
+        } else {
+          "$lang-$country"
+        }
+      } else {
+        ""
+      }
     }
   }
 
@@ -94,17 +109,23 @@ fun RoleplaySettingsScreen(
 
   if (showLanguageDialog) {
     LanguageSelectionDialog(
-      currentLocale = currentLocale,
+      currentLocaleTag = currentLocaleTag,
       onDismiss = { showLanguageDialog = false },
       onLanguageSelected = { localeTag ->
         val localeList = if (localeTag.isEmpty()) {
           LocaleListCompat.getEmptyLocaleList()
         } else {
-          LocaleListCompat.forLanguageTags(localeTag)
+          val parts = localeTag.split("-")
+          val locale = if (parts.size > 1) {
+            Locale(parts[0], parts[1])
+          } else {
+            Locale(localeTag)
+          }
+          LocaleListCompat.create(locale)
         }
         AppCompatDelegate.setApplicationLocales(localeList)
         showLanguageDialog = false
-        (context as? android.app.Activity)?.recreate()
+        activity?.recreate()
       },
     )
   }
@@ -112,7 +133,7 @@ fun RoleplaySettingsScreen(
 
 @Composable
 private fun LanguageSelectionDialog(
-  currentLocale: String,
+  currentLocaleTag: String,
   onDismiss: () -> Unit,
   onLanguageSelected: (String) -> Unit,
 ) {
@@ -124,7 +145,7 @@ private fun LanguageSelectionDialog(
     "ko" to stringResource(R.string.language_korean),
   )
   
-  var selectedLanguage by remember { mutableStateOf(currentLocale) }
+  var selectedLanguage by remember { mutableStateOf(currentLocaleTag) }
 
   AlertDialog(
     onDismissRequest = onDismiss,
