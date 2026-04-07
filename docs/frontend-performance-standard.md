@@ -9,6 +9,7 @@ This standard currently covers the main user-facing flows that matter most in Se
 - role catalog scrolling as the representative long-list interaction
 - sessions list scrolling with many chats
 - long conversation history rendering and scrolling
+- chat page enter and exit from the sessions list
 - role creation editor open, input, and save
 
 ## Runtime Monitoring
@@ -18,6 +19,7 @@ The app now records per-foreground-session frame health with JankStats and Perfo
 - activity scope is attached in MainActivity
 - route scope is attached from the top-level Compose navigation host
 - main tab, sessions list scrolling, role catalog list scrolling, and roleplay chat scrolling are emitted as UI state labels
+- route-level state labels include chat enter and exit transitions
 - frame summaries are dumped on each foreground session end under the log tag FrontendPerf
 
 Tracked runtime indicators:
@@ -27,6 +29,7 @@ Tracked runtime indicators:
 - frozen frame count using a 700 ms threshold
 - frame duration p50, p95, p99, and max
 - main-tab switch latency p50, p95, p99, and max
+- chat enter and chat exit latency p50, p95, p99, and max
 
 ## Excellent Targets
 
@@ -49,6 +52,8 @@ Critical interaction targets:
 
 - main-tab switch p95 <= 150 ms
 - main-tab switch p99 <= 220 ms
+- chat enter p95 <= 150 ms
+- chat exit p95 <= 150 ms
 - role list scrolling jank rate <= 3%
 
 ## Benchmark Harness
@@ -60,6 +65,7 @@ Benchmarks included:
 - StartupBenchmark.coldStartup
 - StartupBenchmark.warmStartup
 - RoleplayFlowBenchmark.mainTabsAndRoleCatalogScroll
+- RoleplayChatNavigationBenchmark.openAndCloseChatFromSessions
 - RoleplayStressBenchmark.manyChatsScroll
 - RoleplayStressBenchmark.longConversationHistoryScroll
 - RoleplayStressBenchmark.manyRolesScroll

@@ -26,6 +26,8 @@ internal const val ROLEPLAY_SURFACE_SESSIONS = "sessions"
 internal const val ROLEPLAY_SURFACE_ROLES = "roles"
 internal const val ROLEPLAY_SURFACE_ROLE_EDITOR = "role_editor"
 internal const val ROLEPLAY_SURFACE_CHAT = "chat"
+internal const val ROLEPLAY_SESSIONS_FIRST_ITEM_X = 0.5f
+internal const val ROLEPLAY_SESSIONS_FIRST_ITEM_Y = 0.24f
 
 private const val LONG_CHAT_SCROLL_X = 0.5f
 private const val ROLE_EDITOR_NAME_Y = 0.14f
@@ -109,6 +111,13 @@ internal fun UiDevice.tapBottomNavigationItem(index: Int, itemCount: Int = 3) {
   val x = (displayWidth * ((index * 2f) + 1f) / (itemCount * 2f)).toInt()
   val y = (displayHeight * 0.93f).toInt()
   click(x, y)
+}
+
+internal fun UiDevice.tapFirstSessionCard() {
+  tapPercent(
+    xPercent = ROLEPLAY_SESSIONS_FIRST_ITEM_X,
+    yPercent = ROLEPLAY_SESSIONS_FIRST_ITEM_Y,
+  )
 }
 
 internal fun UiDevice.waitForAppToSettle() {

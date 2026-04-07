@@ -17,6 +17,7 @@
 package selfgemma.talk.ui.navigation
 
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -66,6 +67,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
@@ -83,6 +85,8 @@ import selfgemma.talk.data.ModelDownloadStatusType
 import selfgemma.talk.data.Task
 import selfgemma.talk.data.isLegacyTasks
 import selfgemma.talk.firebaseAnalytics
+import selfgemma.talk.performance.FrontendPerformanceMonitor
+import selfgemma.talk.performance.TrackPerformanceState
 import selfgemma.talk.ui.benchmark.BenchmarkScreen
 import selfgemma.talk.ui.common.ErrorDialog
 import selfgemma.talk.ui.common.ModelPageAppBar
@@ -106,9 +110,10 @@ private const val ROUTE_MODEL_MANAGER = "model_manager"
 private const val ENTER_ANIMATION_DURATION_MS = 500
 private val ENTER_ANIMATION_EASING = EaseOutExpo
 private const val ENTER_ANIMATION_DELAY_MS = 100
-
 private const val EXIT_ANIMATION_DURATION_MS = 500
 private val EXIT_ANIMATION_EASING = EaseOutExpo
+private const val CHAT_ENTER_ANIMATION_DURATION_MS = 140
+private const val CHAT_EXIT_ANIMATION_DURATION_MS = 110
 
 private fun enterTween(): FiniteAnimationSpec<IntOffset> {
   return tween(
@@ -150,6 +155,24 @@ private fun AnimatedContentTransitionScope<*>.slideDownExit(): ExitTransition {
   )
 }
 
+private fun AnimatedContentTransitionScope<*>.chatEnter(): EnterTransition {
+  return fadeIn(animationSpec = tween(durationMillis = CHAT_ENTER_ANIMATION_DURATION_MS)) +
+    slideIntoContainer(
+      animationSpec = tween(durationMillis = CHAT_ENTER_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
+      towards = AnimatedContentTransitionScope.SlideDirection.Left,
+      initialOffset = { fullSize -> fullSize / 8 },
+    )
+}
+
+private fun AnimatedContentTransitionScope<*>.chatExit(): ExitTransition {
+  return fadeOut(animationSpec = tween(durationMillis = CHAT_EXIT_ANIMATION_DURATION_MS)) +
+    slideOutOfContainer(
+      animationSpec = tween(durationMillis = CHAT_EXIT_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
+      towards = AnimatedContentTransitionScope.SlideDirection.Right,
+      targetOffset = { fullSize -> fullSize / 10 },
+    )
+}
+
 /** Navigation routes. */
 @Composable
 fun AppNavHost(
@@ -163,6 +186,40 @@ fun AppNavHost(
   var enableHomeScreenAnimation by remember { mutableStateOf(true) }
   var enableModelListAnimation by remember { mutableStateOf(true) }
   var lastNavigatedModelName = remember { "" }
+  var pendingChatEnterStartedAtMs by remember { mutableStateOf<Long?>(null) }
+  var pendingChatExitStartedAtMs by remember { mutableStateOf<Long?>(null) }
+  val currentBackStackEntry by navController.currentBackStackEntryAsState()
+  val currentRoute = currentBackStackEntry?.destination?.route
+
+  TrackPerformanceState(key = "Route", value = currentRoute)
+
+  LaunchedEffect(currentRoute) {
+    val currentRouteValue = currentRoute
+    val isOnChatRoute = currentRouteValue == RoleplayRoutes.CHAT
+
+    if (isOnChatRoute) {
+      pendingChatEnterStartedAtMs?.let { startedAt ->
+        val durationMs = SystemClock.elapsedRealtime() - startedAt
+        FrontendPerformanceMonitor.recordInteraction(
+          name = "chat_navigation_enter",
+          durationMs = durationMs,
+        )
+        Log.d(TAG, "chat navigation enter completed route=$currentRouteValue durationMs=$durationMs")
+        pendingChatEnterStartedAtMs = null
+      }
+      return@LaunchedEffect
+    }
+
+    pendingChatExitStartedAtMs?.let { startedAt ->
+      val durationMs = SystemClock.elapsedRealtime() - startedAt
+      FrontendPerformanceMonitor.recordInteraction(
+        name = "chat_navigation_exit",
+        durationMs = durationMs,
+      )
+      Log.d(TAG, "chat navigation exit completed route=$currentRouteValue durationMs=$durationMs")
+      pendingChatExitStartedAtMs = null
+    }
+  }
 
   // Track whether app is in foreground.
   DisposableEffect(lifecycleOwner) {
@@ -196,11 +253,15 @@ fun AppNavHost(
     composable(route = RoleplayRoutes.SESSIONS) {
       MainTabScreen(
         modelManagerViewModel = modelManagerViewModel,
-        onOpenSession = { sessionId -> navController.navigate(RoleplayRoutes.chat(sessionId)) },
+        onOpenSession = { sessionId ->
+          pendingChatEnterStartedAtMs = SystemClock.elapsedRealtime()
+          navController.navigate(RoleplayRoutes.chat(sessionId))
+        },
         onOpenRoleCatalog = { navController.navigate(RoleplayRoutes.ROLE_CATALOG) },
         onOpenSettings = { navController.navigate(RoleplayRoutes.SETTINGS) },
         onOpenModelLibrary = { navController.navigate(ROUTE_MODEL_MANAGER) },
         onOpenChat = { sessionId ->
+          pendingChatEnterStartedAtMs = SystemClock.elapsedRealtime()
           navController.navigate(RoleplayRoutes.chat(sessionId)) {
             popUpTo(RoleplayRoutes.SESSIONS) { inclusive = true }
           }
@@ -216,6 +277,7 @@ fun AppNavHost(
         modelManagerViewModel = modelManagerViewModel,
         navigateUp = { navController.navigateUp() },
         onOpenChat = { sessionId ->
+          pendingChatEnterStartedAtMs = SystemClock.elapsedRealtime()
           navController.navigate(RoleplayRoutes.chat(sessionId)) {
             popUpTo(RoleplayRoutes.ROLE_CATALOG) { inclusive = true }
           }
@@ -242,12 +304,15 @@ fun AppNavHost(
     composable(
       route = RoleplayRoutes.CHAT,
       arguments = listOf(navArgument("sessionId") { type = NavType.StringType }),
-      enterTransition = { slideEnter() },
-      exitTransition = { slideExit() },
+      enterTransition = { chatEnter() },
+      exitTransition = { chatExit() },
     ) {
       RoleplayChatScreen(
         modelManagerViewModel = modelManagerViewModel,
-        navigateUp = { navController.navigateUp() },
+        navigateUp = {
+          pendingChatExitStartedAtMs = SystemClock.elapsedRealtime()
+          navController.navigateUp()
+        },
         onOpenModelLibrary = { navController.navigate(ROUTE_MODEL_MANAGER) },
       )
     }

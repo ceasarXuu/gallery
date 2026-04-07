@@ -48,6 +48,26 @@ Notes:
 - `RoleplayBenchmarkSurfaceActivity` can jump straight into `benchmark-session-long-chat`, which is much faster and more repeatable than tapping through the main UI.
 - The log tag `RoleplayChatScreen` now emits `initial chat positioned ... elapsed=<n>ms`, which is the fastest sanity check that the detail page reached initial bottom positioning.
 
+## 2026-04-08 Roleplay chat enter-exit benchmark verification
+
+- Goal: verify the user-perceived lag when entering and exiting the roleplay chat page through the real app navigation stack.
+- Device: `ONNZ95CAEMMZSKTS`
+- Benchmark class: `selfgemma.talk.macrobenchmark.RoleplayChatNavigationBenchmark`
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\scripts\run-frontend-perf.ps1 -Runner auto -ClassFilter selfgemma.talk.macrobenchmark.RoleplayChatNavigationBenchmark#openAndCloseChatFromSessions
+adb -s ONNZ95CAEMMZSKTS logcat -d -v time | Select-String -Pattern 'AGAppNavGraph|chat navigation enter completed|chat navigation exit completed|FrontendPerf'
+```
+
+Notes:
+
+- This benchmark uses the real `MainActivity` start path plus the sessions list entry, so it covers the same `AppNavHost` transition that users hit in production.
+- Keep the seeded long-chat session pinned and visible near the top of the list; the benchmark taps the first sessions card by screen percentage for repeatability.
+- For this hotspot, prefer correlating Macrobenchmark frame metrics with runtime `FrontendPerf` interaction logs. Smooth frames alone are not enough if the transition duration itself is too long.
+
 ## 2026-04-07 Roleplay chat send orchestration verification
 
 - Goal: verify the new roleplay chat send experience for continued typing, merge-on-resend, and delayed LLM dispatch.
