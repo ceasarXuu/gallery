@@ -81,6 +81,10 @@ interface DataStoreRepository {
 
   fun getHasSeenBenchmarkComparisonHelp(): Boolean
 
+  fun setMessageSoundsEnabled(enabled: Boolean)
+
+  fun areMessageSoundsEnabled(): Boolean
+
   fun addBenchmarkResult(result: BenchmarkResult)
 
   fun getAllBenchmarkResults(): List<BenchmarkResult>
@@ -309,6 +313,21 @@ class DefaultDataStoreRepository(
     return runBlocking {
       val settings = dataStore.data.first()
       settings.hasSeenBenchmarkComparisonHelp
+    }
+  }
+
+  override fun setMessageSoundsEnabled(enabled: Boolean) {
+    runBlocking {
+      dataStore.updateData { settings ->
+        settings.toBuilder().setDisableMessageSounds(!enabled).build()
+      }
+    }
+  }
+
+  override fun areMessageSoundsEnabled(): Boolean {
+    return runBlocking {
+      val settings = dataStore.data.first()
+      !settings.disableMessageSounds
     }
   }
 

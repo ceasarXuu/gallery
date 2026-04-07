@@ -469,6 +469,8 @@
   <!-- Language Settings -->
   <string name="settings_language">言語</string>
   <string name="settings_language_summary">アプリの言語を変更</string>
+  <string name="settings_message_sounds_title">メッセージ音</string>
+  <string name="settings_message_sounds_summary">チャットで送信音と返信音を再生</string>
   <string name="language_system">システム</string>
   <string name="language_english">English</string>
   <string name="language_chinese">简体中文</string>

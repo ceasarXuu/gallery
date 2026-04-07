@@ -3,9 +3,9 @@ package selfgemma.talk.feature.roleplay.settings
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,9 +17,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.os.LocaleListCompat
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import selfgemma.talk.AppTopBar
 import selfgemma.talk.R
 
@@ -41,9 +44,11 @@ fun RoleplaySettingsScreen(
   onOpenLegacyHome: () -> Unit,
   modifier: Modifier = Modifier,
   contentPadding: PaddingValues = PaddingValues(0.dp),
+  viewModel: RoleplaySettingsViewModel = hiltViewModel(),
 ) {
   var showLanguageDialog by remember { mutableStateOf(false) }
   val currentLocaleTag = AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore(',')
+  val uiState by viewModel.uiState.collectAsState()
 
   Scaffold(
     modifier = modifier,
@@ -67,6 +72,12 @@ fun RoleplaySettingsScreen(
         title = stringResource(R.string.settings_language),
         summary = stringResource(R.string.settings_language_summary),
         onClick = { showLanguageDialog = true },
+      )
+      ToggleSettingsCard(
+        title = stringResource(R.string.settings_message_sounds_title),
+        summary = stringResource(R.string.settings_message_sounds_summary),
+        checked = uiState.messageSoundsEnabled,
+        onCheckedChange = viewModel::setMessageSoundsEnabled,
       )
       SettingsCard(
         title = stringResource(R.string.settings_model_library_title),
@@ -171,6 +182,40 @@ private fun SettingsCard(title: String, summary: String, onClick: () -> Unit) {
         summary,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+    }
+  }
+}
+
+@Composable
+private fun ToggleSettingsCard(
+  title: String,
+  summary: String,
+  checked: Boolean,
+  onCheckedChange: (Boolean) -> Unit,
+) {
+  Card(
+    modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) },
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(16.dp),
+      horizontalArrangement = Arrangement.spacedBy(12.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Column(
+        modifier = Modifier.weight(1f),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+      ) {
+        Text(title, style = MaterialTheme.typography.titleMedium)
+        Text(
+          summary,
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
+      Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
       )
     }
   }

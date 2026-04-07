@@ -1,9 +1,9 @@
 package selfgemma.talk.feature.roleplay.chat
 
-import android.media.AudioManager
-import android.media.ToneGenerator
+import android.content.Context
 import android.os.SystemClock
 import android.util.Log
+import dagger.hilt.android.qualifiers.ApplicationContext
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import selfgemma.talk.data.ConfigKeys
+import selfgemma.talk.data.DataStoreRepository
 import selfgemma.talk.data.Model
 import selfgemma.talk.domain.roleplay.model.MemoryCategory
 import selfgemma.talk.domain.roleplay.model.MemoryItem
@@ -75,6 +76,8 @@ class RoleplayChatViewModel
 @Inject
 constructor(
   savedStateHandle: SavedStateHandle,
+  @ApplicationContext private val appContext: Context,
+  private val dataStoreRepository: DataStoreRepository,
   private val conversationRepository: ConversationRepository,
   private val roleRepository: RoleRepository,
   private val memoryRepository: MemoryRepository,
@@ -479,20 +482,16 @@ constructor(
   }
 
   private fun playSendSound() {
-    try {
-      val toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
-      toneGenerator.startTone(ToneGenerator.TONE_PROP_ACK, 150)
-      toneGenerator.release()
-    } catch (_: Exception) {
+    if (!dataStoreRepository.areMessageSoundsEnabled()) {
+      return
     }
+    RoleplaySoundEffectPlayer.playSend(appContext)
   }
 
   private fun playReceiveSound() {
-    try {
-      val toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
-      toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP2, 200)
-      toneGenerator.release()
-    } catch (_: Exception) {
+    if (!dataStoreRepository.areMessageSoundsEnabled()) {
+      return
     }
+    RoleplaySoundEffectPlayer.playReceive(appContext)
   }
 }
