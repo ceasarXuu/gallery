@@ -24,6 +24,8 @@ import selfgemma.talk.data.Model
 import selfgemma.talk.domain.roleplay.model.MemoryCategory
 import selfgemma.talk.domain.roleplay.model.MemoryItem
 import selfgemma.talk.domain.roleplay.model.Message
+import selfgemma.talk.domain.roleplay.model.MessageSide
+import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionEventType
@@ -34,6 +36,7 @@ import selfgemma.talk.domain.roleplay.repository.MemoryRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
 import selfgemma.talk.domain.roleplay.usecase.ExtractMemoriesUseCase
 import selfgemma.talk.domain.roleplay.usecase.SendRoleplayMessageUseCase
+import selfgemma.talk.domain.roleplay.usecase.StagedRoleplayTurn
 import selfgemma.talk.runtime.runtimeHelper
 
 data class RoleplayChatUiState(
@@ -53,6 +56,7 @@ private const val TAG = "RoleplayChatViewModel"
 private data class RoleplayChatMetaState(
   val summary: SessionSummary? = null,
   val pinnedMemories: List<MemoryItem> = emptyList(),
+  val optimisticMessages: List<Message> = emptyList(),
   val inProgress: Boolean = false,
   val errorMessage: String? = null,
 )
@@ -93,7 +97,7 @@ constructor(
         loading = session == null,
         session = session,
         role = role,
-        messages = messages,
+        messages = mergeMessages(messages = messages, optimisticMessages = meta.optimisticMessages),
         draft = draftValue,
         summary = meta.summary,
         pinnedMemories = meta.pinnedMemories,
@@ -128,23 +132,63 @@ constructor(
     playSendSound()
     draft.value = ""
     stopRequested.value = false
-    metaState.update { current -> current.copy(inProgress = true, errorMessage = null) }
+    val stagedTurn = stageOptimisticTurn(input = input, model = model)
+    metaState.update { current ->
+      current.copy(
+        optimisticMessages =
+          current.optimisticMessages + listOf(stagedTurn.userMessage, stagedTurn.assistantMessage),
+        inProgress = true,
+        errorMessage = null,
+      )
+    }
     val clickTimestamp = SystemClock.elapsedRealtime()
     Log.d(
       TAG,
-      "send click accepted sessionId=$sessionId model=${model.name} inputLength=${input.length}",
+      "send click accepted sessionId=$sessionId model=${model.name} inputLength=${input.length} userMessageId=${stagedTurn.userMessage.id} assistantMessageId=${stagedTurn.assistantMessage.id}",
     )
 
     viewModelScope.launch(Dispatchers.IO) {
-      Log.d(
-        TAG,
-        "send worker started after ${SystemClock.elapsedRealtime() - clickTimestamp}ms sessionId=$sessionId",
-      )
-      val result =
-        sendRoleplayMessageUseCase(
+      val pendingMessage =
+        sendRoleplayMessageUseCase.enqueuePendingMessage(
           sessionId = sessionId,
           model = model,
           userInput = input,
+          stagedTurn = stagedTurn,
+        )
+
+      if (pendingMessage == null) {
+        Log.d(
+          TAG,
+          "send queue failed after ${SystemClock.elapsedRealtime() - clickTimestamp}ms sessionId=$sessionId",
+        )
+        draft.value = input
+        stopRequested.value = false
+        metaState.update { current ->
+          current.copy(
+            optimisticMessages =
+              current.optimisticMessages.filterNot { message ->
+                message.id == stagedTurn.userMessage.id || message.id == stagedTurn.assistantMessage.id
+              },
+            inProgress = false,
+            errorMessage = "Session no longer exists.",
+          )
+        }
+        return@launch
+      }
+
+      Log.d(
+        TAG,
+        "send queued after ${SystemClock.elapsedRealtime() - clickTimestamp}ms sessionId=$sessionId userMessageId=${pendingMessage.userMessage.id} assistantMessageId=${pendingMessage.assistantSeed.id}",
+      )
+
+      Log.d(
+        TAG,
+        "send worker started after ${SystemClock.elapsedRealtime() - clickTimestamp}ms sessionId=$sessionId assistantMessageId=${pendingMessage.assistantSeed.id}",
+      )
+      val result =
+        sendRoleplayMessageUseCase.completePendingMessage(
+          pendingMessage = pendingMessage,
+          model = model,
           isStopRequested = { stopRequested.value },
         )
 
@@ -161,7 +205,14 @@ constructor(
 
       stopRequested.value = false
       metaState.update { current ->
-        current.copy(inProgress = false, errorMessage = result.errorMessage)
+        current.copy(
+          optimisticMessages =
+            current.optimisticMessages.filterNot { message ->
+              message.id == stagedTurn.userMessage.id || message.id == stagedTurn.assistantMessage.id
+            },
+          inProgress = false,
+          errorMessage = result.errorMessage,
+        )
       }
       refreshSupplementalState()
     }
@@ -249,6 +300,52 @@ constructor(
       .distinctBy { it.normalizedHash }
       .sortedByDescending { it.updatedAt }
       .take(8)
+  }
+
+  private fun stageOptimisticTurn(input: String, model: Model): StagedRoleplayTurn {
+    val now = System.currentTimeMillis()
+    val existingMessages = mergeMessages(uiState.value.messages, metaState.value.optimisticMessages)
+    val nextSeq = (existingMessages.maxOfOrNull { it.seq } ?: 0) + 1
+    val userMessageId = UUID.randomUUID().toString()
+    val userMessage =
+      Message(
+        id = userMessageId,
+        sessionId = sessionId,
+        seq = nextSeq,
+        side = MessageSide.USER,
+        status = MessageStatus.COMPLETED,
+        content = input,
+        createdAt = now,
+        updatedAt = now,
+      )
+    val assistantMessage =
+      Message(
+        id = UUID.randomUUID().toString(),
+        sessionId = sessionId,
+        seq = nextSeq + 1,
+        side = MessageSide.ASSISTANT,
+        status = MessageStatus.STREAMING,
+        content = "",
+        accelerator =
+          model.getStringConfigValue(
+            key = selfgemma.talk.data.ConfigKeys.ACCELERATOR,
+            defaultValue = "",
+          ),
+        parentMessageId = userMessageId,
+        createdAt = now,
+        updatedAt = now,
+      )
+    Log.d(
+      TAG,
+      "optimistic turn staged sessionId=$sessionId nextSeq=$nextSeq userMessageId=${userMessage.id} assistantMessageId=${assistantMessage.id}",
+    )
+    return StagedRoleplayTurn(userMessage = userMessage, assistantMessage = assistantMessage)
+  }
+
+  private fun mergeMessages(messages: List<Message>, optimisticMessages: List<Message>): List<Message> {
+    val persistedIds = messages.mapTo(mutableSetOf()) { it.id }
+    return (messages + optimisticMessages.filterNot { it.id in persistedIds })
+      .sortedWith(compareBy<Message>({ it.seq }, { it.createdAt }, { it.id }))
   }
 
   private fun String.escapeJson(): String {

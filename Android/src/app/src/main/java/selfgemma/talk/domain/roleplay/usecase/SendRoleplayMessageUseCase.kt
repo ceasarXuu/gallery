@@ -18,6 +18,7 @@ import selfgemma.talk.data.Model
 import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
+import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.MemoryRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
@@ -27,6 +28,18 @@ data class SendRoleplayMessageResult(
   val assistantMessage: Message? = null,
   val interrupted: Boolean = false,
   val errorMessage: String? = null,
+)
+
+data class PendingRoleplayMessage(
+  val session: Session,
+  val userMessage: Message,
+  val assistantSeed: Message,
+  val userInput: String,
+)
+
+data class StagedRoleplayTurn(
+  val userMessage: Message,
+  val assistantMessage: Message,
 )
 
 private data class ModelReadinessResult(
@@ -57,60 +70,77 @@ constructor(
     sessionId: String,
     model: Model,
     userInput: String,
+    stagedTurn: StagedRoleplayTurn? = null,
     isStopRequested: () -> Boolean,
   ): SendRoleplayMessageResult {
+    val pendingMessage =
+      enqueuePendingMessage(
+        sessionId = sessionId,
+        model = model,
+        userInput = userInput,
+        stagedTurn = stagedTurn,
+      ) ?: return SendRoleplayMessageResult(errorMessage = "Session no longer exists.")
+
+    return completePendingMessage(
+      pendingMessage = pendingMessage,
+      model = model,
+      isStopRequested = isStopRequested,
+    )
+  }
+
+  suspend fun enqueuePendingMessage(
+    sessionId: String,
+    model: Model,
+    userInput: String,
+    stagedTurn: StagedRoleplayTurn? = null,
+  ): PendingRoleplayMessage? {
     val startTime = SystemClock.elapsedRealtime()
     val trimmedInput = userInput.trim()
     if (trimmedInput.isBlank()) {
-      return SendRoleplayMessageResult(errorMessage = "Message is empty.")
+      return null
     }
 
     val session = conversationRepository.getSession(sessionId)
     if (session == null) {
-      return SendRoleplayMessageResult(errorMessage = "Session no longer exists.")
+      return null
     }
-    Log.d(TAG, "session loaded after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId")
+    Log.d(TAG, "queue session loaded after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId")
 
-    val now = System.currentTimeMillis()
-    val accelerator = model.getStringConfigValue(key = ConfigKeys.ACCELERATOR, defaultValue = "")
-    val firstSeq = conversationRepository.nextMessageSeq(sessionId)
-    Log.d(TAG, "next seq resolved after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId seq=$firstSeq")
-    val userMessage =
-      Message(
-        id = UUID.randomUUID().toString(),
-        sessionId = sessionId,
-        seq = firstSeq,
-        side = MessageSide.USER,
-        status = MessageStatus.COMPLETED,
-        content = trimmedInput,
-        createdAt = now,
-        updatedAt = now,
-      )
+    val resolvedTurn =
+      stagedTurn ?: createStagedTurn(sessionId = sessionId, model = model, trimmedInput = trimmedInput)
+    val userMessage = resolvedTurn.userMessage.copy(content = trimmedInput)
     conversationRepository.appendMessage(userMessage)
     Log.d(
       TAG,
-      "user message appended after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId messageId=${userMessage.id}",
+      "queued user message after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId messageId=${userMessage.id}",
     )
 
-    val assistantSeed =
-      Message(
-        id = UUID.randomUUID().toString(),
-        sessionId = sessionId,
-        seq = firstSeq + 1,
-        side = MessageSide.ASSISTANT,
-        status = MessageStatus.STREAMING,
-        content = "",
-        accelerator = accelerator,
-        parentMessageId = userMessage.id,
-        createdAt = now,
-        updatedAt = now,
-      )
+    val assistantSeed = resolvedTurn.assistantMessage.copy(parentMessageId = userMessage.id)
     conversationRepository.appendMessage(assistantSeed)
     Log.d(
       TAG,
-      "assistant seed appended after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId messageId=${assistantSeed.id}",
+      "queued assistant seed after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId messageId=${assistantSeed.id} staged=${stagedTurn != null}",
     )
 
+    return PendingRoleplayMessage(
+      session = session,
+      userMessage = userMessage,
+      assistantSeed = assistantSeed,
+      userInput = trimmedInput,
+    )
+  }
+
+  suspend fun completePendingMessage(
+    pendingMessage: PendingRoleplayMessage,
+    model: Model,
+    isStopRequested: () -> Boolean,
+  ): SendRoleplayMessageResult {
+    val startTime = SystemClock.elapsedRealtime()
+    val sessionId = pendingMessage.session.id
+    val session = pendingMessage.session
+    val userMessage = pendingMessage.userMessage
+    val assistantSeed = pendingMessage.assistantSeed
+    val trimmedInput = pendingMessage.userInput
     val modelReadiness = awaitModelReady(model = model, isStopRequested = isStopRequested)
     Log.d(
       TAG,
@@ -370,5 +400,41 @@ constructor(
     }
 
     return ModelReadinessResult(ready = true)
+  }
+
+  private suspend fun createStagedTurn(
+    sessionId: String,
+    model: Model,
+    trimmedInput: String,
+  ): StagedRoleplayTurn {
+    val now = System.currentTimeMillis()
+    val accelerator = model.getStringConfigValue(key = ConfigKeys.ACCELERATOR, defaultValue = "")
+    val firstSeq = conversationRepository.nextMessageSeq(sessionId)
+    Log.d(TAG, "queue next seq resolved sessionId=$sessionId seq=$firstSeq")
+    return StagedRoleplayTurn(
+      userMessage =
+        Message(
+          id = UUID.randomUUID().toString(),
+          sessionId = sessionId,
+          seq = firstSeq,
+          side = MessageSide.USER,
+          status = MessageStatus.COMPLETED,
+          content = trimmedInput,
+          createdAt = now,
+          updatedAt = now,
+        ),
+      assistantMessage =
+        Message(
+          id = UUID.randomUUID().toString(),
+          sessionId = sessionId,
+          seq = firstSeq + 1,
+          side = MessageSide.ASSISTANT,
+          status = MessageStatus.STREAMING,
+          content = "",
+          accelerator = accelerator,
+          createdAt = now,
+          updatedAt = now,
+        ),
+    )
   }
 }
