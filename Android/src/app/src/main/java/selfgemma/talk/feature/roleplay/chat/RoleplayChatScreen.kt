@@ -2,6 +2,7 @@ package selfgemma.talk.feature.roleplay.chat
 
 import android.os.SystemClock
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -139,6 +140,24 @@ fun RoleplayChatScreen(
       (activeModel.initializing || activeModelStatus == ModelInitializationStatusType.INITIALIZING)
   var showMenu by remember { mutableStateOf(false) }
   var showModelPicker by remember { mutableStateOf(false) }
+  val handleNavigateUp: () -> Unit = {
+    when {
+      showModelPicker -> {
+        showModelPicker = false
+        Log.d(TAG, "dismiss model picker before navigating up sessionId=${uiState.session?.id}")
+      }
+      showMenu -> {
+        showMenu = false
+        Log.d(TAG, "dismiss overflow menu before navigating up sessionId=${uiState.session?.id}")
+      }
+      else -> {
+        Log.d(TAG, "navigate up from chat sessionId=${uiState.session?.id}")
+        navigateUp()
+      }
+    }
+  }
+
+  BackHandler { handleNavigateUp() }
 
   LaunchedEffect(activeModel?.name, activeModelStatus) {
     if (
@@ -205,7 +224,7 @@ fun RoleplayChatScreen(
         Box(modifier = Modifier.fillMaxWidth()) {
           AppTopBar(
             title = uiState.role?.name ?: stringResource(R.string.chat_title),
-            leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = navigateUp),
+            leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = handleNavigateUp),
             rightAction =
               AppBarAction(
                 actionType = AppBarActionType.MENU,

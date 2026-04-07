@@ -1,6 +1,8 @@
 package selfgemma.talk.feature.roleplay.settings
 
 import androidx.appcompat.app.AppCompatDelegate
+import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -34,13 +36,18 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.os.LocaleListCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import selfgemma.talk.AppTopBar
+import selfgemma.talk.data.AppBarAction
+import selfgemma.talk.data.AppBarActionType
 import selfgemma.talk.R
+
+private const val TAG = "RoleplaySettingsScreen"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoleplaySettingsScreen(
   navigateUp: () -> Unit,
   onOpenModelLibrary: () -> Unit,
+  showNavigateUp: Boolean = false,
   modifier: Modifier = Modifier,
   contentPadding: PaddingValues = PaddingValues(0.dp),
   viewModel: RoleplaySettingsViewModel = hiltViewModel(),
@@ -48,12 +55,31 @@ fun RoleplaySettingsScreen(
   var showLanguageDialog by remember { mutableStateOf(false) }
   val currentLocaleTag = AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore(',')
   val uiState by viewModel.uiState.collectAsState()
+  val handleNavigateUp: () -> Unit = {
+    if (showLanguageDialog) {
+      showLanguageDialog = false
+      Log.d(TAG, "dismiss language dialog before navigating up")
+    } else {
+      Log.d(TAG, "navigate up from settings")
+      navigateUp()
+    }
+  }
+
+  BackHandler(enabled = showNavigateUp || showLanguageDialog) { handleNavigateUp() }
 
   Scaffold(
     modifier = modifier,
     contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
     topBar = {
-      AppTopBar(title = stringResource(R.string.tab_settings))
+      AppTopBar(
+        title = stringResource(R.string.tab_settings),
+        leftAction =
+          if (showNavigateUp) {
+            AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = handleNavigateUp)
+          } else {
+            null
+          },
+      )
     },
   ) { innerPadding ->
     val combinedPadding = PaddingValues(

@@ -1,8 +1,10 @@
 package selfgemma.talk.feature.roleplay.roles
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -46,6 +48,8 @@ import selfgemma.talk.data.AppBarAction
 import selfgemma.talk.data.AppBarActionType
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 
+private const val TAG = "RoleCatalogScreen"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoleCatalogScreen(
@@ -55,6 +59,7 @@ fun RoleCatalogScreen(
   onCreateRole: () -> Unit,
   onEditRole: (String) -> Unit,
   onOpenModelLibrary: () -> Unit,
+  showNavigateUp: Boolean = false,
   modifier: Modifier = Modifier,
   contentPadding: PaddingValues = PaddingValues(0.dp),
   viewModel: RoleCatalogViewModel = hiltViewModel(),
@@ -76,13 +81,32 @@ fun RoleCatalogScreen(
     value = if (listState.isScrollInProgress) "scrolling" else null,
   )
 
+  val handleNavigateUp: () -> Unit = {
+    if (pendingDeleteRoleId != null) {
+      pendingDeleteRoleId = null
+      Log.d(TAG, "dismiss delete dialog before navigating up")
+    } else {
+      Log.d(TAG, "navigate up from role catalog")
+      navigateUp()
+    }
+  }
+
+  BackHandler(enabled = showNavigateUp) {
+    handleNavigateUp()
+  }
+
   Scaffold(
     modifier = modifier.semantics { testTagsAsResourceId = true },
     contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
     topBar = {
       AppTopBar(
         title = stringResource(R.string.tab_roles),
-        leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = navigateUp),
+        leftAction =
+          if (showNavigateUp) {
+            AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = handleNavigateUp)
+          } else {
+            null
+          },
       )
     },
   ) { innerPadding ->

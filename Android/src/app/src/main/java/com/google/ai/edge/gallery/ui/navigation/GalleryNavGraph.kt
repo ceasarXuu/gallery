@@ -223,6 +223,7 @@ fun AppNavHost(
         onCreateRole = { navController.navigate(RoleplayRoutes.roleEditor()) },
         onEditRole = { roleId -> navController.navigate(RoleplayRoutes.roleEditor(roleId)) },
         onOpenModelLibrary = { navController.navigate(ROUTE_MODEL_MANAGER) },
+        showNavigateUp = true,
       )
     }
 
@@ -255,6 +256,7 @@ fun AppNavHost(
       RoleplaySettingsScreen(
         navigateUp = { navController.navigateUp() },
         onOpenModelLibrary = { navController.navigate(ROUTE_MODEL_MANAGER) },
+        showNavigateUp = true,
       )
     }
 

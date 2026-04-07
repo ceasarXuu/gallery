@@ -1,6 +1,8 @@
 package selfgemma.talk.feature.roleplay.roles
 
 import android.net.Uri
+import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +42,8 @@ import selfgemma.talk.data.AppBarActionType
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import selfgemma.talk.R
 
+private const val TAG = "RoleEditorScreen"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoleEditorScreen(
@@ -64,12 +68,26 @@ fun RoleEditorScreen(
       uri?.let { viewModel.exportStCardToUri(it.toString()) }
     }
 
+  val handleNavigateUp: () -> Unit = {
+    if (modelMenuExpanded) {
+      modelMenuExpanded = false
+      Log.d(TAG, "dismiss model picker before navigating up")
+    } else {
+      Log.d(TAG, "navigate up from role editor isNewRole=${uiState.isNewRole}")
+      navigateUp()
+    }
+  }
+
+  BackHandler {
+    handleNavigateUp()
+  }
+
   Scaffold(
     modifier = modifier.semantics { testTagsAsResourceId = true },
     topBar = {
       AppTopBar(
         title = if (uiState.isNewRole) stringResource(R.string.role_editor_create_title) else stringResource(R.string.role_editor_edit_title),
-        leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = navigateUp),
+        leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = handleNavigateUp),
       )
     },
   ) { innerPadding ->
@@ -242,14 +260,14 @@ fun RoleEditorScreen(
       item {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
           FilledTonalButton(
-            onClick = { viewModel.saveRole { navigateUp() } },
+            onClick = { viewModel.saveRole { handleNavigateUp() } },
             modifier = Modifier.fillMaxWidth().testTag("role_editor_save"),
           ) {
             Text(if (uiState.isNewRole) stringResource(R.string.role_editor_create_button) else stringResource(R.string.role_editor_save_button))
           }
           if (!uiState.isNewRole && !uiState.builtIn) {
             OutlinedButton(
-              onClick = { viewModel.deleteRole { navigateUp() } },
+              onClick = { viewModel.deleteRole { handleNavigateUp() } },
               modifier = Modifier.fillMaxWidth(),
             ) {
               Text(stringResource(R.string.role_editor_delete_button))

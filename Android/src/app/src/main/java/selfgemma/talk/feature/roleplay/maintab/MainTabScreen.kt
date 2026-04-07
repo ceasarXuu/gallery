@@ -1,6 +1,8 @@
 package selfgemma.talk.feature.roleplay.maintab
 
 import android.os.SystemClock
+import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -80,6 +82,15 @@ fun MainTabScreen(
     1 -> "roles"
     else -> "settings"
   }
+  val handleNavigateUp: () -> Unit = {
+    if (currentPage == 0) {
+      Log.d(TAG, "navigate up from root tab, delegating to host")
+      navigateUp()
+    } else {
+      Log.d(TAG, "navigate up from secondary tab page=$currentPage, returning to messages tab")
+      scope.launch { pagerState.animateScrollToPage(page = 0) }
+    }
+  }
 
   val fabDuration = 150
 
@@ -90,6 +101,8 @@ fun MainTabScreen(
       android.util.Log.d(TAG, "Tab切换完成: currentPage=$currentPage, 响应时间监控")
     }
   }
+
+  BackHandler(enabled = currentPage != 0) { handleNavigateUp() }
 
   Scaffold(
     modifier = modifier,
@@ -180,18 +193,20 @@ fun MainTabScreen(
         1 -> {
           selfgemma.talk.feature.roleplay.roles.RoleCatalogScreen(
             modelManagerViewModel = modelManagerViewModel,
-            navigateUp = navigateUp,
+            navigateUp = handleNavigateUp,
             onOpenChat = onOpenChat,
             onCreateRole = onCreateRole,
             onEditRole = onEditRole,
             onOpenModelLibrary = onOpenModelLibrary,
+            showNavigateUp = false,
             contentPadding = innerPadding,
           )
         }
         2 -> {
           selfgemma.talk.feature.roleplay.settings.RoleplaySettingsScreen(
-            navigateUp = navigateUp,
+            navigateUp = handleNavigateUp,
             onOpenModelLibrary = onOpenModelLibrary,
+            showNavigateUp = false,
             contentPadding = innerPadding,
           )
         }

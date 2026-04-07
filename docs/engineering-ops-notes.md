@@ -209,3 +209,46 @@ Fix:
 - Mount the active overflow menu inside the top bar container, aligned with the top-end action area.
 - Remove dependence on hard-coded popup offsets; let Compose position the menu from the local anchor.
 - Keep a lightweight `RoleplayChatScreen` log when the overflow menu opens or dismisses so future regressions can be correlated with session state quickly.
+
+## 2026-04-07 Roleplay edge-back verification
+
+- Goal: verify that roleplay detail pages consume system back instead of letting the app fall to background before returning to the previous in-app page.
+- Verified pages this round:
+  - role catalog standalone route
+  - role editor standalone route
+  - roleplay chat route
+  - root settings tab top bar state
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew :app:compileDebugKotlin
+.\gradlew :app:assembleDebug
+
+adb -s ONNZ95CAEMMZSKTS install -r .\app\build\outputs\apk\debug\app-debug.apk
+adb -s ONNZ95CAEMMZSKTS shell am force-stop selfgemma.talk
+adb -s ONNZ95CAEMMZSKTS logcat -c
+adb -s ONNZ95CAEMMZSKTS shell am start -n selfgemma.talk/.MainActivity
+
+# Use KEYCODE_BACK to verify the same back dispatcher path used by gesture navigation.
+adb -s ONNZ95CAEMMZSKTS shell input keyevent 4
+adb -s ONNZ95CAEMMZSKTS shell uiautomator dump /sdcard/verify.xml
+adb -s ONNZ95CAEMMZSKTS pull /sdcard/verify.xml .\..\tmp_verify.xml
+adb -s ONNZ95CAEMMZSKTS logcat -d -v time | Select-String -Pattern 'RoleplayChatScreen|RoleCatalogScreen|RoleEditorScreen|RoleplaySettingsScreen|AndroidRuntime'
+```
+
+Verification notes:
+
+- For Compose screens, `BackHandler` handles both hardware/software back and gesture back through the same dispatcher, so `input keyevent 4` is a valid fast regression check before spending time on manual edge-swipe runs.
+- Validate both log and UI tree:
+  - log should contain the screen-specific `system back navigate up ...` line
+  - dumped hierarchy should land on the expected previous screen, not launcher
+- When a screen is reused inside a root tab and as a standalone route, verify both modes:
+  - standalone route should show a back affordance and consume back
+  - root tab should not show a misleading back affordance
+
+## 2026-04-07 PowerShell Gradle entry note
+
+- In this repo, Gradle commands must run from `D:\gallery\Android\src`; `D:\gallery\Android` does not contain the wrapper script.
+- On PowerShell, use `.\gradlew.bat ...` from that directory for build verification.
