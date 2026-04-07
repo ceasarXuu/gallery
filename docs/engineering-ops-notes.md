@@ -199,3 +199,13 @@ Notes:
 
 - If user expectation is “chat sound follows media volume”, do not use sonification/system streams here.
 - A successful `streamId` from `SoundPool.play()` is not enough to prove audibility; stream routing must be checked against `dumpsys audio`.
+## 2026-04-07 Roleplay chat overflow menu positioning
+
+- Symptom: the chat page top-right overflow menu opened near the bottom-right of the screen instead of the app bar action.
+- Root cause: `DropdownMenu` was mounted against the full-screen chat root and then corrected with a hard-coded negative `DpOffset`, so the popup anchor drifted as layout bounds changed.
+
+Fix:
+
+- Mount the active overflow menu inside the top bar container, aligned with the top-end action area.
+- Remove dependence on hard-coded popup offsets; let Compose position the menu from the local anchor.
+- Keep a lightweight `RoleplayChatScreen` log when the overflow menu opens or dismisses so future regressions can be correlated with session state quickly.

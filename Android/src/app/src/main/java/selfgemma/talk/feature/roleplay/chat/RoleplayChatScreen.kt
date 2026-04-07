@@ -202,11 +202,54 @@ fun RoleplayChatScreen(
   Box(modifier = modifier) {
     Scaffold(
       topBar = {
-        AppTopBar(
-          title = uiState.role?.name ?: stringResource(R.string.chat_title),
-          leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = navigateUp),
-          rightAction = AppBarAction(actionType = AppBarActionType.MENU, actionFn = { showMenu = true }),
-        )
+        Box(modifier = Modifier.fillMaxWidth()) {
+          AppTopBar(
+            title = uiState.role?.name ?: stringResource(R.string.chat_title),
+            leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = navigateUp),
+            rightAction =
+              AppBarAction(
+                actionType = AppBarActionType.MENU,
+                actionFn = {
+                  showMenu = true
+                  Log.d(TAG, "chat overflow menu opened sessionId=${uiState.session?.id}")
+                },
+              ),
+          )
+          Box(
+            modifier =
+              Modifier.align(Alignment.TopEnd)
+                .padding(top = 4.dp, end = 4.dp),
+          ) {
+            DropdownMenu(
+              expanded = showMenu,
+              onDismissRequest = {
+                showMenu = false
+                Log.d(TAG, "chat overflow menu dismissed sessionId=${uiState.session?.id}")
+              },
+            ) {
+              DropdownMenuItem(
+                text = { Text(stringResource(R.string.chat_switch_model)) },
+                onClick = {
+                  showMenu = false
+                  showModelPicker = true
+                },
+                leadingIcon = {
+                  Icon(Icons.Rounded.SwapHoriz, contentDescription = null)
+                },
+              )
+              DropdownMenuItem(
+                text = { Text(stringResource(R.string.chat_open_model_library_menu)) },
+                onClick = {
+                  showMenu = false
+                  onOpenModelLibrary()
+                },
+                leadingIcon = {
+                  Icon(Icons.Rounded.FolderOpen, contentDescription = null)
+                },
+              )
+            }
+          }
+        }
       },
   ) { innerPadding ->
     if (uiState.loading) {
@@ -308,7 +351,7 @@ fun RoleplayChatScreen(
   }
 
   DropdownMenu(
-      expanded = showMenu,
+      expanded = false,
       onDismissRequest = { showMenu = false },
       offset = DpOffset(x = (-10).dp, y = (-80).dp),
     ) {
