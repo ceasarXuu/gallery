@@ -41,7 +41,6 @@ import selfgemma.talk.R
 fun RoleplaySettingsScreen(
   navigateUp: () -> Unit,
   onOpenModelLibrary: () -> Unit,
-  onOpenLegacyHome: () -> Unit,
   modifier: Modifier = Modifier,
   contentPadding: PaddingValues = PaddingValues(0.dp),
   viewModel: RoleplaySettingsViewModel = hiltViewModel(),
@@ -83,11 +82,6 @@ fun RoleplaySettingsScreen(
         title = stringResource(R.string.settings_model_library_title),
         summary = stringResource(R.string.settings_model_library_summary),
         onClick = onOpenModelLibrary,
-      )
-      SettingsCard(
-        title = stringResource(R.string.settings_legacy_home_title),
-        summary = stringResource(R.string.settings_legacy_home_summary),
-        onClick = onOpenLegacyHome,
       )
     }
   }

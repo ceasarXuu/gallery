@@ -192,7 +192,6 @@ fun MainTabScreen(
           selfgemma.talk.feature.roleplay.settings.RoleplaySettingsScreen(
             navigateUp = navigateUp,
             onOpenModelLibrary = onOpenModelLibrary,
-            onOpenLegacyHome = {},
             contentPadding = innerPadding,
           )
         }

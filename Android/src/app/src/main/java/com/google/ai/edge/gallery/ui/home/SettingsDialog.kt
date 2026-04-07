@@ -50,7 +50,6 @@ import androidx.compose.material3.MultiChoiceSegmentedButtonRow
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -96,7 +95,6 @@ fun SettingsDialog(
   onDismissed: () -> Unit,
 ) {
   var selectedTheme by remember { mutableStateOf(curThemeOverride) }
-  var messageSoundsEnabled by remember { mutableStateOf(modelManagerViewModel.areMessageSoundsEnabled()) }
   var hfToken by remember { mutableStateOf(modelManagerViewModel.getTokenStatusAndData().data) }
   val dateFormatter = remember {
     DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -187,34 +185,6 @@ fun SettingsDialog(
                 )
               }
             }
-          }
-
-          Row(
-            modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            Column(
-              modifier = Modifier.weight(1f),
-              verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-              Text(
-                stringResource(R.string.settings_message_sounds_title),
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium),
-              )
-              Text(
-                stringResource(R.string.settings_message_sounds_summary),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-            }
-            Switch(
-              checked = messageSoundsEnabled,
-              onCheckedChange = {
-                messageSoundsEnabled = it
-                modelManagerViewModel.setMessageSoundsEnabled(it)
-              },
-            )
           }
 
           // HF Token management.

@@ -255,7 +255,6 @@ fun AppNavHost(
       RoleplaySettingsScreen(
         navigateUp = { navController.navigateUp() },
         onOpenModelLibrary = { navController.navigate(ROUTE_MODEL_MANAGER) },
-        onOpenLegacyHome = { navController.navigate(ROUTE_HOMESCREEN) },
       )
     }
 
