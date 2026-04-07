@@ -89,6 +89,7 @@ constructor(
   private var lastDraftEditAtElapsed = 0L
   private var latestQueuedModel: Model? = null
   private var activeAssistantMessageId: String? = null
+  private var activeDispatchSuperseded = false
 
   private val sessionFlow =
     conversationRepository.observeSessions().map { sessions ->
@@ -254,6 +255,7 @@ constructor(
     }
 
     stopRequested.value = true
+    activeDispatchSuperseded = true
     metaState.update { current -> current.copy(errorMessage = null) }
     Log.d(
       TAG,
@@ -275,6 +277,7 @@ constructor(
 
     stopRequested.value = false
     activeAssistantMessageId = stagedTurn.assistantMessage.id
+    activeDispatchSuperseded = false
     metaState.update { current ->
       current.copy(
         inProgress = true,
@@ -335,33 +338,46 @@ constructor(
           model = model,
           isStopRequested = { stopRequested.value },
         )
+      val superseded = activeDispatchSuperseded
 
       Log.d(
         TAG,
-        "dispatch finished after ${SystemClock.elapsedRealtime() - dispatchStartedAt}ms sessionId=$sessionId interrupted=${result.interrupted} error=${result.errorMessage != null}",
+        "dispatch finished after ${SystemClock.elapsedRealtime() - dispatchStartedAt}ms sessionId=$sessionId interrupted=${result.interrupted} superseded=$superseded error=${result.errorMessage != null}",
       )
 
-      if (result.assistantMessage != null && result.assistantMessage.status == MessageStatus.COMPLETED) {
+      if (superseded && result.assistantMessage != null) {
+        conversationRepository.updateMessage(
+          result.assistantMessage.copy(
+            content = "",
+            status = MessageStatus.INTERRUPTED,
+            errorMessage = null,
+            updatedAt = System.currentTimeMillis(),
+          )
+        )
+      }
+
+      if (!superseded && result.assistantMessage != null && result.assistantMessage.status == MessageStatus.COMPLETED) {
         launch(Dispatchers.Default) {
           playReceiveSound()
         }
       }
-      if (result.errorMessage != null && !result.interrupted) {
+      if (!superseded && result.errorMessage != null && !result.interrupted) {
         draft.value = stagedTurn.combinedUserInput
       }
 
       stopRequested.value = false
       activeAssistantMessageId = null
+      activeDispatchSuperseded = false
       metaState.update { current ->
         current.copy(
           pendingUserMessages =
-            if (result.interrupted) {
+            if (result.interrupted || superseded) {
               current.pendingUserMessages
             } else {
               current.pendingUserMessages.filterNot { it.message.id in queuedIds }
             },
           inProgress = false,
-          errorMessage = if (result.interrupted) null else result.errorMessage,
+          errorMessage = if (result.interrupted || superseded) null else result.errorMessage,
         )
       }
       refreshSupplementalState()
