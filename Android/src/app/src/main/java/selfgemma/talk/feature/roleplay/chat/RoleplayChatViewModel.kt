@@ -129,7 +129,6 @@ constructor(
       return
     }
 
-    playSendSound()
     draft.value = ""
     stopRequested.value = false
     val stagedTurn = stageOptimisticTurn(input = input, model = model)
@@ -146,6 +145,10 @@ constructor(
       TAG,
       "send click accepted sessionId=$sessionId model=${model.name} inputLength=${input.length} userMessageId=${stagedTurn.userMessage.id} assistantMessageId=${stagedTurn.assistantMessage.id}",
     )
+
+    viewModelScope.launch(Dispatchers.Default) {
+      playSendSound()
+    }
 
     viewModelScope.launch(Dispatchers.IO) {
       val pendingMessage =
@@ -200,7 +203,9 @@ constructor(
       if (result.errorMessage != null && !result.interrupted) {
         draft.value = input
       } else if (result.assistantMessage != null && result.assistantMessage.status.name == "COMPLETED") {
-        playReceiveSound()
+        launch(Dispatchers.Default) {
+          playReceiveSound()
+        }
       }
 
       stopRequested.value = false
