@@ -95,3 +95,21 @@ Notes:
 - Run `compileDebugKotlin` first; it catches DTO/package/mapping breakage faster than going straight to unit tests.
 - The focused unit test is enough to verify the current round-trip contract: parse ST v2 JSON into canonical `RoleCardCore`, then serialize back into ST v2 shape.
 - Current build still emits unrelated Kotlin context-parameter and Moshi KAPT deprecation warnings; treat them as baseline noise unless the task specifically targets build tooling.
+
+## 2026-04-07 Roleplay ST chat jsonl verification
+
+- Goal: verify ST chat compatibility work at the jsonl parser/serializer layer before wiring chat import/export UI.
+- Scope in this phase: ST native `jsonl` only.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.data.roleplay.interop.stchat.StChatJsonlParserTest" --tests "selfgemma.talk.domain.roleplay.usecase.StChatJsonlInteropUseCaseTest"
+```
+
+Notes:
+
+- Keep the parser/serializer tests separate from repository or UI tests; the goal here is to lock the wire format first.
+- The current implementation preserves ST-specific fields like `extra`, `swipes`, `swipe_id`, and `chat_metadata` through `metadataJson` bridging, so tests should assert field presence rather than exact pretty-print spacing.

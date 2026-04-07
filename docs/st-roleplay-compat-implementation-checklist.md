@@ -48,19 +48,19 @@
 
 ### 4.1 棰嗗煙妯″瀷
 
-- [ ] `ChatInteropModels.kt`
+- [x] `ChatInteropModels.kt`
 - [ ] `MessageVariantModels.kt`
 - [ ] `ChatMetadataModels.kt`
 
 ### 4.2 瀵煎叆瑙ｆ瀽
 
-- [ ] `StChatJsonlParser.kt`
+- [x] `StChatJsonlParser.kt`
 - [ ] `StChatValidator.kt`
 - [ ] `ImportedChatNormalizer.kt`
 
 ### 4.3 瀵煎嚭
 
-- [ ] `StChatJsonlSerializer.kt`
+- [x] `StChatJsonlSerializer.kt`
 - [ ] `StChatExportFacade.kt`
 
 ## 5. 鏁版嵁灞傛竻鍗?
@@ -106,7 +106,7 @@
 - [ ] v3 -> canonical
 - [x] canonical -> v2 json
 - [ ] png metadata read/write
-- [ ] st jsonl parse/serialize
+- [x] st jsonl parse/serialize
 - [ ] legacy role migration
 
 ### 8.2 闆嗘垚娴嬭瘯
@@ -127,3 +127,4 @@
 8. logging / diagnostics
 
 姣忎釜涓婚鎻愪氦鍚庨兘琛ュ搴旀棩蹇椾笌楠岃瘉璁板綍锛岄伩鍏嶅悗缁洖婊氬洶闅俱€?
+
