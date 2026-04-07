@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import selfgemma.talk.domain.roleplay.model.RoleCard
-import selfgemma.talk.domain.roleplay.usecase.ExportStV2RoleCardToUriUseCase
-import selfgemma.talk.domain.roleplay.usecase.ImportStV2RoleCardFromUriUseCase
+import selfgemma.talk.domain.roleplay.usecase.ExportStRoleCardToUriUseCase
+import selfgemma.talk.domain.roleplay.usecase.ImportStRoleCardFromUriUseCase
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
 
 data class RoleEditorUiState(
@@ -40,8 +40,8 @@ class RoleEditorViewModel
 constructor(
   savedStateHandle: SavedStateHandle,
   private val roleRepository: RoleRepository,
-  private val importStV2RoleCardFromUriUseCase: ImportStV2RoleCardFromUriUseCase,
-  private val exportStV2RoleCardToUriUseCase: ExportStV2RoleCardToUriUseCase,
+  private val importStRoleCardFromUriUseCase: ImportStRoleCardFromUriUseCase,
+  private val exportStRoleCardToUriUseCase: ExportStRoleCardToUriUseCase,
 ) : ViewModel() {
   private val editingRoleId: String? = savedStateHandle.get<String?>("roleId")?.takeIf { it.isNotBlank() }
   private val _uiState = MutableStateFlow(RoleEditorUiState())
@@ -92,7 +92,7 @@ constructor(
     viewModelScope.launch {
       runCatching {
         val existingRole = editingRoleId?.let { roleId -> roleRepository.getRole(roleId) }
-        importStV2RoleCardFromUriUseCase.importFromUri(
+        importStRoleCardFromUriUseCase.importFromUri(
           uri = uri,
           existingRole = existingRole,
         )
@@ -114,13 +114,13 @@ constructor(
               safetyPolicy = importedRole.safetyPolicy,
               tagsText = importedRole.tags.joinToString(", "),
               defaultModelId = importedRole.defaultModelId,
-              statusMessage = "Imported ST role card JSON. Review and save to persist changes.",
+              statusMessage = "Imported ST role card. Review and save to persist changes.",
             )
         }
         .onFailure { error ->
           _uiState.update {
             it.copy(
-              errorMessage = error.message ?: "Failed to import ST role card JSON.",
+              errorMessage = error.message ?: "Failed to import ST role card.",
               statusMessage = null,
             )
           }
@@ -132,7 +132,7 @@ constructor(
     val snapshot = buildRoleSnapshot() ?: return
     viewModelScope.launch {
       runCatching {
-        exportStV2RoleCardToUriUseCase.exportToUri(
+        exportStRoleCardToUriUseCase.exportToUri(
           uri = uri,
           role = snapshot,
         )
@@ -140,7 +140,7 @@ constructor(
         .onSuccess {
           _uiState.update {
             it.copy(
-              statusMessage = "Exported ST role card JSON to the selected location.",
+              statusMessage = "Exported ST role card to the selected location.",
               errorMessage = null,
             )
           }
@@ -148,7 +148,7 @@ constructor(
         .onFailure { error ->
           _uiState.update {
             it.copy(
-              errorMessage = error.message ?: "Failed to export ST role card JSON.",
+              errorMessage = error.message ?: "Failed to export ST role card.",
               statusMessage = null,
             )
           }

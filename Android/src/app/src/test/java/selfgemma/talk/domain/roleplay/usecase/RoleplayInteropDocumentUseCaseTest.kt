@@ -8,6 +8,7 @@ import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.RoleCard
+import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentMetadata
 import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentRepository
 
 class RoleplayInteropDocumentUseCaseTest {
@@ -95,6 +96,7 @@ class RoleplayInteropDocumentUseCaseTest {
 
   private class FakeRoleplayInteropDocumentRepository : RoleplayInteropDocumentRepository {
     val documents = linkedMapOf<String, String>()
+    val byteDocuments = linkedMapOf<String, ByteArray>()
 
     override suspend fun readText(uri: String): String {
       return documents[uri] ?: error("No fake document for uri=$uri")
@@ -102,6 +104,18 @@ class RoleplayInteropDocumentUseCaseTest {
 
     override suspend fun writeText(uri: String, content: String) {
       documents[uri] = content
+    }
+
+    override suspend fun readBytes(uri: String): ByteArray {
+      return byteDocuments[uri] ?: documents[uri]?.toByteArray() ?: error("No fake document for uri=$uri")
+    }
+
+    override suspend fun writeBytes(uri: String, content: ByteArray) {
+      byteDocuments[uri] = content
+    }
+
+    override suspend fun getMetadata(uri: String): RoleplayInteropDocumentMetadata {
+      return RoleplayInteropDocumentMetadata(displayName = uri.substringAfterLast('/'))
     }
   }
 }

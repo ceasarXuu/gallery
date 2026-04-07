@@ -100,6 +100,7 @@ fun SessionEntity.toDomain(): Session {
     turnCount = turnCount,
     summaryVersion = summaryVersion,
     draftInput = draftInput,
+    interopChatMetadataJson = interopChatMetadataJson,
   )
 }
 
@@ -120,6 +121,7 @@ fun Session.toEntity(): SessionEntity {
     turnCount = turnCount,
     summaryVersion = summaryVersion,
     draftInput = draftInput,
+    interopChatMetadataJson = interopChatMetadataJson,
   )
 }
 

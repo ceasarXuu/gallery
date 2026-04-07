@@ -82,6 +82,15 @@ interface MessageDao {
     """
     SELECT * FROM messages
     WHERE sessionId = :sessionId
+    ORDER BY seq ASC
+    """
+  )
+  suspend fun listBySession(sessionId: String): List<MessageEntity>
+
+  @Query(
+    """
+    SELECT * FROM messages
+    WHERE sessionId = :sessionId
     ORDER BY seq DESC
     LIMIT :limit
     """
@@ -108,6 +117,9 @@ interface MessageDao {
 
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   suspend fun insertAll(entities: List<MessageEntity>)
+
+  @Query("DELETE FROM messages WHERE sessionId = :sessionId")
+  suspend fun deleteBySession(sessionId: String): Int
 
   @Update
   suspend fun update(entity: MessageEntity)

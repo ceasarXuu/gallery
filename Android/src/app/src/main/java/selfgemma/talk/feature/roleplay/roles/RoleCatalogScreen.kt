@@ -1,5 +1,8 @@
 package selfgemma.talk.feature.roleplay.roles
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -63,6 +66,10 @@ fun RoleCatalogScreen(
   val defaultModelId = downloadedModels.firstOrNull()?.name
   var pendingDeleteRoleId by rememberSaveable { mutableStateOf<String?>(null) }
   val listState = rememberLazyListState()
+  val importLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+      uri?.let { viewModel.importStRoleCard(it.toString()) }
+    }
 
   TrackPerformanceState(
     key = "RoleCatalogList",
@@ -115,11 +122,35 @@ fun RoleCatalogScreen(
               FilledTonalButton(onClick = onCreateRole, modifier = Modifier.testTag("role_catalog_create_role")) {
                 Text(stringResource(R.string.roles_create_button))
               }
+              OutlinedButton(
+                onClick = { importLauncher.launch(arrayOf("application/json", "image/png")) },
+                modifier = Modifier.testTag("role_catalog_import_st_json"),
+              ) {
+                Text(stringResource(R.string.roles_import_st_card))
+              }
               OutlinedButton(onClick = onOpenModelLibrary) {
                 Text(stringResource(R.string.roles_model_library))
               }
             }
           }
+        }
+      }
+      uiState.errorMessage?.let { errorMessage ->
+        item {
+          Text(
+            errorMessage,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+          )
+        }
+      }
+      uiState.statusMessage?.let { statusMessage ->
+        item {
+          Text(
+            statusMessage,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+          )
         }
       }
 

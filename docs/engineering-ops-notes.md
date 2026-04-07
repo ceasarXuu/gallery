@@ -126,3 +126,24 @@ Notes:
 
 - Keep file IO in `RoleplayInteropDocumentRepository`; do not read `ContentResolver` directly from ViewModel or Compose screen.
 - Import currently loads ST JSON into the editor state and waits for an explicit save, which is safer than auto-persisting over an existing role.
+
+## 2026-04-07 Roleplay ST interop document workflow notes
+
+- Goal: verify the end-to-end ST compatibility chain after wiring UI entry points and PNG support.
+- Scope in this phase:
+  - role card `json` and `png`
+  - chat `jsonl`
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.StChatSessionInteropUseCaseTest" --tests "selfgemma.talk.domain.roleplay.usecase.StRoleCardDocumentInteropUseCaseTest" --tests "selfgemma.talk.data.roleplay.interop.stcardpng.StPngRoleCardCodecTest"
+```
+
+Notes:
+
+- `compileDebugKotlin` and `testDebugUnitTest` must run sequentially. Running them in parallel can corrupt KAPT/Hilt generated sources under `app\build\generated\source\kapt\debug` and produce false unreadable-file errors.
+- PNG role card import currently follows ST precedence exactly: read `ccv3` first, then `chara`; because the app canonical parser is still v2-first, the document import layer normalizes `chara_card_v3` payloads back to v2 before mapping.
+- Keep file-format detection in `RoleplayInteropDocumentRepository.getMetadata()` and document-level usecases. Do not branch on URI strings inside Compose or ViewModel code.

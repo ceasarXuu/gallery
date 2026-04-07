@@ -85,6 +85,7 @@ data class Session(
   val turnCount: Int = 0,
   val summaryVersion: Int = 0,
   val draftInput: String = "",
+  val interopChatMetadataJson: String? = null,
 )
 
 data class Message(

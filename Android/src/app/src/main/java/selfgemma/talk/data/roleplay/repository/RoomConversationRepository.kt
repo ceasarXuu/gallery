@@ -5,6 +5,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import selfgemma.talk.data.roleplay.db.entity.SessionEntity
 import selfgemma.talk.data.roleplay.db.dao.MessageDao
 import selfgemma.talk.data.roleplay.db.dao.SessionDao
 import selfgemma.talk.data.roleplay.db.dao.SessionEventDao
@@ -39,6 +40,10 @@ constructor(
 
   override fun observeMessages(sessionId: String): Flow<List<Message>> {
     return messageDao.observeBySession(sessionId).map { messages -> messages.map { it.toDomain() } }
+  }
+
+  override suspend fun listMessages(sessionId: String): List<Message> {
+    return messageDao.listBySession(sessionId).map { it.toDomain() }
   }
 
   override suspend fun getSession(sessionId: String): Session? {
@@ -83,6 +88,14 @@ constructor(
     syncSessionMetadata(message)
   }
 
+  override suspend fun replaceMessages(sessionId: String, messages: List<Message>) {
+    messageDao.deleteBySession(sessionId)
+    if (messages.isNotEmpty()) {
+      messageDao.insertAll(messages.map { it.toEntity() })
+    }
+    resyncSessionMetadata(sessionId)
+  }
+
   override suspend fun nextMessageSeq(sessionId: String): Int {
     return messageDao.getMaxSeq(sessionId) + 1
   }
@@ -125,27 +138,65 @@ constructor(
         session.turnCount
       }
 
-    sessionDao.upsert(
-      session.copy(
-        title = deriveSessionTitle(session.title, message),
-        updatedAt = maxOf(session.updatedAt, message.updatedAt),
-        lastMessageAt = maxOf(session.lastMessageAt, message.updatedAt),
-        lastUserMessageExcerpt =
-          if (message.side == MessageSide.USER) {
-            message.content.toExcerpt()
-          } else {
-            session.lastUserMessageExcerpt
-          },
-        lastAssistantMessageExcerpt =
-          if (message.side == MessageSide.ASSISTANT && message.content.isNotBlank()) {
-            message.content.toExcerpt()
-          } else {
-            session.lastAssistantMessageExcerpt
-          },
-        turnCount = completedTurns,
-      )
-    )
+    sessionDao.upsert(session.mergeWithMessage(message, completedTurns))
   }
+
+  private suspend fun resyncSessionMetadata(sessionId: String) {
+    val session = sessionDao.getById(sessionId) ?: return
+    val messages = messageDao.listBySession(sessionId).map { it.toDomain() }
+    val updatedSession =
+      if (messages.isEmpty()) {
+        session.copy(
+          title = DEFAULT_SESSION_TITLE,
+          updatedAt = maxOf(session.updatedAt, session.createdAt),
+          lastMessageAt = session.createdAt,
+          lastUserMessageExcerpt = null,
+          lastAssistantMessageExcerpt = null,
+          turnCount = 0,
+        )
+      } else {
+        messages.fold(
+          initial = session.copy(
+            title = DEFAULT_SESSION_TITLE,
+            lastUserMessageExcerpt = null,
+            lastAssistantMessageExcerpt = null,
+            turnCount = 0,
+          )
+        ) { accumulator, message ->
+          accumulator.mergeWithMessage(
+            message = message,
+            completedTurns =
+              if (message.side == MessageSide.ASSISTANT && message.status == MessageStatus.COMPLETED) {
+                accumulator.turnCount + 1
+              } else {
+                accumulator.turnCount
+              },
+          )
+        }
+      }
+    sessionDao.upsert(updatedSession)
+  }
+}
+
+private fun SessionEntity.mergeWithMessage(message: Message, completedTurns: Int): SessionEntity {
+  return copy(
+    title = deriveSessionTitle(title, message),
+    updatedAt = maxOf(updatedAt, message.updatedAt),
+    lastMessageAt = maxOf(lastMessageAt, message.updatedAt),
+    lastUserMessageExcerpt =
+      if (message.side == MessageSide.USER) {
+        message.content.toExcerpt()
+      } else {
+        lastUserMessageExcerpt
+      },
+    lastAssistantMessageExcerpt =
+      if (message.side == MessageSide.ASSISTANT && message.content.isNotBlank()) {
+        message.content.toExcerpt()
+      } else {
+        lastAssistantMessageExcerpt
+      },
+    turnCount = completedTurns,
+  )
 }
 
 private fun deriveSessionTitle(currentTitle: String, message: Message): String {

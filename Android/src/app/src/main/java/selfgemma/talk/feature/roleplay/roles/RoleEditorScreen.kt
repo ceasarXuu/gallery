@@ -55,8 +55,12 @@ fun RoleEditorScreen(
     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
       uri?.let { viewModel.importStCardFromUri(it.toString()) }
     }
-  val exportLauncher =
+  val exportJsonLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
+      uri?.let { viewModel.exportStCardToUri(it.toString()) }
+    }
+  val exportPngLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("image/png")) { uri: Uri? ->
       uri?.let { viewModel.exportStCardToUri(it.toString()) }
     }
 
@@ -192,19 +196,28 @@ fun RoleEditorScreen(
       item {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
           OutlinedButton(
-            onClick = { importLauncher.launch(arrayOf("application/json")) },
+            onClick = { importLauncher.launch(arrayOf("application/json", "image/png")) },
             modifier = Modifier.fillMaxWidth().testTag("role_editor_import_st_json"),
           ) {
-            Text("Import ST Role Card JSON")
+            Text("Import ST Role Card")
           }
           OutlinedButton(
             onClick = {
               val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-              exportLauncher.launch("${fileName}.json")
+              exportJsonLauncher.launch("${fileName}.json")
             },
             modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_json"),
           ) {
             Text("Export ST Role Card JSON")
+          }
+          OutlinedButton(
+            onClick = {
+              val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+              exportPngLauncher.launch("${fileName}.png")
+            },
+            modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_png"),
+          ) {
+            Text("Export ST Role Card PNG")
           }
         }
       }

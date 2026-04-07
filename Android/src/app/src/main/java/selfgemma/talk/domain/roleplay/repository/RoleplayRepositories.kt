@@ -13,6 +13,8 @@ interface ConversationRepository {
 
   fun observeMessages(sessionId: String): Flow<List<Message>>
 
+  suspend fun listMessages(sessionId: String): List<Message>
+
   suspend fun getSession(sessionId: String): Session?
 
   suspend fun createSession(roleId: String, modelId: String): Session
@@ -26,6 +28,8 @@ interface ConversationRepository {
   suspend fun appendMessage(message: Message)
 
   suspend fun updateMessage(message: Message)
+
+  suspend fun replaceMessages(sessionId: String, messages: List<Message>)
 
   suspend fun nextMessageSeq(sessionId: String): Int
 

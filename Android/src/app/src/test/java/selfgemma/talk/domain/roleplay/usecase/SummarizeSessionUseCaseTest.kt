@@ -85,6 +85,10 @@ private class FakeConversationRepository(
     return flowOf(messages.filter { it.sessionId == sessionId })
   }
 
+  override suspend fun listMessages(sessionId: String): List<Message> {
+    return messages.filter { it.sessionId == sessionId }
+  }
+
   override suspend fun getSession(sessionId: String): Session? {
     return session.takeIf { it.id == sessionId }
   }
@@ -110,6 +114,10 @@ private class FakeConversationRepository(
   }
 
   override suspend fun updateMessage(message: Message) {
+    error("Not needed in this test")
+  }
+
+  override suspend fun replaceMessages(sessionId: String, messages: List<Message>) {
     error("Not needed in this test")
   }
 

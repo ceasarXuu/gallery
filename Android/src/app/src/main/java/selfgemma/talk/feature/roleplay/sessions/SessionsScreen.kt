@@ -1,5 +1,8 @@
 package selfgemma.talk.feature.roleplay.sessions
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,7 +25,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Archive
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -74,9 +79,27 @@ fun SessionsScreen(
 ) {
   val uiState by viewModel.uiState.collectAsState()
   var pendingDeleteSessionId by rememberSaveable { mutableStateOf<String?>(null) }
+  var pendingImportSessionId by rememberSaveable { mutableStateOf<String?>(null) }
+  var pendingExportSessionId by rememberSaveable { mutableStateOf<String?>(null) }
   var expandedSessionId by rememberSaveable { mutableStateOf<String?>(null) }
   val context = LocalContext.current
   val listState = rememberLazyListState()
+  val importLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+      val sessionId = pendingImportSessionId
+      pendingImportSessionId = null
+      if (sessionId != null && uri != null) {
+        viewModel.importChatJsonl(sessionId = sessionId, uri = uri.toString())
+      }
+    }
+  val exportLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/x-ndjson")) { uri: Uri? ->
+      val sessionId = pendingExportSessionId
+      pendingExportSessionId = null
+      if (sessionId != null && uri != null) {
+        viewModel.exportChatJsonl(sessionId = sessionId, uri = uri.toString())
+      }
+    }
 
   TrackPerformanceState(
     key = "SessionsList",
@@ -142,6 +165,15 @@ fun SessionsScreen(
             )
           }
         }
+        uiState.statusMessage?.let { statusMessage ->
+          item {
+            Text(
+              statusMessage,
+              style=MaterialTheme.typography.bodyMedium,
+              color=MaterialTheme.colorScheme.primary,
+            )
+          }
+        }
 
         items(uiState.sessions, key={ it.id }) { session ->
           SessionCard(
@@ -151,6 +183,16 @@ fun SessionsScreen(
               expandedSessionId=if (shouldExpand) session.id else null
             },
             onOpen={ onOpenSession(session.id) },
+            onImportChat={
+              pendingImportSessionId = session.id
+              importLauncher.launch(arrayOf("application/x-ndjson", "application/json", "text/plain"))
+            },
+            onExportChat={
+              pendingExportSessionId = session.id
+              val fileName =
+                session.roleName.ifBlank { "session" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+              exportLauncher.launch("${fileName}-${session.id.take(8)}.jsonl")
+            },
             onTogglePin={ viewModel.togglePin(session.id) },
             onArchive={ viewModel.archiveSession(session.id) },
             onDelete={ pendingDeleteSessionId=session.id },
@@ -194,6 +236,8 @@ private fun SessionCard(
   isExpanded: Boolean,
   onExpandChange: (Boolean) -> Unit,
   onOpen: () -> Unit,
+  onImportChat: () -> Unit,
+  onExportChat: () -> Unit,
   onTogglePin: () -> Unit,
   onArchive: () -> Unit,
   onDelete: () -> Unit,
@@ -225,6 +269,24 @@ private fun SessionCard(
       horizontalArrangement=Arrangement.End,
       verticalAlignment=Alignment.CenterVertically,
     ) {
+      IconButton(onClick=onImportChat, modifier=Modifier.size(52.dp).background(MaterialTheme.colorScheme.tertiary.copy(alpha=0.15f), CircleShape)) {
+        Icon(
+          Icons.Rounded.FileUpload,
+          contentDescription=stringResource(R.string.sessions_import_chat),
+          tint=MaterialTheme.colorScheme.tertiary,
+          modifier=Modifier.size(26.dp),
+        )
+      }
+      Spacer(Modifier.width(8.dp))
+      IconButton(onClick=onExportChat, modifier=Modifier.size(52.dp).background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha=0.35f), CircleShape)) {
+        Icon(
+          Icons.Rounded.Download,
+          contentDescription=stringResource(R.string.sessions_export_chat),
+          tint=MaterialTheme.colorScheme.onTertiaryContainer,
+          modifier=Modifier.size(26.dp),
+        )
+      }
+      Spacer(Modifier.width(8.dp))
       IconButton(onClick=onDelete, modifier=Modifier.size(52.dp).background(MaterialTheme.colorScheme.error.copy(alpha=0.15f), CircleShape)) {
         Icon(
           Icons.Rounded.Delete,
