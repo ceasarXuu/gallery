@@ -144,8 +144,6 @@
   <!-- Settings Screen -->
   <string name="settings_model_library_title">模型库</string>
   <string name="settings_model_library_summary">下载、导入和管理本地模型</string>
-  <string name="settings_legacy_home_title">旧版主页</string>
-  <string name="settings_legacy_home_summary">打开之前的Gallery主页作为备用入口</string>
 
   <!-- Model Manager -->
   <string name="model_manager">模型管理器</string>

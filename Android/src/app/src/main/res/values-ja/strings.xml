@@ -143,8 +143,6 @@
   <!-- Settings Screen -->
   <string name="settings_model_library_title">モデルライブラリ</string>
   <string name="settings_model_library_summary">ローカルモデルのダウンロード、インポート、管理</string>
-  <string name="settings_legacy_home_title">旧ホーム</string>
-  <string name="settings_legacy_home_summary">以前のGalleryホームページをバックアップエントリとして開く</string>
 
   <!-- Model Manager -->
   <string name="model_manager">モデルマネージャー</string>

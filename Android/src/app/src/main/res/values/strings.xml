@@ -144,8 +144,6 @@
   <!-- Settings Screen -->
   <string name="settings_model_library_title">Model Library</string>
   <string name="settings_model_library_summary">Download, import and manage local models</string>
-  <string name="settings_legacy_home_title">Legacy Home</string>
-  <string name="settings_legacy_home_summary">Open the previous Gallery home page as a backup entry</string>
 
   <!-- Model Manager -->
   <string name="model_manager">Model Manager</string>
