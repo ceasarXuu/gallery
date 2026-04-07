@@ -392,7 +392,10 @@ fun ChatPanel(
                     when (message) {
                       // Text
                       is ChatMessageText ->
-                        MessageBodyText(message = message, inProgress = uiState.inProgress)
+                        MessageBodyText(
+                          message = message,
+                          inProgress = uiState.inProgress && index == messages.lastIndex,
+                        )
 
                       // Image
                       is ChatMessageImage -> {

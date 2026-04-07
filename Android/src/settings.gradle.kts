@@ -47,3 +47,4 @@ dependencyResolutionManagement {
 rootProject.name = "SelfGemma Talk"
 
 include(":app")
+include(":macrobenchmark")

@@ -53,6 +53,11 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("debug")
     }
+    create("benchmark") {
+      initWith(getByName("release"))
+      matchingFallbacks += listOf("release")
+      signingConfig = signingConfigs.getByName("debug")
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -68,9 +73,16 @@ android {
   }
 }
 
+androidComponents {
+  beforeVariants(selector().withBuildType("benchmark")) { variantBuilder ->
+    variantBuilder.enableAndroidTest = false
+  }
+}
+
 dependencies {
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.appcompat)
+  implementation(libs.androidx.metrics.performance)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
   implementation(platform(libs.androidx.compose.bom))
@@ -88,6 +100,7 @@ dependencies {
   implementation(libs.androidx.room.ktx)
   implementation(libs.com.google.code.gson)
   implementation(libs.androidx.lifecycle.process)
+  implementation(libs.androidx.profileinstaller)
   implementation(libs.androidx.security.crypto)
   implementation(libs.androidx.webkit)
   implementation(libs.litertlm)

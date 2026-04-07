@@ -33,6 +33,9 @@ interface RoleDao {
   @Upsert
   suspend fun upsert(entity: RoleEntity)
 
+  @Upsert
+  suspend fun upsertAll(entities: List<RoleEntity>)
+
   @Query("DELETE FROM roles WHERE id = :roleId")
   suspend fun delete(roleId: String): Int
 }
@@ -53,6 +56,9 @@ interface SessionDao {
 
   @Upsert
   suspend fun upsert(entity: SessionEntity)
+
+  @Upsert
+  suspend fun upsertAll(entities: List<SessionEntity>)
 
   @Query("UPDATE sessions SET archived = 1, updatedAt = :updatedAt WHERE id = :sessionId")
   suspend fun archive(sessionId: String, updatedAt: Long): Int
@@ -100,6 +106,9 @@ interface MessageDao {
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   suspend fun insert(entity: MessageEntity)
 
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertAll(entities: List<MessageEntity>)
+
   @Update
   suspend fun update(entity: MessageEntity)
 
@@ -125,6 +134,9 @@ interface SessionSummaryDao {
 
   @Upsert
   suspend fun upsert(entity: SessionSummaryEntity)
+
+  @Upsert
+  suspend fun upsertAll(entities: List<SessionSummaryEntity>)
 
   @Query("DELETE FROM session_summaries WHERE sessionId = :sessionId")
   suspend fun delete(sessionId: String): Int

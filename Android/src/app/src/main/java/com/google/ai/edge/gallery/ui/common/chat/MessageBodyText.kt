@@ -35,20 +35,35 @@ import androidx.compose.ui.unit.dp
 import selfgemma.talk.R
 import selfgemma.talk.ui.common.MarkdownText
 
+private val markdownBlockPattern = Regex("""(?m)^\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```|~~~)""")
+private val markdownInlinePattern =
+  Regex("""(\[[^]]+]\([^)]+\)|`[^`]+`|\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|_[^_\n]+_)""")
+
 /** Composable function to display the text content of a ChatMessageText. */
 @Composable
-fun MessageBodyText(message: ChatMessageText, inProgress: Boolean) {
+fun MessageBodyText(message: ChatMessageText, inProgress: Boolean = false) {
+  val shouldRenderMarkdown = shouldRenderMarkdown(message = message, isStreaming = inProgress)
+
   SelectionContainer {
     if (message.side == ChatSide.USER) {
-      MarkdownText(
-        text = message.content,
-        modifier = Modifier.padding(12.dp),
-        textColor = Color.White,
-        linkColor = Color.White,
-      )
+      if (shouldRenderMarkdown) {
+        MarkdownText(
+          text = message.content,
+          modifier = Modifier.padding(12.dp),
+          textColor = Color.White,
+          linkColor = Color.White,
+        )
+      } else {
+        Text(
+          text = message.content,
+          style = MaterialTheme.typography.bodyLarge,
+          color = Color.White,
+          modifier = Modifier.padding(12.dp),
+        )
+      }
     } else if (message.side == ChatSide.AGENT) {
       val cdResponse = stringResource(R.string.cd_model_response_text)
-      if (message.isMarkdown) {
+      if (shouldRenderMarkdown) {
         MarkdownText(
           text = message.content,
           modifier =
@@ -63,7 +78,7 @@ fun MessageBodyText(message: ChatMessageText, inProgress: Boolean) {
       } else {
         Text(
           message.content,
-          style = MaterialTheme.typography.bodyMedium,
+          style = MaterialTheme.typography.bodyLarge,
           color = MaterialTheme.colorScheme.onSurface,
           modifier =
             Modifier.padding(12.dp).semantics {
@@ -77,6 +92,19 @@ fun MessageBodyText(message: ChatMessageText, inProgress: Boolean) {
       }
     }
   }
+}
+
+private fun shouldRenderMarkdown(message: ChatMessageText, isStreaming: Boolean): Boolean {
+  if (!message.isMarkdown || isStreaming) {
+    return false
+  }
+
+  val text = message.content
+  if (text.isBlank()) {
+    return false
+  }
+
+  return markdownBlockPattern.containsMatchIn(text) || markdownInlinePattern.containsMatchIn(text)
 }
 
 // @Preview(showBackground = true)

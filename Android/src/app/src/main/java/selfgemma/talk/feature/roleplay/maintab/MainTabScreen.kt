@@ -1,7 +1,7 @@
 package selfgemma.talk.feature.roleplay.maintab
 
+import android.os.SystemClock
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -38,6 +38,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import selfgemma.talk.performance.FrontendPerformanceMonitor
+import selfgemma.talk.performance.TrackPerformanceState
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import selfgemma.talk.R
 
@@ -73,9 +75,15 @@ fun MainTabScreen(
   val currentPage by remember { derivedStateOf { pagerState.currentPage } }
   val targetPage by remember { derivedStateOf { pagerState.targetPage } }
   val isScrollInProgress by remember { derivedStateOf { pagerState.isScrollInProgress } }
+  val currentPageName = when (currentPage) {
+    0 -> "messages"
+    1 -> "roles"
+    else -> "settings"
+  }
 
   val fabDuration = 150
-  val pageAnimationSpec = tween<Float>(durationMillis = 250, easing = FastOutSlowInEasing)
+
+  TrackPerformanceState(key = "MainTab", value = currentPageName)
 
   LaunchedEffect(currentPage, isScrollInProgress) {
     if (!isScrollInProgress) {
@@ -121,12 +129,13 @@ fun MainTabScreen(
             onClick = {
               if (currentPage != index) {
                 scope.launch {
-                  val startTime = System.currentTimeMillis()
-                  pagerState.animateScrollToPage(
-                    page = index,
-                    animationSpec = pageAnimationSpec,
+                  val startTime = SystemClock.elapsedRealtime()
+                  pagerState.scrollToPage(page = index)
+                  val duration = SystemClock.elapsedRealtime() - startTime
+                  FrontendPerformanceMonitor.recordInteraction(
+                    name = "main_tab_switch",
+                    durationMs = duration,
                   )
-                  val duration = System.currentTimeMillis() - startTime
                   android.util.Log.d(TAG, "Tab切换耗时: ${duration}ms, 目标: $index")
                 }
               }
@@ -153,7 +162,7 @@ fun MainTabScreen(
     HorizontalPager(
       state = pagerState,
       modifier = Modifier.fillMaxSize(),
-      beyondViewportPageCount = 0,
+      beyondViewportPageCount = 2,
       pageSpacing = 0.dp,
       key = { page -> page },
     ) { page ->

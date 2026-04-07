@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Archive
@@ -57,6 +58,7 @@ import selfgemma.talk.AppTopBar
 import selfgemma.talk.data.AppBarAction
 import selfgemma.talk.data.AppBarActionType
 import selfgemma.talk.R
+import selfgemma.talk.performance.TrackPerformanceState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +76,12 @@ fun SessionsScreen(
   var pendingDeleteSessionId by rememberSaveable { mutableStateOf<String?>(null) }
   var expandedSessionId by rememberSaveable { mutableStateOf<String?>(null) }
   val context = LocalContext.current
+  val listState = rememberLazyListState()
+
+  TrackPerformanceState(
+    key = "SessionsList",
+    value = if (listState.isScrollInProgress) "scrolling" else null,
+  )
 
   Scaffold(
     modifier=modifier,
@@ -120,6 +128,7 @@ fun SessionsScreen(
       }
 
       LazyColumn(
+        state= listState,
         modifier=Modifier.fillMaxSize(),
         contentPadding=PaddingValues(16.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp),

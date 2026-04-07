@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -65,20 +67,27 @@ constructor(
   private val draft = MutableStateFlow("")
   private val metaState = MutableStateFlow(RoleplayChatMetaState())
   private val stopRequested = MutableStateFlow(false)
+  private val sessionFlow =
+    conversationRepository.observeSessions().map { sessions ->
+      sessions.firstOrNull { it.id == sessionId }
+    }.distinctUntilChanged()
+  private val roleFlow =
+    combine(sessionFlow, roleRepository.observeRoles()) { session, roles ->
+      roles.firstOrNull { it.id == session?.roleId }
+    }.distinctUntilChanged()
 
   val uiState: StateFlow<RoleplayChatUiState> =
     combine(
-      conversationRepository.observeSessions(),
-      conversationRepository.observeMessages(sessionId),
-      roleRepository.observeRoles(),
+      sessionFlow,
+      conversationRepository.observeMessages(sessionId).distinctUntilChanged(),
+      roleFlow,
       draft,
       metaState,
-    ) { sessions, messages, roles, draftValue, meta ->
-      val session = sessions.firstOrNull { it.id == sessionId }
+    ) { session, messages, role, draftValue, meta ->
       RoleplayChatUiState(
         loading = session == null,
         session = session,
-        role = roles.firstOrNull { it.id == session?.roleId },
+        role = role,
         messages = messages,
         draft = draftValue,
         summary = meta.summary,

@@ -39,11 +39,12 @@ constructor(
 ) : ViewModel() {
   val uiState: StateFlow<SessionsUiState> =
     combine(conversationRepository.observeSessions(), roleRepository.observeRoles()) { sessions, roles ->
+      val rolesById = roles.associateBy { it.id }
       SessionsUiState(
         loading = false,
         sessions =
           sessions.map { session ->
-            val role = roles.find { it.id == session.roleId }
+            val role = rolesById[session.roleId]
             SessionListItemUiState(
               id = session.id,
               title = session.title,

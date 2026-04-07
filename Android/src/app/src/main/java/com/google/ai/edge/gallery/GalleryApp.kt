@@ -17,8 +17,11 @@
 package selfgemma.talk
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import selfgemma.talk.performance.TrackPerformanceState
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import selfgemma.talk.ui.navigation.AppNavHost
 
@@ -28,5 +31,14 @@ fun SelfGemmaTalkApp(
   navController: NavHostController = rememberNavController(),
   modelManagerViewModel: ModelManagerViewModel,
 ) {
+  val backStackEntry by navController.currentBackStackEntryAsState()
+
+  TrackPerformanceState(
+    key = "Route",
+    value = backStackEntry?.destination?.route ?: ROLEPLAY_BOOTSTRAP_ROUTE,
+  )
+
   AppNavHost(navController = navController, modelManagerViewModel = modelManagerViewModel)
 }
+
+private const val ROLEPLAY_BOOTSTRAP_ROUTE = "roleplay_bootstrap"

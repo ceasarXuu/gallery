@@ -44,6 +44,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val TAG = "AGLlmChatViewModel"
+private const val STREAM_UI_UPDATE_MIN_INTERVAL_MS = 50L
 
 @OptIn(ExperimentalApi::class)
 open class LlmChatViewModelBase() : ChatViewModel() {
@@ -79,6 +80,48 @@ open class LlmChatViewModelBase() : ChatViewModel() {
 
       var firstRun = true
       val start = System.currentTimeMillis()
+      var pendingTextUpdate = StringBuilder()
+      var pendingThinkingUpdate = StringBuilder()
+      var lastTextUiUpdateAt = 0L
+      var lastThinkingUiUpdateAt = 0L
+
+      fun flushPendingThinkingUpdate(force: Boolean = false) {
+        if (pendingThinkingUpdate.isEmpty()) {
+          return
+        }
+
+        val now = System.currentTimeMillis()
+        if (!force && now - lastThinkingUiUpdateAt < STREAM_UI_UPDATE_MIN_INTERVAL_MS) {
+          return
+        }
+
+        updateLastThinkingMessageContentIncrementally(
+          model = model,
+          partialContent = pendingThinkingUpdate.toString(),
+        )
+        pendingThinkingUpdate = StringBuilder()
+        lastThinkingUiUpdateAt = now
+      }
+
+      fun flushPendingTextUpdate(force: Boolean = false, latencyMs: Float = -1f) {
+        val now = System.currentTimeMillis()
+        if (!force) {
+          if (pendingTextUpdate.isEmpty()) {
+            return
+          }
+          if (now - lastTextUiUpdateAt < STREAM_UI_UPDATE_MIN_INTERVAL_MS) {
+            return
+          }
+        }
+
+        updateLastTextMessageContentIncrementally(
+          model = model,
+          partialContent = pendingTextUpdate.toString(),
+          latencyMs = latencyMs,
+        )
+        pendingTextUpdate = StringBuilder()
+        lastTextUiUpdateAt = now
+      }
 
       try {
         val resultListener: (String, Boolean, String?) -> Unit =
@@ -114,12 +157,11 @@ open class LlmChatViewModelBase() : ChatViewModel() {
                       ),
                   )
                 }
-                updateLastThinkingMessageContentIncrementally(
-                  model = model,
-                  partialContent = thinkingText!!,
-                )
+                pendingThinkingUpdate.append(thinkingText!!)
+                flushPendingThinkingUpdate(force = done)
               } else {
                 if (currentLastMessage?.type == ChatMessageType.THINKING) {
+                  flushPendingThinkingUpdate(force = true)
                   val thinkingMsg = currentLastMessage as ChatMessageThinking
                   if (thinkingMsg.inProgress) {
                     replaceLastMessage(
@@ -159,11 +201,8 @@ open class LlmChatViewModelBase() : ChatViewModel() {
                 // Incrementally update the streamed partial results.
                 val latencyMs: Long = if (done) System.currentTimeMillis() - start else -1
                 if (partialResult.isNotEmpty() || wasLoading || done) {
-                  updateLastTextMessageContentIncrementally(
-                    model = model,
-                    partialContent = partialResult,
-                    latencyMs = latencyMs.toFloat(),
-                  )
+                  pendingTextUpdate.append(partialResult)
+                  flushPendingTextUpdate(force = done || wasLoading, latencyMs = latencyMs.toFloat())
                 }
               }
 
@@ -199,12 +238,19 @@ open class LlmChatViewModelBase() : ChatViewModel() {
           }
 
         val cleanUpListener: () -> Unit = {
+          flushPendingThinkingUpdate(force = true)
+          flushPendingTextUpdate(force = true)
           setInProgress(false)
           setPreparing(false)
         }
 
         val errorListener: (String) -> Unit = { message ->
           Log.e(TAG, "Error occurred while running inference")
+          flushPendingThinkingUpdate(force = true)
+          flushPendingTextUpdate(
+            force = true,
+            latencyMs = (System.currentTimeMillis() - start).toFloat(),
+          )
           setInProgress(false)
           setPreparing(false)
           onError(message)

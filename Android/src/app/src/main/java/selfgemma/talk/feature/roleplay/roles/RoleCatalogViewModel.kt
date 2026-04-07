@@ -12,7 +12,6 @@ import kotlinx.coroutines.launch
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
-import selfgemma.talk.domain.roleplay.usecase.EnsureRoleplaySeedDataUseCase
 
 data class RoleCatalogUiState(
   val loading: Boolean = true,
@@ -26,7 +25,6 @@ class RoleCatalogViewModel
 constructor(
   private val roleRepository: RoleRepository,
   private val conversationRepository: ConversationRepository,
-  ensureRoleplaySeedData: EnsureRoleplaySeedDataUseCase,
 ) : ViewModel() {
   val uiState: StateFlow<RoleCatalogUiState> =
     roleRepository.observeRoles().map { roles ->
@@ -41,12 +39,6 @@ constructor(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = RoleCatalogUiState(),
       )
-
-  init {
-    viewModelScope.launch {
-      ensureRoleplaySeedData()
-    }
-  }
 
   suspend fun createSession(roleId: String, modelId: String): String {
     return conversationRepository.createSession(roleId = roleId, modelId = modelId).id

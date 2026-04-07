@@ -110,7 +110,7 @@ open class ChatMessageText(
   override val side: ChatSide,
   // Negative numbers will hide the latency display.
   override val latencyMs: Float = 0f,
-  val isMarkdown: Boolean = true,
+  val isMarkdown: Boolean = side != ChatSide.USER,
 
   // Benchmark result for LLM response.
   var llmBenchmarkResult: ChatMessageBenchmarkLlmResult? = null,

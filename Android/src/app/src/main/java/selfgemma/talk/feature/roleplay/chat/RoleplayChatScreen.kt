@@ -87,6 +87,7 @@ import selfgemma.talk.data.Model
 import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
+import selfgemma.talk.performance.TrackPerformanceState
 import selfgemma.talk.ui.modelmanager.ModelInitializationStatusType
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import androidx.compose.ui.res.stringResource
@@ -106,7 +107,13 @@ fun RoleplayChatScreen(
   val uiState by viewModel.uiState.collectAsState()
   val modelManagerUiState by modelManagerViewModel.uiState.collectAsState()
   val activeModel = uiState.session?.activeModelId?.let(modelManagerViewModel::getModelByName)
-  val downloadedModels = modelManagerViewModel.getAllDownloadedModels()
+  val downloadedModels =
+    remember(
+      modelManagerUiState.modelDownloadStatus,
+      modelManagerUiState.modelImportingUpdateTrigger,
+    ) {
+      modelManagerViewModel.getAllDownloadedModels()
+    }
   val llmChatTask = modelManagerViewModel.getTaskById(BuiltInTaskId.LLM_CHAT)
   val listState = rememberLazyListState()
   val lastMessage = uiState.messages.lastOrNull()
@@ -116,6 +123,12 @@ fun RoleplayChatScreen(
         messageCount = uiState.messages.size,
       )
     }
+
+  TrackPerformanceState(
+    key = "RoleplayChatList",
+    value = if (listState.isScrollInProgress) "scrolling" else null,
+  )
+
   val activeModelStatus = activeModel?.let { modelManagerUiState.modelInitializationStatus[it.name]?.status }
   val isActiveModelInitialized =
     activeModel != null && activeModelStatus == ModelInitializationStatusType.INITIALIZED
@@ -175,7 +188,7 @@ fun RoleplayChatScreen(
       return@Scaffold
     }
 
-    if (activeModel == null) {
+    if (activeModel == null && uiState.messages.isEmpty()) {
       Column(
         modifier = Modifier.fillMaxSize().padding(innerPadding).padding(24.dp),
         verticalArrangement = Arrangement.Center,
@@ -212,6 +225,14 @@ fun RoleplayChatScreen(
           .consumeWindowInsets(innerPadding)
           .imePadding()
     ) {
+      if (activeModel == null) {
+        MissingModelBanner(
+          downloadedModels = downloadedModels,
+          onSwitchModel = viewModel::switchModel,
+          onOpenModelLibrary = onOpenModelLibrary,
+        )
+      }
+
       LazyColumn(
         state = listState,
         modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -302,9 +323,17 @@ fun RoleplayChatScreen(
           draft = uiState.draft,
           onDraftChange = viewModel::updateDraft,
           inProgress = uiState.inProgress,
-          canSend = isActiveModelInitialized && uiState.draft.isNotBlank(),
-          onSend = { viewModel.sendMessage(activeModel) },
-          onStop = { viewModel.stopGeneration(activeModel) },
+          canSend = activeModel != null && isActiveModelInitialized && uiState.draft.isNotBlank(),
+          onSend = {
+            activeModel?.let { currentModel ->
+              viewModel.sendMessage(currentModel)
+            }
+          },
+          onStop = {
+            activeModel?.let { currentModel ->
+              viewModel.stopGeneration(currentModel)
+            }
+          },
         )
       }
     }
@@ -376,6 +405,50 @@ fun RoleplayChatScreen(
         },
         confirmButton = {}
       )
+    }
+  }
+}
+
+@Composable
+private fun MissingModelBanner(
+  downloadedModels: List<Model>,
+  onSwitchModel: (String) -> Unit,
+  onOpenModelLibrary: () -> Unit,
+) {
+  Surface(
+    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    shape = RoundedCornerShape(18.dp),
+    tonalElevation = 1.dp,
+    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
+  ) {
+    Column(
+      modifier = Modifier.fillMaxWidth().padding(16.dp),
+      verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+      Text(
+        text = stringResource(R.string.chat_missing_model_title),
+        style = MaterialTheme.typography.titleMedium,
+      )
+      Text(
+        text = stringResource(R.string.chat_missing_model_content),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        downloadedModels.firstOrNull()?.let { fallbackModel ->
+          OutlinedButton(onClick = { onSwitchModel(fallbackModel.name) }) {
+            Text(
+              stringResource(
+                R.string.chat_use_model,
+                fallbackModel.displayName.ifEmpty { fallbackModel.name },
+              )
+            )
+          }
+        }
+        FilledTonalButton(onClick = onOpenModelLibrary) {
+          Text(stringResource(R.string.chat_open_model_library))
+        }
+      }
     }
   }
 }

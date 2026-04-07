@@ -46,8 +46,12 @@ import androidx.compose.ui.Modifier
 import androidx.core.animation.doOnEnd
 import androidx.core.os.bundleOf
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.metrics.performance.JankStats
+import androidx.metrics.performance.PerformanceMetricsState
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.performance.FrontendPerformanceMonitor
 import selfgemma.talk.ui.theme.AppTheme
 import com.google.ai.edge.litertlm.ExperimentalApi
 import com.google.ai.edge.litertlm.ExperimentalFlags
@@ -60,6 +64,10 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
   private val modelManagerViewModel: ModelManagerViewModel by viewModels()
+  private val jankFrameListener = JankStats.OnFrameListener { frameData ->
+    FrontendPerformanceMonitor.recordFrame(frameData)
+  }
+  private var jankStats: JankStats? = null
   private var splashScreenAboutToExit: Boolean = false
   private var contentSet: Boolean = false
 
@@ -99,6 +107,8 @@ class MainActivity : AppCompatActivity() {
 
       @OptIn(ExperimentalApi::class)
       ExperimentalFlags.enableBenchmark = false
+
+      initializePerformanceTrackingIfNeeded()
 
       contentSet = true
     }
@@ -165,6 +175,9 @@ class MainActivity : AppCompatActivity() {
   override fun onResume() {
     super.onResume()
 
+    FrontendPerformanceMonitor.startForegroundSession(javaClass.simpleName)
+    jankStats?.isTrackingEnabled = true
+
     firebaseAnalytics?.logEvent(
       FirebaseAnalytics.Event.APP_OPEN,
       bundleOf(
@@ -173,6 +186,24 @@ class MainActivity : AppCompatActivity() {
         "device_model" to Build.MODEL,
       ),
     )
+  }
+
+  override fun onPause() {
+    FrontendPerformanceMonitor.endForegroundSession("${javaClass.simpleName}.onPause")
+    jankStats?.isTrackingEnabled = false
+    super.onPause()
+  }
+
+  private fun initializePerformanceTrackingIfNeeded() {
+    if (jankStats != null) {
+      return
+    }
+
+    val metricsStateHolder = PerformanceMetricsState.getHolderForHierarchy(window.decorView)
+    metricsStateHolder.state?.putState("Activity", javaClass.simpleName)
+    jankStats = JankStats.createAndTrack(window, jankFrameListener).apply {
+      isTrackingEnabled = lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+    }
   }
 
   companion object {
