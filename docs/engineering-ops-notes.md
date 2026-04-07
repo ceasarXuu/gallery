@@ -147,3 +147,32 @@ Notes:
 - `compileDebugKotlin` and `testDebugUnitTest` must run sequentially. Running them in parallel can corrupt KAPT/Hilt generated sources under `app\build\generated\source\kapt\debug` and produce false unreadable-file errors.
 - PNG role card import currently follows ST precedence exactly: read `ccv3` first, then `chara`; because the app canonical parser is still v2-first, the document import layer normalizes `chara_card_v3` payloads back to v2 before mapping.
 - Keep file-format detection in `RoleplayInteropDocumentRepository.getMetadata()` and document-level usecases. Do not branch on URI strings inside Compose or ViewModel code.
+
+## 2026-04-07 Android real-device overwrite install verification
+
+- Goal: verify the ST interop work survives a real-device overwrite install and a cold launch.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery
+adb devices
+
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:assembleDebug
+
+adb install -r "D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk"
+adb shell am force-stop selfgemma.talk
+adb logcat -c
+adb shell am start -n selfgemma.talk/.MainActivity
+Start-Sleep -Seconds 6
+adb shell pidof selfgemma.talk
+adb logcat -d -v time | Select-String -Pattern 'AndroidRuntime|FATAL EXCEPTION|selfgemma.talk|Room|SQLite|Hilt'
+```
+
+Verification notes:
+
+- On this round the target device was `ONNZ95CAEMMZSKTS`.
+- `adb install -r` succeeded, so overwrite install is valid with the current signing/build output.
+- Cold launch reached `Displayed selfgemma.talk/.MainActivity` and `pidof selfgemma.talk` returned a live pid, with no `AndroidRuntime` / `FATAL EXCEPTION` crash during startup capture.
+- Keep unrelated local worktree changes out of validation commits. This round there were still unrelated edits in `RoleplayChatScreen.kt` and untracked audio files.
