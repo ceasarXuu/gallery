@@ -2,6 +2,7 @@ package selfgemma.talk.feature.roleplay.chat
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.SoundPool
 import android.util.Log
 import selfgemma.talk.R
@@ -29,8 +30,9 @@ object RoleplaySoundEffectPlayer {
           .setMaxStreams(2)
           .setAudioAttributes(
             AudioAttributes.Builder()
-              .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+              .setUsage(AudioAttributes.USAGE_MEDIA)
               .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+              .setLegacyStreamType(AudioManager.STREAM_MUSIC)
               .build()
           )
           .build()
@@ -66,7 +68,10 @@ object RoleplaySoundEffectPlayer {
       sendSoundId = pool.load(context.applicationContext, R.raw.iphone_send, 1)
       receiveSoundId = pool.load(context.applicationContext, R.raw.iphone_back, 1)
       soundPool = pool
-      Log.d(TAG, "sound pool prepared sendSoundId=$sendSoundId receiveSoundId=$receiveSoundId")
+      Log.d(
+        TAG,
+        "sound pool prepared sendSoundId=$sendSoundId receiveSoundId=$receiveSoundId usage=media legacyStream=music",
+      )
     }
   }
 

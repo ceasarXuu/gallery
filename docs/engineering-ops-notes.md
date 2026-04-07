@@ -176,3 +176,26 @@ Verification notes:
 - `adb install -r` succeeded, so overwrite install is valid with the current signing/build output.
 - Cold launch reached `Displayed selfgemma.talk/.MainActivity` and `pidof selfgemma.talk` returned a live pid, with no `AndroidRuntime` / `FATAL EXCEPTION` crash during startup capture.
 - Keep unrelated local worktree changes out of validation commits. This round there were still unrelated edits in `RoleplayChatScreen.kt` and untracked audio files.
+
+## 2026-04-07 Roleplay message sound routing issue
+
+- Symptom: send/receive sound effects log `SoundPool.play()` successfully but are inaudible on-device.
+- Root cause on the verified device: `AudioAttributes.USAGE_ASSISTANCE_SONIFICATION` is routed to `STREAM_SYSTEM`, and that stream was muted by the current ringer/vibrate state even while media volume was high.
+
+Fix:
+
+- In `RoleplaySoundEffectPlayer`, route chat sound effects through media:
+  - `usage = USAGE_MEDIA`
+  - `legacy stream = STREAM_MUSIC`
+
+Verification aid:
+
+```powershell
+adb shell dumpsys audio | Select-String -Pattern 'STREAM_MUSIC|STREAM_SYSTEM|ringer mode'
+adb logcat -d -v time | Select-String -Pattern 'RoleplaySoundEffects'
+```
+
+Notes:
+
+- If user expectation is “chat sound follows media volume”, do not use sonification/system streams here.
+- A successful `streamId` from `SoundPool.play()` is not enough to prove audibility; stream routing must be checked against `dumpsys audio`.
