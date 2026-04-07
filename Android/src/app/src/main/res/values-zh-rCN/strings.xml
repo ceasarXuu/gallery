@@ -130,6 +130,7 @@
   <string name="chat_you">你</string>
   <string name="chat_assistant">助手</string>
   <string name="chat_message_placeholder">给角色发送消息...</string>
+  <string name="chat_message_read">已读</string>
   <string name="chat_stop_response">停止回复</string>
   <string name="chat_send_message">发送消息</string>
   <string name="chat_response_stopped">回复已停止。</string>

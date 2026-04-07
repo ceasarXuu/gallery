@@ -35,7 +35,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
-import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Check
@@ -297,16 +296,10 @@ fun RoleplayChatScreen(
         ChatComposer(
           draft = uiState.draft,
           onDraftChange = viewModel::updateDraft,
-          inProgress = uiState.inProgress,
           canSend = activeModel != null && uiState.draft.isNotBlank(),
           onSend = {
             activeModel?.let { currentModel ->
               viewModel.sendMessage(currentModel)
-            }
-          },
-          onStop = {
-            activeModel?.let { currentModel ->
-              viewModel.stopGeneration(currentModel)
             }
           },
         )
@@ -415,6 +408,14 @@ private fun ChatMessageBubble(
           modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
           verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+          if (isUser) {
+            Text(
+              text = stringResource(R.string.chat_message_read),
+              style = MaterialTheme.typography.labelSmall,
+              color = MaterialTheme.colorScheme.primary,
+              fontWeight = FontWeight.SemiBold,
+            )
+          }
           if (message.status == MessageStatus.STREAMING) {
             TypingIndicator()
           } else {
@@ -507,10 +508,8 @@ private fun MissingModelBanner(
 private fun ChatComposer(
   draft: String,
   onDraftChange: (String) -> Unit,
-  inProgress: Boolean,
   canSend: Boolean,
   onSend: () -> Unit,
-  onStop: () -> Unit,
 ) {
   Surface(
     shape = RoundedCornerShape(28.dp),
@@ -540,10 +539,9 @@ private fun ChatComposer(
         modifier = Modifier.weight(1f),
         value = draft,
         onValueChange = onDraftChange,
-        enabled = !inProgress,
         minLines = 1,
         maxLines = 4,
-        placeholder = { Text("Message your character...") },
+        placeholder = { Text(stringResource(R.string.chat_message_placeholder)) },
         colors =
           TextFieldDefaults.colors(
             focusedContainerColor = Color.Transparent,
@@ -560,39 +558,27 @@ private fun ChatComposer(
       )
 
       IconButton(
-        onClick = if (inProgress) onStop else onSend,
-        enabled = if (inProgress) true else canSend,
+        onClick = onSend,
+        enabled = canSend,
         colors =
           IconButtonDefaults.iconButtonColors(
-            containerColor =
-              if (inProgress) {
-                MaterialTheme.colorScheme.secondaryContainer
-              } else {
-                MaterialTheme.colorScheme.primary
-              },
-            contentColor =
-              if (inProgress) {
-                MaterialTheme.colorScheme.onSecondaryContainer
-              } else {
-                MaterialTheme.colorScheme.onPrimary
-              },
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
             disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
           ),
         modifier = Modifier
           .size(44.dp)
           .shadow(
-            elevation = if (inProgress || canSend) 6.dp else 2.dp,
+            elevation = if (canSend) 6.dp else 2.dp,
             shape = CircleShape,
-            ambientColor = if (inProgress) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
-                          else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-            spotColor = if (inProgress) MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
-                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+            ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+            spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
           )
       ) {
         Icon(
-          imageVector = if (inProgress) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.Send,
-          contentDescription = if (inProgress) "Stop response" else "Send message",
+          imageVector = Icons.AutoMirrored.Rounded.Send,
+          contentDescription = stringResource(R.string.chat_send_message),
           modifier = Modifier.size(22.dp),
         )
       }

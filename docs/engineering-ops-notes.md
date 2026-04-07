@@ -47,3 +47,32 @@ Notes:
 - `RoleplayBenchmarkReceiver` can seed a long conversation quickly; the current stress fixture yields `messages=400`.
 - `RoleplayBenchmarkSurfaceActivity` can jump straight into `benchmark-session-long-chat`, which is much faster and more repeatable than tapping through the main UI.
 - The log tag `RoleplayChatScreen` now emits `initial chat positioned ... elapsed=<n>ms`, which is the fastest sanity check that the detail page reached initial bottom positioning.
+
+## 2026-04-07 Roleplay chat send orchestration verification
+
+- Goal: verify the new roleplay chat send experience for continued typing, merge-on-resend, and delayed LLM dispatch.
+- Key tags: `RoleplayChatViewModel`, `SendRoleplayMessage`
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew :app:compileDebugKotlin
+adb logcat -c
+adb shell am force-stop selfgemma.talk
+adb shell am start -n selfgemma.talk/.MainActivity
+adb logcat -v time | Select-String -Pattern 'RoleplayChatViewModel|SendRoleplayMessage|AndroidRuntime'
+```
+
+What to verify in logcat:
+
+- When the user sends and keeps editing, `RoleplayChatViewModel` should print `dispatch paused ... reason=draft changed while send pending`.
+- When the user sends again before the assistant reply lands, `RoleplayChatViewModel` should print `send merge requested ...` and the previous assistant seed should end as interrupted without showing a visible empty bubble.
+- The next actual request should print `dispatch starting ... pendingCount=<n> combinedLength=<n>`, and `SendRoleplayMessage` should print `queued assistant seed ... userMessageCount=<n>`, proving multiple user messages were merged into one model call.
+
+Manual verification flow:
+
+- Open a roleplay session and send message A.
+- Immediately continue typing message B; wait for the debounce window and confirm the first request is delayed while editing continues.
+- Send message B before any assistant text appears; confirm the old generation is interrupted and the next dispatch reports `userMessageCount=2`.
+- Keep the input focused during the assistant run and send message C; confirm the input stays editable and the send button remains in normal send state.

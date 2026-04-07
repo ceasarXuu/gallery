@@ -130,6 +130,7 @@
   <string name="chat_you">You</string>
   <string name="chat_assistant">Assistant</string>
   <string name="chat_message_placeholder">Message your character...</string>
+  <string name="chat_message_read">Read</string>
   <string name="chat_stop_response">Stop response</string>
   <string name="chat_send_message">Send message</string>
   <string name="chat_response_stopped">Response stopped.</string>

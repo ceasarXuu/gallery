@@ -32,14 +32,15 @@ data class SendRoleplayMessageResult(
 
 data class PendingRoleplayMessage(
   val session: Session,
-  val userMessage: Message,
+  val userMessages: List<Message>,
   val assistantSeed: Message,
-  val userInput: String,
+  val combinedUserInput: String,
 )
 
 data class StagedRoleplayTurn(
-  val userMessage: Message,
+  val userMessages: List<Message>,
   val assistantMessage: Message,
+  val combinedUserInput: String,
 )
 
 private data class ModelReadinessResult(
@@ -73,12 +74,12 @@ constructor(
     stagedTurn: StagedRoleplayTurn? = null,
     isStopRequested: () -> Boolean,
   ): SendRoleplayMessageResult {
+    val resolvedTurn =
+      stagedTurn ?: createStagedTurn(sessionId = sessionId, model = model, userInputs = listOf(userInput))
     val pendingMessage =
       enqueuePendingMessage(
         sessionId = sessionId,
-        model = model,
-        userInput = userInput,
-        stagedTurn = stagedTurn,
+        stagedTurn = resolvedTurn,
       ) ?: return SendRoleplayMessageResult(errorMessage = "Session no longer exists.")
 
     return completePendingMessage(
@@ -90,12 +91,11 @@ constructor(
 
   suspend fun enqueuePendingMessage(
     sessionId: String,
-    model: Model,
-    userInput: String,
-    stagedTurn: StagedRoleplayTurn? = null,
+    stagedTurn: StagedRoleplayTurn,
+    persistedUserMessageIds: Set<String> = emptySet(),
   ): PendingRoleplayMessage? {
     val startTime = SystemClock.elapsedRealtime()
-    val trimmedInput = userInput.trim()
+    val trimmedInput = stagedTurn.combinedUserInput.trim()
     if (trimmedInput.isBlank()) {
       return null
     }
@@ -106,27 +106,29 @@ constructor(
     }
     Log.d(TAG, "queue session loaded after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId")
 
-    val resolvedTurn =
-      stagedTurn ?: createStagedTurn(sessionId = sessionId, model = model, trimmedInput = trimmedInput)
-    val userMessage = resolvedTurn.userMessage.copy(content = trimmedInput)
-    conversationRepository.appendMessage(userMessage)
-    Log.d(
-      TAG,
-      "queued user message after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId messageId=${userMessage.id}",
-    )
+    val userMessages = stagedTurn.userMessages.map { it.copy(content = it.content.trim()) }
+    userMessages
+      .filterNot { message -> message.id in persistedUserMessageIds }
+      .forEach { userMessage ->
+        conversationRepository.appendMessage(userMessage)
+        Log.d(
+          TAG,
+          "queued user message after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId messageId=${userMessage.id}",
+        )
+      }
 
-    val assistantSeed = resolvedTurn.assistantMessage.copy(parentMessageId = userMessage.id)
+    val assistantSeed = stagedTurn.assistantMessage.copy(parentMessageId = userMessages.lastOrNull()?.id)
     conversationRepository.appendMessage(assistantSeed)
     Log.d(
       TAG,
-      "queued assistant seed after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId messageId=${assistantSeed.id} staged=${stagedTurn != null}",
+      "queued assistant seed after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId messageId=${assistantSeed.id} userMessageCount=${userMessages.size}",
     )
 
     return PendingRoleplayMessage(
       session = session,
-      userMessage = userMessage,
+      userMessages = userMessages,
       assistantSeed = assistantSeed,
-      userInput = trimmedInput,
+      combinedUserInput = trimmedInput,
     )
   }
 
@@ -138,9 +140,9 @@ constructor(
     val startTime = SystemClock.elapsedRealtime()
     val sessionId = pendingMessage.session.id
     val session = pendingMessage.session
-    val userMessage = pendingMessage.userMessage
+    val userMessages = pendingMessage.userMessages
     val assistantSeed = pendingMessage.assistantSeed
-    val trimmedInput = pendingMessage.userInput
+    val trimmedInput = pendingMessage.combinedUserInput
     val modelReadiness = awaitModelReady(model = model, isStopRequested = isStopRequested)
     Log.d(
       TAG,
@@ -178,7 +180,7 @@ constructor(
 
     val recentMessages =
       conversationRepository.observeMessages(sessionId).first().filter { message ->
-        message.id != userMessage.id && message.id != assistantSeed.id
+        message.id != assistantSeed.id && userMessages.none { userMessage -> userMessage.id == message.id }
       }
     val summary = conversationRepository.getSummary(sessionId)
     val memoryLimit = role.memoryMaxItems.coerceIn(0, 8)
@@ -357,7 +359,7 @@ constructor(
       extractMemoriesUseCase(
         session = session,
         role = role,
-        userMessage = userMessage,
+        userMessage = userMessages.last(),
         assistantMessage = finalMessage,
       )
     }
@@ -405,29 +407,32 @@ constructor(
   private suspend fun createStagedTurn(
     sessionId: String,
     model: Model,
-    trimmedInput: String,
+    userInputs: List<String>,
   ): StagedRoleplayTurn {
     val now = System.currentTimeMillis()
     val accelerator = model.getStringConfigValue(key = ConfigKeys.ACCELERATOR, defaultValue = "")
     val firstSeq = conversationRepository.nextMessageSeq(sessionId)
     Log.d(TAG, "queue next seq resolved sessionId=$sessionId seq=$firstSeq")
+    val sanitizedInputs = userInputs.map(String::trim).filter(String::isNotBlank)
     return StagedRoleplayTurn(
-      userMessage =
-        Message(
-          id = UUID.randomUUID().toString(),
-          sessionId = sessionId,
-          seq = firstSeq,
-          side = MessageSide.USER,
-          status = MessageStatus.COMPLETED,
-          content = trimmedInput,
-          createdAt = now,
-          updatedAt = now,
-        ),
+      userMessages =
+        sanitizedInputs.mapIndexed { index, input ->
+          Message(
+            id = UUID.randomUUID().toString(),
+            sessionId = sessionId,
+            seq = firstSeq + index,
+            side = MessageSide.USER,
+            status = MessageStatus.COMPLETED,
+            content = input,
+            createdAt = now,
+            updatedAt = now,
+          )
+        },
       assistantMessage =
         Message(
           id = UUID.randomUUID().toString(),
           sessionId = sessionId,
-          seq = firstSeq + 1,
+          seq = firstSeq + sanitizedInputs.size,
           side = MessageSide.ASSISTANT,
           status = MessageStatus.STREAMING,
           content = "",
@@ -435,6 +440,7 @@ constructor(
           createdAt = now,
           updatedAt = now,
         ),
+      combinedUserInput = sanitizedInputs.joinToString(separator = "\n\n"),
     )
   }
 }

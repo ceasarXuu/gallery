@@ -1,7 +1,7 @@
 package selfgemma.talk.feature.roleplay.chat
 
-import android.media.ToneGenerator
 import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
@@ -10,6 +10,9 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,19 +21,19 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import selfgemma.talk.data.ConfigKeys
 import selfgemma.talk.data.Model
 import selfgemma.talk.domain.roleplay.model.MemoryCategory
 import selfgemma.talk.domain.roleplay.model.MemoryItem
 import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
+import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionEventType
 import selfgemma.talk.domain.roleplay.model.SessionSummary
-import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.MemoryRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
@@ -52,11 +55,17 @@ data class RoleplayChatUiState(
 )
 
 private const val TAG = "RoleplayChatViewModel"
+private const val SEND_DISPATCH_DELAY_MS = 2_000L
+
+private data class QueuedUserMessage(
+  val message: Message,
+  val persisted: Boolean = false,
+)
 
 private data class RoleplayChatMetaState(
   val summary: SessionSummary? = null,
   val pinnedMemories: List<MemoryItem> = emptyList(),
-  val optimisticMessages: List<Message> = emptyList(),
+  val pendingUserMessages: List<QueuedUserMessage> = emptyList(),
   val inProgress: Boolean = false,
   val errorMessage: String? = null,
 )
@@ -76,6 +85,11 @@ constructor(
   private val draft = MutableStateFlow("")
   private val metaState = MutableStateFlow(RoleplayChatMetaState())
   private val stopRequested = MutableStateFlow(false)
+  private var dispatchJob: Job? = null
+  private var lastDraftEditAtElapsed = 0L
+  private var latestQueuedModel: Model? = null
+  private var activeAssistantMessageId: String? = null
+
   private val sessionFlow =
     conversationRepository.observeSessions().map { sessions ->
       sessions.firstOrNull { it.id == sessionId }
@@ -97,7 +111,7 @@ constructor(
         loading = session == null,
         session = session,
         role = role,
-        messages = mergeMessages(messages = messages, optimisticMessages = meta.optimisticMessages),
+        messages = mergeMessages(messages = messages, queuedMessages = meta.pendingUserMessages),
         draft = draftValue,
         summary = meta.summary,
         pinnedMemories = meta.pinnedMemories,
@@ -116,121 +130,49 @@ constructor(
   }
 
   fun updateDraft(value: String) {
-    draft.value = value
-  }
-
-  fun sendMessage(model: Model) {
-    if (metaState.value.inProgress) {
+    if (draft.value == value) {
       return
     }
 
+    draft.value = value
+    lastDraftEditAtElapsed = SystemClock.elapsedRealtime()
+    if (metaState.value.pendingUserMessages.isNotEmpty() && !metaState.value.inProgress) {
+      scheduleDispatch(reason = "draft changed while send pending")
+    }
+  }
+
+  fun sendMessage(model: Model) {
     val input = draft.value.trim()
     if (input.isBlank()) {
       return
     }
 
+    latestQueuedModel = model
     draft.value = ""
-    stopRequested.value = false
-    val stagedTurn = stageOptimisticTurn(input = input, model = model)
+    lastDraftEditAtElapsed = SystemClock.elapsedRealtime()
+
+    val queuedMessage = stagePendingUserMessage(input = input)
     metaState.update { current ->
       current.copy(
-        optimisticMessages =
-          current.optimisticMessages + listOf(stagedTurn.userMessage, stagedTurn.assistantMessage),
-        inProgress = true,
+        pendingUserMessages = current.pendingUserMessages + queuedMessage,
         errorMessage = null,
       )
     }
-    val clickTimestamp = SystemClock.elapsedRealtime()
     Log.d(
       TAG,
-      "send click accepted sessionId=$sessionId model=${model.name} inputLength=${input.length} userMessageId=${stagedTurn.userMessage.id} assistantMessageId=${stagedTurn.assistantMessage.id}",
+      "send accepted sessionId=$sessionId model=${model.name} inputLength=${input.length} pendingCount=${metaState.value.pendingUserMessages.size} messageId=${queuedMessage.message.id}",
     )
 
     viewModelScope.launch(Dispatchers.Default) {
       playSendSound()
     }
 
-    viewModelScope.launch(Dispatchers.IO) {
-      val pendingMessage =
-        sendRoleplayMessageUseCase.enqueuePendingMessage(
-          sessionId = sessionId,
-          model = model,
-          userInput = input,
-          stagedTurn = stagedTurn,
-        )
-
-      if (pendingMessage == null) {
-        Log.d(
-          TAG,
-          "send queue failed after ${SystemClock.elapsedRealtime() - clickTimestamp}ms sessionId=$sessionId",
-        )
-        draft.value = input
-        stopRequested.value = false
-        metaState.update { current ->
-          current.copy(
-            optimisticMessages =
-              current.optimisticMessages.filterNot { message ->
-                message.id == stagedTurn.userMessage.id || message.id == stagedTurn.assistantMessage.id
-              },
-            inProgress = false,
-            errorMessage = "Session no longer exists.",
-          )
-        }
-        return@launch
-      }
-
-      Log.d(
-        TAG,
-        "send queued after ${SystemClock.elapsedRealtime() - clickTimestamp}ms sessionId=$sessionId userMessageId=${pendingMessage.userMessage.id} assistantMessageId=${pendingMessage.assistantSeed.id}",
-      )
-
-      Log.d(
-        TAG,
-        "send worker started after ${SystemClock.elapsedRealtime() - clickTimestamp}ms sessionId=$sessionId assistantMessageId=${pendingMessage.assistantSeed.id}",
-      )
-      val result =
-        sendRoleplayMessageUseCase.completePendingMessage(
-          pendingMessage = pendingMessage,
-          model = model,
-          isStopRequested = { stopRequested.value },
-        )
-
-      Log.d(
-        TAG,
-        "send worker finished after ${SystemClock.elapsedRealtime() - clickTimestamp}ms sessionId=$sessionId error=${result.errorMessage != null} interrupted=${result.interrupted}",
-      )
-
-      if (result.errorMessage != null && !result.interrupted) {
-        draft.value = input
-      } else if (result.assistantMessage != null && result.assistantMessage.status.name == "COMPLETED") {
-        launch(Dispatchers.Default) {
-          playReceiveSound()
-        }
-      }
-
-      stopRequested.value = false
-      metaState.update { current ->
-        current.copy(
-          optimisticMessages =
-            current.optimisticMessages.filterNot { message ->
-              message.id == stagedTurn.userMessage.id || message.id == stagedTurn.assistantMessage.id
-            },
-          inProgress = false,
-          errorMessage = result.errorMessage,
-        )
-      }
-      refreshSupplementalState()
-    }
-  }
-
-  fun stopGeneration(model: Model) {
-    if (!metaState.value.inProgress) {
+    if (metaState.value.inProgress) {
+      requestMergeAndStop(model = model)
       return
     }
 
-    stopRequested.value = true
-    metaState.update { current -> current.copy(errorMessage = null) }
-    model.runtimeHelper.stopResponse(model)
+    scheduleDispatch(reason = "send accepted")
   }
 
   fun switchModel(modelId: String) {
@@ -281,6 +223,155 @@ constructor(
     }
   }
 
+  private fun scheduleDispatch(reason: String) {
+    val model = latestQueuedModel ?: return
+    dispatchJob?.cancel()
+    dispatchJob =
+      viewModelScope.launch {
+        while (true) {
+          val delayMs = remainingDispatchDelay()
+          if (delayMs <= 0L) {
+            break
+          }
+          Log.d(
+            TAG,
+            "dispatch paused sessionId=$sessionId reason=$reason delayMs=$delayMs pendingCount=${metaState.value.pendingUserMessages.size}",
+          )
+          delay(delayMs)
+        }
+
+        if (metaState.value.inProgress || metaState.value.pendingUserMessages.isEmpty()) {
+          return@launch
+        }
+
+        dispatchPendingMessages(model = model)
+      }
+  }
+
+  private fun requestMergeAndStop(model: Model) {
+    if (!metaState.value.inProgress) {
+      return
+    }
+
+    stopRequested.value = true
+    metaState.update { current -> current.copy(errorMessage = null) }
+    Log.d(
+      TAG,
+      "send merge requested sessionId=$sessionId model=${model.name} pendingCount=${metaState.value.pendingUserMessages.size} activeAssistantMessageId=$activeAssistantMessageId",
+    )
+    model.runtimeHelper.stopResponse(model)
+  }
+
+  private fun dispatchPendingMessages(model: Model) {
+    val queuedMessages = metaState.value.pendingUserMessages
+    if (queuedMessages.isEmpty() || metaState.value.inProgress) {
+      return
+    }
+
+    val stagedTurn = stageDispatchTurn(userMessages = queuedMessages.map { it.message }, model = model)
+    val persistedIds = queuedMessages.filter { it.persisted }.mapTo(mutableSetOf()) { it.message.id }
+    val queuedIds = queuedMessages.mapTo(mutableSetOf()) { it.message.id }
+    val dispatchStartedAt = SystemClock.elapsedRealtime()
+
+    stopRequested.value = false
+    activeAssistantMessageId = stagedTurn.assistantMessage.id
+    metaState.update { current ->
+      current.copy(
+        inProgress = true,
+        errorMessage = null,
+      )
+    }
+    Log.d(
+      TAG,
+      "dispatch starting sessionId=$sessionId model=${model.name} pendingCount=${queuedMessages.size} persistedCount=${persistedIds.size} combinedLength=${stagedTurn.combinedUserInput.length} assistantMessageId=${stagedTurn.assistantMessage.id}",
+    )
+
+    viewModelScope.launch(Dispatchers.IO) {
+      val pendingMessage =
+        sendRoleplayMessageUseCase.enqueuePendingMessage(
+          sessionId = sessionId,
+          stagedTurn = stagedTurn,
+          persistedUserMessageIds = persistedIds,
+        )
+
+      if (pendingMessage == null) {
+        Log.d(
+          TAG,
+          "dispatch queue failed after ${SystemClock.elapsedRealtime() - dispatchStartedAt}ms sessionId=$sessionId",
+        )
+        draft.value = stagedTurn.combinedUserInput
+        stopRequested.value = false
+        activeAssistantMessageId = null
+        metaState.update { current ->
+          current.copy(
+            pendingUserMessages = current.pendingUserMessages.filterNot { it.message.id in queuedIds },
+            inProgress = false,
+            errorMessage = "Session no longer exists.",
+          )
+        }
+        return@launch
+      }
+
+      metaState.update { current ->
+        current.copy(
+          pendingUserMessages =
+            current.pendingUserMessages.map { queued ->
+              if (queued.message.id in queuedIds) {
+                queued.copy(persisted = true)
+              } else {
+                queued
+              }
+            }
+        )
+      }
+      Log.d(
+        TAG,
+        "dispatch queued after ${SystemClock.elapsedRealtime() - dispatchStartedAt}ms sessionId=$sessionId assistantMessageId=${pendingMessage.assistantSeed.id}",
+      )
+
+      val result =
+        sendRoleplayMessageUseCase.completePendingMessage(
+          pendingMessage = pendingMessage,
+          model = model,
+          isStopRequested = { stopRequested.value },
+        )
+
+      Log.d(
+        TAG,
+        "dispatch finished after ${SystemClock.elapsedRealtime() - dispatchStartedAt}ms sessionId=$sessionId interrupted=${result.interrupted} error=${result.errorMessage != null}",
+      )
+
+      if (result.assistantMessage != null && result.assistantMessage.status == MessageStatus.COMPLETED) {
+        launch(Dispatchers.Default) {
+          playReceiveSound()
+        }
+      }
+      if (result.errorMessage != null && !result.interrupted) {
+        draft.value = stagedTurn.combinedUserInput
+      }
+
+      stopRequested.value = false
+      activeAssistantMessageId = null
+      metaState.update { current ->
+        current.copy(
+          pendingUserMessages =
+            if (result.interrupted) {
+              current.pendingUserMessages
+            } else {
+              current.pendingUserMessages.filterNot { it.message.id in queuedIds }
+            },
+          inProgress = false,
+          errorMessage = if (result.interrupted) null else result.errorMessage,
+        )
+      }
+      refreshSupplementalState()
+
+      if (metaState.value.pendingUserMessages.isNotEmpty()) {
+        scheduleDispatch(reason = "pending queue remains after completion")
+      }
+    }
+  }
+
   private fun refreshSupplementalState() {
     viewModelScope.launch {
       val session = conversationRepository.getSession(sessionId)
@@ -307,14 +398,12 @@ constructor(
       .take(8)
   }
 
-  private fun stageOptimisticTurn(input: String, model: Model): StagedRoleplayTurn {
+  private fun stagePendingUserMessage(input: String): QueuedUserMessage {
     val now = System.currentTimeMillis()
-    val existingMessages = mergeMessages(uiState.value.messages, metaState.value.optimisticMessages)
-    val nextSeq = (existingMessages.maxOfOrNull { it.seq } ?: 0) + 1
-    val userMessageId = UUID.randomUUID().toString()
+    val nextSeq = (uiState.value.messages.maxOfOrNull { it.seq } ?: 0) + 1
     val userMessage =
       Message(
-        id = userMessageId,
+        id = UUID.randomUUID().toString(),
         sessionId = sessionId,
         seq = nextSeq,
         side = MessageSide.USER,
@@ -323,33 +412,49 @@ constructor(
         createdAt = now,
         updatedAt = now,
       )
+    Log.d(TAG, "queued user draft sessionId=$sessionId seq=$nextSeq messageId=${userMessage.id}")
+    return QueuedUserMessage(message = userMessage)
+  }
+
+  private fun stageDispatchTurn(userMessages: List<Message>, model: Model): StagedRoleplayTurn {
+    val now = System.currentTimeMillis()
     val assistantMessage =
       Message(
         id = UUID.randomUUID().toString(),
         sessionId = sessionId,
-        seq = nextSeq + 1,
+        seq = (userMessages.maxOfOrNull { it.seq } ?: 0) + 1,
         side = MessageSide.ASSISTANT,
         status = MessageStatus.STREAMING,
         content = "",
-        accelerator =
-          model.getStringConfigValue(
-            key = selfgemma.talk.data.ConfigKeys.ACCELERATOR,
-            defaultValue = "",
-          ),
-        parentMessageId = userMessageId,
+        accelerator = model.getStringConfigValue(key = ConfigKeys.ACCELERATOR, defaultValue = ""),
+        parentMessageId = userMessages.lastOrNull()?.id,
         createdAt = now,
         updatedAt = now,
       )
     Log.d(
       TAG,
-      "optimistic turn staged sessionId=$sessionId nextSeq=$nextSeq userMessageId=${userMessage.id} assistantMessageId=${assistantMessage.id}",
+      "dispatch turn staged sessionId=$sessionId userMessageCount=${userMessages.size} assistantMessageId=${assistantMessage.id}",
     )
-    return StagedRoleplayTurn(userMessage = userMessage, assistantMessage = assistantMessage)
+    return StagedRoleplayTurn(
+      userMessages = userMessages,
+      assistantMessage = assistantMessage,
+      combinedUserInput = userMessages.joinToString(separator = "\n\n") { it.content.trim() },
+    )
   }
 
-  private fun mergeMessages(messages: List<Message>, optimisticMessages: List<Message>): List<Message> {
+  private fun remainingDispatchDelay(): Long {
+    val elapsed = SystemClock.elapsedRealtime() - lastDraftEditAtElapsed
+    return (SEND_DISPATCH_DELAY_MS - elapsed).coerceAtLeast(0L)
+  }
+
+  private fun mergeMessages(messages: List<Message>, queuedMessages: List<QueuedUserMessage>): List<Message> {
     val persistedIds = messages.mapTo(mutableSetOf()) { it.id }
-    return (messages + optimisticMessages.filterNot { it.id in persistedIds })
+    return (messages + queuedMessages.map { it.message }.filterNot { it.id in persistedIds })
+      .filterNot { message ->
+        message.side == MessageSide.ASSISTANT &&
+          message.status == MessageStatus.INTERRUPTED &&
+          message.content.isBlank()
+      }
       .sortedWith(compareBy<Message>({ it.seq }, { it.createdAt }, { it.id }))
   }
 
@@ -362,7 +467,7 @@ constructor(
       val toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
       toneGenerator.startTone(ToneGenerator.TONE_PROP_ACK, 150)
       toneGenerator.release()
-    } catch (e: Exception) {
+    } catch (_: Exception) {
     }
   }
 
@@ -371,7 +476,7 @@ constructor(
       val toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
       toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP2, 200)
       toneGenerator.release()
-    } catch (e: Exception) {
+    } catch (_: Exception) {
     }
   }
 }
