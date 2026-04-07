@@ -540,6 +540,14 @@ constructor(
     dataStoreRepository.saveTheme(theme = theme)
   }
 
+  fun areMessageSoundsEnabled(): Boolean {
+    return dataStoreRepository.areMessageSoundsEnabled()
+  }
+
+  fun setMessageSoundsEnabled(enabled: Boolean) {
+    dataStoreRepository.setMessageSoundsEnabled(enabled)
+  }
+
   fun getModelUrlResponse(model: Model, accessToken: String? = null): Int {
     try {
       val url = URL(model.url)

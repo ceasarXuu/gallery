@@ -130,6 +130,7 @@ constructor(
       )
 
   init {
+    RoleplaySoundEffectPlayer.prepare(appContext)
     refreshSupplementalState()
   }
 
