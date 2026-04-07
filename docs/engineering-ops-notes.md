@@ -76,3 +76,22 @@ Manual verification flow:
 - Immediately continue typing message B; wait for the debounce window and confirm the first request is delayed while editing continues.
 - Send message B before any assistant text appears; confirm the old generation is interrupted and the next dispatch reports `userMessageCount=2`.
 - Keep the input focused during the assistant run and send message C; confirm the input stays editable and the send button remains in normal send state.
+
+## 2026-04-07 Roleplay ST interop parser verification
+
+- Goal: verify ST role card compatibility work at the parser/serializer layer before wiring UI import/export.
+- Scope in this phase: ST v2 `json` only.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.data.roleplay.interop.stcard.StV2CardParserTest"
+```
+
+Notes:
+
+- Run `compileDebugKotlin` first; it catches DTO/package/mapping breakage faster than going straight to unit tests.
+- The focused unit test is enough to verify the current round-trip contract: parse ST v2 JSON into canonical `RoleCardCore`, then serialize back into ST v2 shape.
+- Current build still emits unrelated Kotlin context-parameter and Moshi KAPT deprecation warnings; treat them as baseline noise unless the task specifically targets build tooling.
