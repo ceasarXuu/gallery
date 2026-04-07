@@ -1,5 +1,8 @@
 package selfgemma.talk.feature.roleplay.roles
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +51,14 @@ fun RoleEditorScreen(
   val uiState by viewModel.uiState.collectAsState()
   val downloadedModels = modelManagerViewModel.getAllDownloadedModels()
   var modelMenuExpanded by remember { mutableStateOf(false) }
+  val importLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+      uri?.let { viewModel.importStCardFromUri(it.toString()) }
+    }
+  val exportLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
+      uri?.let { viewModel.exportStCardToUri(it.toString()) }
+    }
 
   Scaffold(
     modifier = modifier.semantics { testTagsAsResourceId = true },
@@ -176,6 +187,34 @@ fun RoleEditorScreen(
               }
             }
           }
+        }
+      }
+      item {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+          OutlinedButton(
+            onClick = { importLauncher.launch(arrayOf("application/json")) },
+            modifier = Modifier.fillMaxWidth().testTag("role_editor_import_st_json"),
+          ) {
+            Text("Import ST Role Card JSON")
+          }
+          OutlinedButton(
+            onClick = {
+              val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+              exportLauncher.launch("${fileName}.json")
+            },
+            modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_json"),
+          ) {
+            Text("Export ST Role Card JSON")
+          }
+        }
+      }
+      uiState.statusMessage?.let { statusMessage ->
+        item {
+          Text(
+            statusMessage,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+          )
         }
       }
       uiState.errorMessage?.let { errorMessage ->

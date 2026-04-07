@@ -114,3 +114,15 @@ Notes:
 - Keep the parser/serializer tests separate from repository or UI tests; the goal here is to lock the wire format first.
 - The current implementation preserves ST-specific fields like `extra`, `swipes`, `swipe_id`, and `chat_metadata` through `metadataJson` bridging, so tests should assert field presence rather than exact pretty-print spacing.
 - Do not run `:app:compileDebugKotlin` and `:app:testDebugUnitTest` in parallel. They can race on `app\build\tmp\kotlin-classes\debug` and produce false build failures about unreadable or missing class outputs.
+
+## 2026-04-07 Role editor ST card file-flow notes
+
+- Current role editor integration only wires ST role card `json` import/export, not PNG and not chat `jsonl`.
+- UI flow uses Android document contracts rather than direct file paths:
+  - import: `ActivityResultContracts.OpenDocument`
+  - export: `ActivityResultContracts.CreateDocument("application/json")`
+
+Notes:
+
+- Keep file IO in `RoleplayInteropDocumentRepository`; do not read `ContentResolver` directly from ViewModel or Compose screen.
+- Import currently loads ST JSON into the editor state and waits for an explicit save, which is safer than auto-persisting over an existing role.
