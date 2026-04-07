@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -27,10 +28,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import selfgemma.talk.R
 import kotlinx.coroutines.launch
+import selfgemma.talk.performance.TrackPerformanceState
 import selfgemma.talk.AppTopBar
 import selfgemma.talk.data.AppBarAction
 import selfgemma.talk.data.AppBarActionType
@@ -55,13 +62,19 @@ fun RoleCatalogScreen(
   val downloadedModelIds = downloadedModels.map { it.name }.toSet()
   val defaultModelId = downloadedModels.firstOrNull()?.name
   var pendingDeleteRoleId by rememberSaveable { mutableStateOf<String?>(null) }
+  val listState = rememberLazyListState()
+
+  TrackPerformanceState(
+    key = "RoleCatalogList",
+    value = if (listState.isScrollInProgress) "scrolling" else null,
+  )
 
   Scaffold(
-    modifier = modifier,
+    modifier = modifier.semantics { testTagsAsResourceId = true },
     contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
     topBar = {
       AppTopBar(
-        title = "角色",
+        title = stringResource(R.string.tab_roles),
         leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = navigateUp),
       )
     },
@@ -74,6 +87,7 @@ fun RoleCatalogScreen(
     )
 
     LazyColumn(
+      state = listState,
       modifier = Modifier.fillMaxSize().padding(combinedPadding),
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -87,22 +101,22 @@ fun RoleCatalogScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
           ) {
-            Text("Create and tune roles", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.roles_create_tune_title), style = MaterialTheme.typography.titleMedium)
             Text(
               if (downloadedModels.isEmpty()) {
-                "You can create and edit role cards now. Download a local model before starting a session."
+                stringResource(R.string.roles_create_tune_content_no_model)
               } else {
-                "Create custom roles with text fields only, then start a new session with a local model."
+                stringResource(R.string.roles_create_tune_content_model)
               },
               style = MaterialTheme.typography.bodyMedium,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-              FilledTonalButton(onClick = onCreateRole) {
-                Text("Create Role")
+              FilledTonalButton(onClick = onCreateRole, modifier = Modifier.testTag("role_catalog_create_role")) {
+                Text(stringResource(R.string.roles_create_button))
               }
               OutlinedButton(onClick = onOpenModelLibrary) {
-                Text("Model Library")
+                Text(stringResource(R.string.roles_model_library))
               }
             }
           }
@@ -111,7 +125,7 @@ fun RoleCatalogScreen(
 
       if (uiState.builtInRoles.isNotEmpty()) {
         item {
-          Text("Built-in Roles", style = MaterialTheme.typography.titleMedium)
+          Text(stringResource(R.string.roles_builtin_title), style = MaterialTheme.typography.titleMedium)
         }
       }
       items(uiState.builtInRoles, key = { it.id }) { role ->
@@ -143,7 +157,7 @@ fun RoleCatalogScreen(
       }
       if (uiState.customRoles.isNotEmpty()) {
         item {
-          Text("Custom Roles", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+          Text(stringResource(R.string.roles_custom_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
         }
       }
       items(uiState.customRoles, key = { it.id }) { role ->
@@ -181,9 +195,9 @@ fun RoleCatalogScreen(
     if (roleToDelete != null) {
       AlertDialog(
         onDismissRequest = { pendingDeleteRoleId = null },
-        title = { Text("Delete role") },
+        title = { Text(stringResource(R.string.roles_delete_title)) },
         text = {
-          Text("Deleting ${roleToDelete.name} will also remove its sessions and saved memories.")
+          Text(stringResource(R.string.roles_delete_content, roleToDelete.name))
         },
         confirmButton = {
           FilledTonalButton(
@@ -192,12 +206,12 @@ fun RoleCatalogScreen(
               pendingDeleteRoleId = null
             }
           ) {
-            Text("Delete")
+            Text(stringResource(R.string.delete))
           }
         },
         dismissButton = {
           OutlinedButton(onClick = { pendingDeleteRoleId = null }) {
-            Text("Cancel")
+            Text(stringResource(R.string.cancel))
           }
         },
       )
@@ -216,18 +230,23 @@ private fun RoleCardItem(
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-      Text(role.name, style = MaterialTheme.typography.titleMedium)
-      Text(role.summary, style = MaterialTheme.typography.bodyMedium)
+      Text(role.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+      Text(
+        role.summary,
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = 3,
+        overflow = TextOverflow.Ellipsis,
+      )
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(
-          role.tags.joinToString(separator = " • ").ifBlank { "roleplay" },
+          role.tags.joinToString(separator = " • ").ifBlank { stringResource(R.string.roles_default_tag) },
           style = MaterialTheme.typography.labelMedium,
           color = MaterialTheme.colorScheme.primary,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis,
         )
         Text(
-          activeModelId ?: "No model",
+          activeModelId ?: stringResource(R.string.roles_no_model),
           style = MaterialTheme.typography.labelSmall,
           color = MaterialTheme.colorScheme.secondary,
           maxLines = 1,
@@ -236,16 +255,16 @@ private fun RoleCardItem(
       }
       Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         FilledTonalButton(onClick = { onStart?.invoke() }, enabled = canStart && onStart != null) {
-          Text("Start Session")
+          Text(stringResource(R.string.roles_start_session))
         }
         if (onEdit != null) {
           OutlinedButton(onClick = onEdit) {
-            Text("Edit")
+            Text(stringResource(R.string.edit))
           }
         }
         if (onDelete != null) {
           OutlinedButton(onClick = onDelete) {
-            Text("Delete")
+            Text(stringResource(R.string.delete))
           }
         }
       }

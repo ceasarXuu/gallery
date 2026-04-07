@@ -25,12 +25,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import selfgemma.talk.AppTopBar
 import selfgemma.talk.data.AppBarAction
 import selfgemma.talk.data.AppBarActionType
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,10 +50,10 @@ fun RoleEditorScreen(
   var modelMenuExpanded by remember { mutableStateOf(false) }
 
   Scaffold(
-    modifier = modifier,
+    modifier = modifier.semantics { testTagsAsResourceId = true },
     topBar = {
       AppTopBar(
-        title = if (uiState.isNewRole) "Create Role" else "Edit Role",
+        title = if (uiState.isNewRole) stringResource(R.string.role_editor_create_title) else stringResource(R.string.role_editor_edit_title),
         leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = navigateUp),
       )
     },
@@ -59,7 +64,7 @@ fun RoleEditorScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
       ) {
-        Text("Loading role...", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.role_editor_loading), style = MaterialTheme.typography.headlineSmall)
       }
       return@Scaffold
     }
@@ -71,98 +76,97 @@ fun RoleEditorScreen(
     ) {
       item {
         TextField(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().testTag("role_editor_name"),
           value = uiState.name,
           onValueChange = viewModel::updateName,
-          label = { Text("Role name") },
-          placeholder = { Text("Enter a character name") },
+          label = { Text(stringResource(R.string.role_editor_name_label)) },
+          placeholder = { Text(stringResource(R.string.role_editor_name_placeholder)) },
         )
       }
       item {
         TextField(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().testTag("role_editor_summary"),
           value = uiState.summary,
           onValueChange = viewModel::updateSummary,
           minLines = 2,
-          label = { Text("Summary") },
-          placeholder = { Text("Short one-line description") },
+          label = { Text(stringResource(R.string.role_editor_summary_label)) },
+          placeholder = { Text(stringResource(R.string.role_editor_summary_placeholder)) },
         )
       }
       item {
         TextField(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().testTag("role_editor_system_prompt"),
           value = uiState.systemPrompt,
           onValueChange = viewModel::updateSystemPrompt,
           minLines = 5,
-          label = { Text("System prompt") },
-          placeholder = { Text("Describe exactly how the role should speak and behave") },
+          label = { Text(stringResource(R.string.role_editor_system_prompt_label)) },
+          placeholder = { Text(stringResource(R.string.role_editor_system_prompt_placeholder)) },
         )
       }
       item {
         TextField(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().testTag("role_editor_persona"),
           value = uiState.personaDescription,
           onValueChange = viewModel::updatePersonaDescription,
           minLines = 3,
-          label = { Text("Persona") },
+          label = { Text(stringResource(R.string.role_editor_persona_label)) },
         )
       }
       item {
         TextField(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().testTag("role_editor_world_settings"),
           value = uiState.worldSettings,
           onValueChange = viewModel::updateWorldSettings,
           minLines = 3,
-          label = { Text("World settings") },
+          label = { Text(stringResource(R.string.role_editor_world_settings_label)) },
         )
       }
       item {
         TextField(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().testTag("role_editor_opening_line"),
           value = uiState.openingLine,
           onValueChange = viewModel::updateOpeningLine,
           minLines = 2,
-          label = { Text("Opening line") },
+          label = { Text(stringResource(R.string.role_editor_opening_line_label)) },
         )
       }
       item {
         TextField(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().testTag("role_editor_safety_policy"),
           value = uiState.safetyPolicy,
           onValueChange = viewModel::updateSafetyPolicy,
           minLines = 2,
-          label = { Text("Safety policy") },
+          label = { Text(stringResource(R.string.role_editor_safety_policy_label)) },
         )
       }
       item {
         TextField(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().testTag("role_editor_tags"),
           value = uiState.tagsText,
           onValueChange = viewModel::updateTagsText,
-          label = { Text("Tags") },
-          placeholder = { Text("comma, separated, tags") },
+          label = { Text(stringResource(R.string.role_editor_tags_label)) },
+          placeholder = { Text(stringResource(R.string.role_editor_tags_placeholder)) },
         )
       }
       item {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          Text("Default model", style = MaterialTheme.typography.labelLarge)
+          Text(stringResource(R.string.role_editor_default_model_label), style = MaterialTheme.typography.labelLarge)
           Box {
             OutlinedButton(onClick = { modelMenuExpanded = true }) {
-              Text(uiState.defaultModelId ?: "No default model")
+              Text(uiState.defaultModelId ?: stringResource(R.string.role_editor_no_default_model))
             }
             DropdownMenu(
               expanded = modelMenuExpanded,
               onDismissRequest = { modelMenuExpanded = false },
             ) {
               DropdownMenuItem(
-                text = { Text("No default model") },
+                text = { Text(stringResource(R.string.role_editor_no_default_model)) },
                 onClick = {
                   modelMenuExpanded = false
                   viewModel.updateDefaultModelId(null)
                 },
               )
-              downloadedModels.forEach { model ->
-                DropdownMenuItem(
+              downloadedModels.forEach { model ->DropdownMenuItem(
                   text = { Text(model.displayName.ifEmpty { model.name }) },
                   onClick = {
                     modelMenuExpanded = false
@@ -187,16 +191,16 @@ fun RoleEditorScreen(
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
           FilledTonalButton(
             onClick = { viewModel.saveRole { navigateUp() } },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("role_editor_save"),
           ) {
-            Text(if (uiState.isNewRole) "Create Role" else "Save Changes")
+            Text(if (uiState.isNewRole) stringResource(R.string.role_editor_create_button) else stringResource(R.string.role_editor_save_button))
           }
           if (!uiState.isNewRole && !uiState.builtIn) {
             OutlinedButton(
               onClick = { viewModel.deleteRole { navigateUp() } },
               modifier = Modifier.fillMaxWidth(),
             ) {
-              Text("Delete Role")
+              Text(stringResource(R.string.role_editor_delete_button))
             }
           }
         }
