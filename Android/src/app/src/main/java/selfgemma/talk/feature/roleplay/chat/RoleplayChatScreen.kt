@@ -1,16 +1,16 @@
 package selfgemma.talk.feature.roleplay.chat
 
+import android.os.SystemClock
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.border
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,13 +21,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -37,7 +35,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.FolderOpen
@@ -63,19 +60,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import kotlinx.coroutines.delay
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -92,6 +87,8 @@ import selfgemma.talk.ui.modelmanager.ModelInitializationStatusType
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import androidx.compose.ui.res.stringResource
 import selfgemma.talk.R
+
+private const val TAG = "RoleplayChatScreen"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,6 +114,12 @@ fun RoleplayChatScreen(
   val llmChatTask = modelManagerViewModel.getTaskById(BuiltInTaskId.LLM_CHAT)
   val listState = rememberLazyListState()
   val lastMessage = uiState.messages.lastOrNull()
+  val roleName = uiState.role?.name ?: stringResource(R.string.chat_assistant)
+  val imeBottom = WindowInsets.ime.getBottom(density)
+  val screenOpenTimestamp = remember { SystemClock.elapsedRealtime() }
+  var hasCompletedInitialPositioning by rememberSaveable(uiState.session?.id) { mutableStateOf(false) }
+  var hasLoggedInitialPositioning by rememberSaveable(uiState.session?.id) { mutableStateOf(false) }
+  var previousMessageCount by rememberSaveable(uiState.session?.id) { mutableStateOf(0) }
   val latestListItemIndex =
     remember(uiState.messages.size) {
       calculateLatestListItemIndex(
@@ -149,21 +152,51 @@ fun RoleplayChatScreen(
     }
   }
 
-  LaunchedEffect(WindowInsets.ime.getBottom(density)) {
-    if (latestListItemIndex >= 0) {
+  LaunchedEffect(imeBottom, latestListItemIndex, hasCompletedInitialPositioning) {
+    if (
+      hasCompletedInitialPositioning &&
+        imeBottom > 0 &&
+        latestListItemIndex >= 0 &&
+        shouldKeepLatestMessageVisible(listState, latestListItemIndex)
+    ) {
       scrollToItem(listState = listState, itemIndex = latestListItemIndex, animate = false)
     }
   }
 
-  LaunchedEffect(latestListItemIndex) {
-    if (latestListItemIndex >= 0) {
+  LaunchedEffect(latestListItemIndex, uiState.messages.size) {
+    if (latestListItemIndex < 0) {
+      previousMessageCount = 0
+      return@LaunchedEffect
+    }
+
+    if (!hasCompletedInitialPositioning) {
+      scrollToItem(listState = listState, itemIndex = latestListItemIndex, animate = false)
+      hasCompletedInitialPositioning = true
+      previousMessageCount = uiState.messages.size
+      if (!hasLoggedInitialPositioning) {
+        hasLoggedInitialPositioning = true
+        Log.d(
+          TAG,
+          "initial chat positioned sessionId=${uiState.session?.id} messageCount=${uiState.messages.size} elapsed=${SystemClock.elapsedRealtime() - screenOpenTimestamp}ms",
+        )
+      }
+      return@LaunchedEffect
+    }
+
+    val messageCountIncreased = uiState.messages.size > previousMessageCount
+    previousMessageCount = uiState.messages.size
+    if (messageCountIncreased && shouldKeepLatestMessageVisible(listState, latestListItemIndex)) {
       scrollToItem(listState = listState, itemIndex = latestListItemIndex, animate = true)
     }
   }
 
-  LaunchedEffect(lastMessage?.id, lastMessage?.content, lastMessage?.status) {
-    if (latestListItemIndex >= 0 && shouldKeepLatestMessageVisible(listState, latestListItemIndex)) {
-      scrollToItem(listState = listState, itemIndex = latestListItemIndex, animate = true)
+  LaunchedEffect(lastMessage?.id, lastMessage?.content, lastMessage?.status, hasCompletedInitialPositioning) {
+    if (
+      hasCompletedInitialPositioning &&
+        latestListItemIndex >= 0 &&
+        shouldKeepLatestMessageVisible(listState, latestListItemIndex)
+    ) {
+      scrollToItem(listState = listState, itemIndex = latestListItemIndex, animate = false)
     }
   }
 
@@ -241,69 +274,11 @@ fun RoleplayChatScreen(
       ) {
 
         items(uiState.messages, key = { it.id }) { message ->
-          val isUser = message.side == MessageSide.USER
-          AnimatedVisibility(
-            visible = true,
-            enter = fadeIn(
-              animationSpec = spring(
-                stiffness = Spring.StiffnessMediumLow,
-                dampingRatio = Spring.DampingRatioMediumBouncy
-              )
-            ) + slideInHorizontally(
-              animationSpec = spring(
-                stiffness = Spring.StiffnessMediumLow,
-                dampingRatio = Spring.DampingRatioMediumBouncy
-              ),
-              initialOffsetX = { if (isUser) it / 3 else -it / 3 }
-            ) + scaleIn(
-              animationSpec = spring(
-                stiffness = Spring.StiffnessMediumLow,
-                dampingRatio = Spring.DampingRatioMediumBouncy
-              ),
-              initialScale = 0.9f
-            ),
-            exit = fadeOut() + scaleOut(targetScale = 0.9f)
-          ) {
-            Column(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
-            ) {
-              Text(
-                text = if (isUser) stringResource(R.string.chat_you) else (uiState.role?.name ?: stringResource(R.string.chat_assistant)),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 6.dp),
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
-              )
-
-              Surface(
-                modifier = Modifier.widthIn(max = 340.dp),
-                shape = RoundedCornerShape(18.dp),
-                tonalElevation = if (isUser) 1.dp else 0.5.dp,
-                shadowElevation = if (isUser) 1.dp else 0.5.dp,
-                color = if (isUser) {
-                  MaterialTheme.colorScheme.primaryContainer
-                } else {
-                  MaterialTheme.colorScheme.surfaceContainerHighest
-                }
-              ) {
-                Column(
-                  modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                  verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                  if (message.status == MessageStatus.STREAMING) {
-                    TypingIndicator()
-                  } else {
-                    Text(
-                      text = message.displayText(),
-                      style = MaterialTheme.typography.bodyLarge,
-                      lineHeight = 22.sp,
-                    )
-                  }
-                }
-              }
-            }
-          }
+          ChatMessageBubble(
+            message = message,
+            roleName = roleName,
+            animateOnEnter = hasCompletedInitialPositioning && message.id == lastMessage?.id,
+          )
         }
       }
 
@@ -406,6 +381,81 @@ fun RoleplayChatScreen(
         confirmButton = {}
       )
     }
+  }
+}
+
+@Composable
+private fun ChatMessageBubble(
+  message: Message,
+  roleName: String,
+  animateOnEnter: Boolean,
+) {
+  val isUser = message.side == MessageSide.USER
+  val content: @Composable () -> Unit = {
+    Column(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
+    ) {
+      Text(
+        text = if (isUser) stringResource(R.string.chat_you) else roleName,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 6.dp),
+        fontWeight = FontWeight.Medium,
+      )
+
+      Surface(
+        modifier = Modifier.widthIn(max = 340.dp),
+        shape = RoundedCornerShape(18.dp),
+        tonalElevation = if (isUser) 1.dp else 0.5.dp,
+        shadowElevation = if (isUser) 1.dp else 0.5.dp,
+        color = if (isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
+      ) {
+        Column(
+          modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+          verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+          if (message.status == MessageStatus.STREAMING) {
+            TypingIndicator()
+          } else {
+            Text(
+              text = message.displayText(),
+              style = MaterialTheme.typography.bodyLarge,
+              lineHeight = 22.sp,
+            )
+          }
+        }
+      }
+    }
+  }
+
+  if (animateOnEnter) {
+    AnimatedVisibility(
+      visible = true,
+      enter = fadeIn(
+        animationSpec = spring(
+          stiffness = Spring.StiffnessMediumLow,
+          dampingRatio = Spring.DampingRatioMediumBouncy,
+        )
+      ) + slideInHorizontally(
+        animationSpec = spring(
+          stiffness = Spring.StiffnessMediumLow,
+          dampingRatio = Spring.DampingRatioMediumBouncy,
+        ),
+        initialOffsetX = { if (isUser) it / 3 else -it / 3 },
+      ) + scaleIn(
+        animationSpec = spring(
+          stiffness = Spring.StiffnessMediumLow,
+          dampingRatio = Spring.DampingRatioMediumBouncy,
+        ),
+        initialScale = 0.9f,
+      ),
+      exit = fadeOut() + scaleOut(targetScale = 0.9f),
+    ) {
+      content()
+    }
+  } else {
+    content()
   }
 }
 
