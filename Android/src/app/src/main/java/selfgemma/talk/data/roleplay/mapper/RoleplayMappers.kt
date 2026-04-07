@@ -14,6 +14,9 @@ import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionSummary
 
 fun RoleEntity.toDomain(): RoleCard {
+  val cardCore = toRoleCardCoreOrLegacy()
+  val runtimeProfile = toRoleRuntimeProfileOrLegacy()
+  val interopState = toRoleInteropStateOrDefault()
   return RoleCard(
     id = id,
     name = name,
@@ -35,6 +38,9 @@ fun RoleEntity.toDomain(): RoleCard {
     memoryEnabled = memoryEnabled,
     memoryMaxItems = memoryMaxItems,
     tags = tags,
+    cardCore = cardCore,
+    runtimeProfile = runtimeProfile,
+    interopState = interopState,
     builtIn = builtIn,
     archived = archived,
     createdAt = createdAt,
@@ -43,6 +49,9 @@ fun RoleEntity.toDomain(): RoleCard {
 }
 
 fun RoleCard.toEntity(): RoleEntity {
+  val cardCore = toPersistedRoleCardCore()
+  val runtimeProfile = toPersistedRoleRuntimeProfile()
+  val interopState = toPersistedRoleInteropState()
   return RoleEntity(
     id = id,
     name = name,
@@ -64,6 +73,9 @@ fun RoleCard.toEntity(): RoleEntity {
     memoryEnabled = memoryEnabled,
     memoryMaxItems = memoryMaxItems,
     tags = tags,
+    cardCoreJson = RoleplayInteropJsonCodec.encodeRoleCardCore(cardCore),
+    runtimeProfileJson = RoleplayInteropJsonCodec.encodeRoleRuntimeProfile(runtimeProfile),
+    interopStateJson = RoleplayInteropJsonCodec.encodeRoleInteropState(interopState),
     builtIn = builtIn,
     archived = archived,
     createdAt = createdAt,

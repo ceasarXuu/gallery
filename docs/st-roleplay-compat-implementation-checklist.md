@@ -7,6 +7,16 @@
 3. 兼容逻辑优先放在 `interop` 包，不散落到业务代码各处。
 4. 新增能力时优先扩展 canonical schema，不直接扩展旧 `RoleCard`。
 
+## 1.1 当前进度
+
+- [x] `RoleplayInteropModels.kt`
+- [x] `RoleplayInteropJsonCodec.kt`
+- [x] `RoleplayRoleInteropMappers.kt`
+- [x] `RoleEntity` 增加 interop JSON 承载列
+- [x] `RoleCard` 增加 canonical/interop/runtime 承载字段
+- [x] `RoleplayDatabase` 升级到 `version = 2`
+- [x] 本地执行 `:app:compileDebugKotlin`
+
 ## 2. 推荐文件上限
 
 建议作为重构时的软约束：
@@ -20,10 +30,10 @@
 
 ### 3.1 领域模型
 
-- [ ] `CardCoreModels.kt`
-- [ ] `CardInteropModels.kt`
+- [x] `CardCoreModels.kt`
+- [x] `CardInteropModels.kt`
 - [ ] `CharacterBookModels.kt`
-- [ ] `RuntimeProfileModels.kt`
+- [x] `RuntimeProfileModels.kt`
 
 ### 3.2 导入解析
 
@@ -35,7 +45,7 @@
 ### 3.3 归一映射
 
 - [ ] `ImportedCardNormalizer.kt`
-- [ ] `LegacyRoleToCoreMapper.kt`
+- [x] `LegacyRoleToCoreMapper.kt`
 - [ ] `CoreToLegacyPromptMapper.kt`
 
 ### 3.4 导出
@@ -67,7 +77,7 @@
 
 - [ ] `RoleInteropEntityPayloads.kt`
 - [ ] `RoleInteropJsonConverters.kt`
-- [ ] `RoleMigrationMapper.kt`
+- [x] `RoleMigrationMapper.kt`
 - [ ] `RoleInteropRepository.kt`
 
 ## 6. UI 清单
