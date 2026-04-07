@@ -1,5 +1,7 @@
 package selfgemma.talk.domain.roleplay.usecase
 
+import android.os.SystemClock
+import android.util.Log
 import com.google.ai.edge.litertlm.Contents
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -7,6 +9,7 @@ import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -26,6 +29,14 @@ data class SendRoleplayMessageResult(
   val errorMessage: String? = null,
 )
 
+private data class ModelReadinessResult(
+  val ready: Boolean,
+  val interrupted: Boolean = false,
+  val errorMessage: String? = null,
+)
+
+private const val TAG = "SendRoleplayMessage"
+
 class SendRoleplayMessageUseCase
 @Inject
 constructor(
@@ -38,6 +49,8 @@ constructor(
 ) {
   companion object {
     const val ENABLE_STREAMING = false
+    private const val MODEL_READY_TIMEOUT_MS = 60_000L
+    private const val MODEL_READY_POLL_INTERVAL_MS = 50L
   }
 
   suspend operator fun invoke(
@@ -46,6 +59,7 @@ constructor(
     userInput: String,
     isStopRequested: () -> Boolean,
   ): SendRoleplayMessageResult {
+    val startTime = SystemClock.elapsedRealtime()
     val trimmedInput = userInput.trim()
     if (trimmedInput.isBlank()) {
       return SendRoleplayMessageResult(errorMessage = "Message is empty.")
@@ -55,23 +69,17 @@ constructor(
     if (session == null) {
       return SendRoleplayMessageResult(errorMessage = "Session no longer exists.")
     }
-
-    val role = roleRepository.getRole(session.roleId)
-    if (role == null) {
-      return SendRoleplayMessageResult(errorMessage = "Role data is missing for this session.")
-    }
-
-    if (model.instance == null) {
-      return SendRoleplayMessageResult(errorMessage = "Selected model is still preparing.")
-    }
+    Log.d(TAG, "session loaded after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId")
 
     val now = System.currentTimeMillis()
     val accelerator = model.getStringConfigValue(key = ConfigKeys.ACCELERATOR, defaultValue = "")
+    val firstSeq = conversationRepository.nextMessageSeq(sessionId)
+    Log.d(TAG, "next seq resolved after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId seq=$firstSeq")
     val userMessage =
       Message(
         id = UUID.randomUUID().toString(),
         sessionId = sessionId,
-        seq = conversationRepository.nextMessageSeq(sessionId),
+        seq = firstSeq,
         side = MessageSide.USER,
         status = MessageStatus.COMPLETED,
         content = trimmedInput,
@@ -79,12 +87,16 @@ constructor(
         updatedAt = now,
       )
     conversationRepository.appendMessage(userMessage)
+    Log.d(
+      TAG,
+      "user message appended after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId messageId=${userMessage.id}",
+    )
 
     val assistantSeed =
       Message(
         id = UUID.randomUUID().toString(),
         sessionId = sessionId,
-        seq = conversationRepository.nextMessageSeq(sessionId),
+        seq = firstSeq + 1,
         side = MessageSide.ASSISTANT,
         status = MessageStatus.STREAMING,
         content = "",
@@ -94,6 +106,45 @@ constructor(
         updatedAt = now,
       )
     conversationRepository.appendMessage(assistantSeed)
+    Log.d(
+      TAG,
+      "assistant seed appended after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId messageId=${assistantSeed.id}",
+    )
+
+    val modelReadiness = awaitModelReady(model = model, isStopRequested = isStopRequested)
+    Log.d(
+      TAG,
+      "model readiness resolved after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId ready=${modelReadiness.ready} interrupted=${modelReadiness.interrupted}",
+    )
+    if (!modelReadiness.ready) {
+      val pendingMessage =
+        assistantSeed.copy(
+          status = if (modelReadiness.interrupted) MessageStatus.INTERRUPTED else MessageStatus.FAILED,
+          errorMessage = modelReadiness.errorMessage,
+          updatedAt = System.currentTimeMillis(),
+        )
+      conversationRepository.updateMessage(pendingMessage)
+      return SendRoleplayMessageResult(
+        assistantMessage = pendingMessage,
+        interrupted = modelReadiness.interrupted,
+        errorMessage = pendingMessage.errorMessage,
+      )
+    }
+
+    val role = roleRepository.getRole(session.roleId)
+    if (role == null) {
+      val failedMessage =
+        assistantSeed.copy(
+          status = MessageStatus.FAILED,
+          errorMessage = "Role data is missing for this session.",
+          updatedAt = System.currentTimeMillis(),
+        )
+      conversationRepository.updateMessage(failedMessage)
+      return SendRoleplayMessageResult(
+        assistantMessage = failedMessage,
+        errorMessage = failedMessage.errorMessage,
+      )
+    }
 
     val recentMessages =
       conversationRepository.observeMessages(sessionId).first().filter { message ->
@@ -134,6 +185,7 @@ constructor(
         supportAudio = false,
         systemInstruction = systemInstruction,
       )
+      Log.d(TAG, "conversation reset after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId")
     } catch (exception: Exception) {
       val failedMessage =
         assistantSeed.copy(
@@ -197,6 +249,10 @@ constructor(
                 }
 
                 if (done) {
+                  Log.d(
+                    TAG,
+                    "inference callback done after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId",
+                  )
                   finish(
                     status =
                       if (isStopRequested()) {
@@ -209,6 +265,10 @@ constructor(
               },
               cleanUpListener = {},
               onError = { message ->
+                Log.d(
+                  TAG,
+                  "inference error after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId message=$message",
+                )
                 finish(
                   status =
                     if (isStopRequested()) {
@@ -232,6 +292,7 @@ constructor(
                   null
                 },
             )
+              Log.d(TAG, "runInference dispatched after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId")
           } catch (exception: Exception) {
             finish(
               status = MessageStatus.FAILED,
@@ -276,5 +337,38 @@ constructor(
       interrupted = finalMessage.status == MessageStatus.INTERRUPTED,
       errorMessage = finalMessage.errorMessage,
     )
+  }
+
+  private suspend fun awaitModelReady(
+    model: Model,
+    isStopRequested: () -> Boolean,
+  ): ModelReadinessResult {
+    val startTime = System.currentTimeMillis()
+    var sawInitialization = model.initializing
+
+    while (model.instance == null) {
+      if (isStopRequested()) {
+        return ModelReadinessResult(ready = false, interrupted = true)
+      }
+
+      sawInitialization = sawInitialization || model.initializing
+      if (sawInitialization && !model.initializing) {
+        return ModelReadinessResult(
+          ready = false,
+          errorMessage = "Selected model failed to initialize.",
+        )
+      }
+
+      if (System.currentTimeMillis() - startTime >= MODEL_READY_TIMEOUT_MS) {
+        return ModelReadinessResult(
+          ready = false,
+          errorMessage = "Selected model is still preparing.",
+        )
+      }
+
+      delay(MODEL_READY_POLL_INTERVAL_MS)
+    }
+
+    return ModelReadinessResult(ready = true)
   }
 }

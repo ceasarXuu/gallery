@@ -2,6 +2,8 @@ package selfgemma.talk.feature.roleplay.chat
 
 import android.media.ToneGenerator
 import android.media.AudioManager
+import android.os.SystemClock
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import selfgemma.talk.data.Model
 import selfgemma.talk.domain.roleplay.model.MemoryCategory
@@ -44,6 +47,8 @@ data class RoleplayChatUiState(
   val inProgress: Boolean = false,
   val errorMessage: String? = null,
 )
+
+private const val TAG = "RoleplayChatViewModel"
 
 private data class RoleplayChatMetaState(
   val summary: SessionSummary? = null,
@@ -124,8 +129,17 @@ constructor(
     draft.value = ""
     stopRequested.value = false
     metaState.update { current -> current.copy(inProgress = true, errorMessage = null) }
+    val clickTimestamp = SystemClock.elapsedRealtime()
+    Log.d(
+      TAG,
+      "send click accepted sessionId=$sessionId model=${model.name} inputLength=${input.length}",
+    )
 
-    viewModelScope.launch {
+    viewModelScope.launch(Dispatchers.IO) {
+      Log.d(
+        TAG,
+        "send worker started after ${SystemClock.elapsedRealtime() - clickTimestamp}ms sessionId=$sessionId",
+      )
       val result =
         sendRoleplayMessageUseCase(
           sessionId = sessionId,
@@ -133,6 +147,11 @@ constructor(
           userInput = input,
           isStopRequested = { stopRequested.value },
         )
+
+      Log.d(
+        TAG,
+        "send worker finished after ${SystemClock.elapsedRealtime() - clickTimestamp}ms sessionId=$sessionId error=${result.errorMessage != null} interrupted=${result.interrupted}",
+      )
 
       if (result.errorMessage != null && !result.interrupted) {
         draft.value = input

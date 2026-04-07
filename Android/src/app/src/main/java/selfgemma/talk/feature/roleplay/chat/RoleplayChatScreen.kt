@@ -323,7 +323,7 @@ fun RoleplayChatScreen(
           draft = uiState.draft,
           onDraftChange = viewModel::updateDraft,
           inProgress = uiState.inProgress,
-          canSend = activeModel != null && isActiveModelInitialized && uiState.draft.isNotBlank(),
+          canSend = activeModel != null && uiState.draft.isNotBlank(),
           onSend = {
             activeModel?.let { currentModel ->
               viewModel.sendMessage(currentModel)

@@ -115,11 +115,15 @@ constructor(
   private suspend fun syncSessionMetadata(message: Message) {
     val session = sessionDao.getById(message.sessionId) ?: return
     val completedTurns =
-      messageDao.countBySideAndStatus(
-        sessionId = message.sessionId,
-        side = MessageSide.ASSISTANT,
-        status = MessageStatus.COMPLETED,
-      )
+      if (message.side == MessageSide.ASSISTANT && message.status == MessageStatus.COMPLETED) {
+        messageDao.countBySideAndStatus(
+          sessionId = message.sessionId,
+          side = MessageSide.ASSISTANT,
+          status = MessageStatus.COMPLETED,
+        )
+      } else {
+        session.turnCount
+      }
 
     sessionDao.upsert(
       session.copy(
