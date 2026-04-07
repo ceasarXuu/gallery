@@ -17,11 +17,13 @@ import selfgemma.talk.data.roleplay.db.dao.SessionDao
 import selfgemma.talk.data.roleplay.db.dao.SessionEventDao
 import selfgemma.talk.data.roleplay.db.dao.SessionSummaryDao
 import selfgemma.talk.data.roleplay.repository.RoomConversationRepository
+import selfgemma.talk.data.roleplay.repository.AndroidRoleplayInteropDocumentRepository
 import selfgemma.talk.data.roleplay.repository.RoomMemoryRepository
 import selfgemma.talk.data.roleplay.repository.RoomRoleRepository
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.MemoryRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
+import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentRepository
 
 private const val ROLEPLAY_DATABASE_NAME = "selfgemma_talk.db"
 
@@ -83,4 +85,10 @@ abstract class RoleplayRepositoryModule {
   @Binds
   @Singleton
   abstract fun bindMemoryRepository(implementation: RoomMemoryRepository): MemoryRepository
+
+  @Binds
+  @Singleton
+  abstract fun bindRoleplayInteropDocumentRepository(
+    implementation: AndroidRoleplayInteropDocumentRepository
+  ): RoleplayInteropDocumentRepository
 }

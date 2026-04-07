@@ -113,3 +113,4 @@ Notes:
 
 - Keep the parser/serializer tests separate from repository or UI tests; the goal here is to lock the wire format first.
 - The current implementation preserves ST-specific fields like `extra`, `swipes`, `swipe_id`, and `chat_metadata` through `metadataJson` bridging, so tests should assert field presence rather than exact pretty-print spacing.
+- Do not run `:app:compileDebugKotlin` and `:app:testDebugUnitTest` in parallel. They can race on `app\build\tmp\kotlin-classes\debug` and produce false build failures about unreadable or missing class outputs.
