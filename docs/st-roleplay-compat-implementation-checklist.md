@@ -1,94 +1,82 @@
-# ST 兼容实现拆分清单
+﻿# ST 鍏煎瀹炵幇鎷嗗垎娓呭崟
 
-## 1. 基线原则
+## 1. 鍩虹嚎鍘熷垯
 
-1. 每个文件只承担单一职责。
-2. 解析、映射、持久化、UI、运行时拼装分层实现。
-3. 兼容逻辑优先放在 `interop` 包，不散落到业务代码各处。
-4. 新增能力时优先扩展 canonical schema，不直接扩展旧 `RoleCard`。
-
-## 1.1 当前进度
+1. 姣忎釜鏂囦欢鍙壙鎷呭崟涓€鑱岃矗銆?2. 瑙ｆ瀽銆佹槧灏勩€佹寔涔呭寲銆乁I銆佽繍琛屾椂鎷艰鍒嗗眰瀹炵幇銆?3. 鍏煎閫昏緫浼樺厛鏀惧湪 `interop` 鍖咃紝涓嶆暎钀藉埌涓氬姟浠ｇ爜鍚勫銆?4. 鏂板鑳藉姏鏃朵紭鍏堟墿灞?canonical schema锛屼笉鐩存帴鎵╁睍鏃?`RoleCard`銆?
+## 1.1 褰撳墠杩涘害
 
 - [x] `RoleplayInteropModels.kt`
 - [x] `RoleplayInteropJsonCodec.kt`
 - [x] `RoleplayRoleInteropMappers.kt`
-- [x] `RoleEntity` 增加 interop JSON 承载列
-- [x] `RoleCard` 增加 canonical/interop/runtime 承载字段
-- [x] `RoleplayDatabase` 升级到 `version = 2`
-- [x] 本地执行 `:app:compileDebugKotlin`
+- [x] `RoleEntity` 澧炲姞 interop JSON 鎵胯浇鍒?- [x] `RoleCard` 澧炲姞 canonical/interop/runtime 鎵胯浇瀛楁
+- [x] `RoleplayDatabase` 鍗囩骇鍒?`version = 2`
+- [x] 鏈湴鎵ц `:app:compileDebugKotlin`
 
-## 2. 推荐文件上限
+## 2. 鎺ㄨ崘鏂囦欢涓婇檺
 
-建议作为重构时的软约束：
+寤鸿浣滀负閲嶆瀯鏃剁殑杞害鏉燂細
 
-1. parser / mapper / serializer 单文件控制在 200 行左右。
-2. ViewModel 单文件控制在 300 行左右。
-3. Compose Screen 单文件控制在 250 行左右。
-4. 超过上限时优先拆 section、state、event handler。
-
-## 3. 角色卡实现清单
-
-### 3.1 领域模型
+1. parser / mapper / serializer 鍗曟枃浠舵帶鍒跺湪 200 琛屽乏鍙炽€?2. ViewModel 鍗曟枃浠舵帶鍒跺湪 300 琛屽乏鍙炽€?3. Compose Screen 鍗曟枃浠舵帶鍒跺湪 250 琛屽乏鍙炽€?4. 瓒呰繃涓婇檺鏃朵紭鍏堟媶 section銆乻tate銆乪vent handler銆?
+## 3. 瑙掕壊鍗″疄鐜版竻鍗?
+### 3.1 棰嗗煙妯″瀷
 
 - [x] `CardCoreModels.kt`
 - [x] `CardInteropModels.kt`
 - [ ] `CharacterBookModels.kt`
 - [x] `RuntimeProfileModels.kt`
 
-### 3.2 导入解析
+### 3.2 瀵煎叆瑙ｆ瀽
 
-- [ ] `StCardJsonParser.kt`
+- [x] `StCardJsonParser.kt`
 - [ ] `StCardPngParser.kt`
 - [ ] `StCardSpecDetector.kt`
 - [ ] `StCardValidator.kt`
 
-### 3.3 归一映射
+### 3.3 褰掍竴鏄犲皠
 
-- [ ] `ImportedCardNormalizer.kt`
+- [x] `ImportedCardNormalizer.kt`
 - [x] `LegacyRoleToCoreMapper.kt`
 - [ ] `CoreToLegacyPromptMapper.kt`
 
-### 3.4 导出
+### 3.4 瀵煎嚭
 
-- [ ] `StCardJsonSerializer.kt`
+- [x] `StCardJsonSerializer.kt`
 - [ ] `StCardPngSerializer.kt`
 - [ ] `StCardExportFacade.kt`
 
-## 4. 聊天记录实现清单
+## 4. 鑱婂ぉ璁板綍瀹炵幇娓呭崟
 
-### 4.1 领域模型
+### 4.1 棰嗗煙妯″瀷
 
 - [ ] `ChatInteropModels.kt`
 - [ ] `MessageVariantModels.kt`
 - [ ] `ChatMetadataModels.kt`
 
-### 4.2 导入解析
+### 4.2 瀵煎叆瑙ｆ瀽
 
 - [ ] `StChatJsonlParser.kt`
 - [ ] `StChatValidator.kt`
 - [ ] `ImportedChatNormalizer.kt`
 
-### 4.3 导出
+### 4.3 瀵煎嚭
 
 - [ ] `StChatJsonlSerializer.kt`
 - [ ] `StChatExportFacade.kt`
 
-## 5. 数据层清单
-
+## 5. 鏁版嵁灞傛竻鍗?
 - [ ] `RoleInteropEntityPayloads.kt`
 - [ ] `RoleInteropJsonConverters.kt`
 - [x] `RoleMigrationMapper.kt`
 - [ ] `RoleInteropRepository.kt`
 
-## 6. UI 清单
+## 6. UI 娓呭崟
 
-### 6.1 编辑页状态
-
+### 6.1 缂栬緫椤电姸鎬?
 - [ ] `RoleEditorUiState.kt`
 - [ ] `RoleEditorEvents.kt`
 - [ ] `RoleEditorFieldState.kt`
 
-### 6.2 编辑页 section
+### 6.2 缂栬緫椤?section
 
 - [ ] `RoleBasicSection.kt`
 - [ ] `RoleStCardSection.kt`
@@ -96,43 +84,40 @@
 - [ ] `RoleRuntimeSection.kt`
 - [ ] `RoleInteropSection.kt`
 
-### 6.3 导入导出
+### 6.3 瀵煎叆瀵煎嚭
 
 - [ ] `RoleImportExportViewModel.kt`
 - [ ] `RoleImportExportSection.kt`
 
-## 7. Prompt 层清单
-
+## 7. Prompt 灞傛竻鍗?
 - [ ] `PromptInput.kt`
 - [ ] `PromptInstructionAssembler.kt`
 - [ ] `PromptLoreAssembler.kt`
 - [ ] `PromptMemoryAssembler.kt`
 - [ ] `PromptHistoryAssembler.kt`
-- [ ] `PromptAssembler.kt` 仅做 orchestrator
+- [ ] `PromptAssembler.kt` 浠呭仛 orchestrator
 
-## 8. 测试清单
+## 8. 娴嬭瘯娓呭崟
 
-### 8.1 单元测试
+### 8.1 鍗曞厓娴嬭瘯
 
 - [ ] v1 -> canonical
-- [ ] v2 -> canonical
+- [x] v2 -> canonical
 - [ ] v3 -> canonical
-- [ ] canonical -> v2 json
+- [x] canonical -> v2 json
 - [ ] png metadata read/write
 - [ ] st jsonl parse/serialize
 - [ ] legacy role migration
 
-### 8.2 集成测试
+### 8.2 闆嗘垚娴嬭瘯
 
-- [ ] 导入 ST 卡后进入编辑页字段正确
-- [ ] 导出后可被 ST 再次导入
-- [ ] 导入 ST jsonl 后聊天顺序、swipes、hidden message 不丢
+- [ ] 瀵煎叆 ST 鍗″悗杩涘叆缂栬緫椤靛瓧娈垫纭?- [ ] 瀵煎嚭鍚庡彲琚?ST 鍐嶆瀵煎叆
+- [ ] 瀵煎叆 ST jsonl 鍚庤亰澶╅『搴忋€乻wipes銆乭idden message 涓嶄涪
 
-## 9. 提交策略
+## 9. 鎻愪氦绛栫暐
 
-建议按以下小主题独立提交：
-
-1. canonical schema 与 interop model
+寤鸿鎸変互涓嬪皬涓婚鐙珛鎻愪氦锛?
+1. canonical schema 涓?interop model
 2. role db migration
 3. card import parser
 4. card export serializer
@@ -141,4 +126,4 @@
 7. prompt assembler refactor
 8. logging / diagnostics
 
-每个主题提交后都补对应日志与验证记录，避免后续回滚困难。
+姣忎釜涓婚鎻愪氦鍚庨兘琛ュ搴旀棩蹇椾笌楠岃瘉璁板綍锛岄伩鍏嶅悗缁洖婊氬洶闅俱€?
