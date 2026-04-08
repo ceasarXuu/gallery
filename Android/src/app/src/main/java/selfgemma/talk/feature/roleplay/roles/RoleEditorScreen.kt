@@ -167,6 +167,15 @@ fun RoleEditorScreen(
       when (selectedTabIndex) {
         0 -> {
           item {
+            TextField(
+              modifier = Modifier.fillMaxWidth().testTag("role_editor_name"),
+              value = uiState.name,
+              onValueChange = viewModel::updateName,
+              label = { Text(stringResource(R.string.role_editor_name_label)) },
+              placeholder = { Text(stringResource(R.string.role_editor_name_placeholder)) },
+            )
+          }
+          item {
             RoleEditorMediaSection(
               avatarUri = uiState.avatarUri,
               avatarSource = uiState.avatarSource,
@@ -181,15 +190,6 @@ fun RoleEditorScreen(
               onUpdateGalleryUsage = { _, _ -> },
               onSetGalleryAsAvatar = { },
               onRemoveGalleryAsset = { },
-            )
-          }
-          item {
-            TextField(
-              modifier = Modifier.fillMaxWidth().testTag("role_editor_name"),
-              value = uiState.name,
-              onValueChange = viewModel::updateName,
-              label = { Text(stringResource(R.string.role_editor_name_label)) },
-              placeholder = { Text(stringResource(R.string.role_editor_name_placeholder)) },
             )
           }
           item {
