@@ -80,13 +80,6 @@ fun RoleEditorMediaSection(
       style = MaterialTheme.typography.bodyMedium,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    MediaCompatibilitySummary(
-      hasAvatar = !avatarUri.isNullOrBlank(),
-      hasCover = !coverUri.isNullOrBlank(),
-      galleryCount = galleryAssets.size,
-      spriteCount = spriteAssets.size,
-      importedFromStPng = importedFromStPng,
-    )
     RoleMediaCard(
       title = stringResource(R.string.role_editor_avatar_title),
       subtitle = stringResource(R.string.role_editor_avatar_summary),
@@ -135,78 +128,6 @@ fun RoleEditorMediaSection(
       onUpdateStateTag = onUpdateSpriteStateTag,
       onRemove = onRemoveSpriteAsset,
     )
-  }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun MediaCompatibilitySummary(
-  hasAvatar: Boolean,
-  hasCover: Boolean,
-  galleryCount: Int,
-  spriteCount: Int,
-  importedFromStPng: Boolean,
-) {
-  Card {
-    Column(
-      modifier = Modifier.fillMaxWidth().padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-      Text(
-        text = stringResource(R.string.role_editor_media_export_summary_title),
-        style = MaterialTheme.typography.titleSmall,
-      )
-      FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        AssistChip(
-          onClick = {},
-          enabled = false,
-          label = {
-            Text(
-              if (hasAvatar) {
-                stringResource(R.string.role_editor_media_export_st_png_ready)
-              } else {
-                stringResource(R.string.role_editor_media_export_st_png_missing)
-              }
-            )
-          },
-        )
-        AssistChip(
-          onClick = {},
-          enabled = false,
-          label = {
-            Text(
-              if (hasCover) {
-                stringResource(R.string.role_editor_media_export_cover_project_only)
-              } else {
-                stringResource(R.string.role_editor_media_export_cover_empty)
-              }
-            )
-          },
-        )
-        AssistChip(
-          onClick = {},
-          enabled = false,
-          label = { Text(stringResource(R.string.role_editor_media_export_gallery_count, galleryCount)) },
-        )
-        AssistChip(
-          onClick = {},
-          enabled = false,
-          label = { Text(stringResource(R.string.role_editor_media_export_sprite_count, spriteCount)) },
-        )
-        if (importedFromStPng) {
-          AssistChip(
-            onClick = {},
-            enabled = false,
-            label = { Text(stringResource(R.string.role_editor_media_status_st_png)) },
-          )
-        }
-      }
-      Text(
-        text = stringResource(R.string.role_editor_media_export_summary_body),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-    }
   }
 }
 
