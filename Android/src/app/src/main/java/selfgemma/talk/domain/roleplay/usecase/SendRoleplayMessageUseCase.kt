@@ -207,6 +207,7 @@ constructor(
           summary = summary,
           memories = relevantMemories,
           recentMessages = recentMessages,
+          pendingUserInput = trimmedInput,
         )
       )
 

@@ -68,6 +68,35 @@ class CreateRoleplaySessionUseCaseTest {
 
     assertTrue(conversationRepository.messages.isEmpty())
   }
+
+  @Test
+  fun createSession_fallsBackToAlternateGreeting() = runBlocking {
+    val conversationRepository = SessionSeedConversationRepository()
+    val roleRepository =
+      SessionSeedRoleRepository(
+        RoleCard(
+          id = "role-3",
+          name = "Mira",
+          systemPrompt = "Stay in character.",
+          cardCore =
+            RoleCardCore(
+              name = "Mira",
+              firstMessage = "",
+              alternateGreetings = listOf("Alt hello", "Alt two"),
+            ),
+          createdAt = 1L,
+          updatedAt = 1L,
+        )
+      )
+
+    CreateRoleplaySessionUseCase(
+      conversationRepository = conversationRepository,
+      roleRepository = roleRepository,
+    ).invoke(roleId = "role-3", modelId = "gemma")
+
+    assertEquals(1, conversationRepository.messages.size)
+    assertEquals("Alt hello", conversationRepository.messages.single().content)
+  }
 }
 
 private class SessionSeedConversationRepository : ConversationRepository {

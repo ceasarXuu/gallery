@@ -1,6 +1,7 @@
 package selfgemma.talk.domain.roleplay.usecase
 
 import javax.inject.Inject
+import selfgemma.talk.domain.roleplay.model.CharacterBookEntry
 import selfgemma.talk.domain.roleplay.model.MemoryItem
 import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageKind
@@ -18,8 +19,23 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     summary: SessionSummary?,
     memories: List<MemoryItem>,
     recentMessages: List<Message>,
+    pendingUserInput: String = "",
   ): String {
     val dialogueWindow = selectRecentMessages(recentMessages)
+    val loreContext =
+      buildString {
+        appendLine(role.name)
+        appendLine(role.summary)
+        appendLine(role.personaDescription)
+        appendLine(role.worldSettings)
+        appendLine(summary?.summaryText.orEmpty())
+        memories.forEach { appendLine(it.content) }
+        dialogueWindow.forEach { appendLine(messageContentForLore(it)) }
+        appendLine(pendingUserInput)
+      }
+    val lorebook = role.cardCore?.characterBook
+    val beforeLore = lorebook.resolveEntries(position = "before_char", context = loreContext)
+    val afterLore = lorebook.resolveEntries(position = "after_char", context = loreContext)
 
     return buildString {
       appendLine("You are roleplaying as ${role.name}.")
@@ -27,6 +43,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       appendLine()
 
       appendSection("Core Character", role.systemPrompt)
+      appendSection("Lorebook", beforeLore)
       appendSection("Character Summary", role.summary)
       appendSection("Persona", role.personaDescription)
       appendSection("World", role.worldSettings)
@@ -55,6 +72,8 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
           },
         )
       }
+      appendSection("Lorebook", afterLore)
+      appendSection("Post-History Instructions", role.cardCore?.postHistoryInstructions.orEmpty())
 
       appendLine("[Response Rules]")
       appendLine("- The next incoming user message is the live message you must answer.")
@@ -115,6 +134,42 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       MessageSide.ASSISTANT -> role.name
       MessageSide.SYSTEM -> "System"
     }
+  }
+
+  private fun messageContentForLore(message: Message): String {
+    return "${message.side.name}:${message.content}"
+  }
+
+  private fun selfgemma.talk.domain.roleplay.model.CharacterBook?.resolveEntries(
+    position: String,
+    context: String,
+  ): String {
+    val normalizedContext = context.lowercase()
+    val selectedEntries =
+      this?.entries
+        ?.filter { entry -> entry.enabled }
+        ?.filter { entry -> entry.matches(position = position, normalizedContext = normalizedContext) }
+        .orEmpty()
+
+    return selectedEntries.joinToString("\n\n") { entry -> entry.content.trim() }.trim()
+  }
+
+  private fun CharacterBookEntry.matches(position: String, normalizedContext: String): Boolean {
+    if (!this.position.equals(position, ignoreCase = true)) {
+      return false
+    }
+    if (constant) {
+      return true
+    }
+
+    val matchedPrimary = keys.any { key -> key.isNotBlank() && normalizedContext.contains(key.lowercase()) }
+    if (!selective) {
+      return matchedPrimary
+    }
+
+    val matchedSecondary =
+      secondaryKeys.any { key -> key.isNotBlank() && normalizedContext.contains(key.lowercase()) }
+    return matchedPrimary && matchedSecondary
   }
 
   companion object {

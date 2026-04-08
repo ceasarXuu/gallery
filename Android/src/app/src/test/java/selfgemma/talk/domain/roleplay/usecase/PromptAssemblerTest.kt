@@ -3,6 +3,8 @@ package selfgemma.talk.domain.roleplay.usecase
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import selfgemma.talk.domain.roleplay.model.CharacterBook
+import selfgemma.talk.domain.roleplay.model.CharacterBookEntry
 import selfgemma.talk.domain.roleplay.model.MemoryCategory
 import selfgemma.talk.domain.roleplay.model.MemoryItem
 import selfgemma.talk.domain.roleplay.model.Message
@@ -26,6 +28,29 @@ class PromptAssemblerTest {
             summary = "A dry-witted investigator.",
             systemPrompt = "Always stay in character.",
             openingLine = "The case file is already open.",
+            cardCore =
+              selfgemma.talk.domain.roleplay.model.RoleCardCore(
+                name = "Iris Vale",
+                postHistoryInstructions = "Keep responses terse after the history block.",
+                characterBook =
+                  CharacterBook(
+                    entries =
+                      listOf(
+                        CharacterBookEntry(
+                          id = 1,
+                          keys = listOf("lower station"),
+                          content = "The lower station smells like coolant and wet rust.",
+                          position = "before_char",
+                        ),
+                        CharacterBookEntry(
+                          id = 2,
+                          keys = listOf("forged pass"),
+                          content = "If the forged pass comes up, Iris should suspect internal sabotage.",
+                          position = "after_char",
+                        ),
+                      )
+                  ),
+              ),
             createdAt = now,
             updatedAt = now,
           ),
@@ -75,8 +100,14 @@ class PromptAssemblerTest {
               updatedAt = now,
             ),
           ),
+        pendingUserInput = "Could the forged pass point to someone inside the lower station?",
       )
 
+    assertTrue(prompt.contains("[Lorebook]"))
+    assertTrue(prompt.contains("The lower station smells like coolant and wet rust."))
+    assertTrue(prompt.contains("If the forged pass comes up, Iris should suspect internal sabotage."))
+    assertTrue(prompt.contains("[Post-History Instructions]"))
+    assertTrue(prompt.contains("Keep responses terse after the history block."))
     assertTrue(prompt.contains("[Session Summary]"))
     assertTrue(prompt.contains("The pair discovered a forged transit pass."))
     assertTrue(prompt.contains("[Relevant Memory]"))
