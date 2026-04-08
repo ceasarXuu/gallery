@@ -1,5 +1,7 @@
 package selfgemma.talk.domain.roleplay.usecase
 
+import android.content.ContextWrapper
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -31,6 +33,7 @@ class StSampleCardsRegressionTest {
     val repository = LocalFileRoleCardDocumentRepository(cardsDir)
     val importUseCase =
       ImportStRoleCardFromUriUseCase(
+        appContext = SampleCardsImportContext(),
         documentRepository = repository,
         importStV2RoleCardUseCase = ImportStV2RoleCardUseCase(),
       )
@@ -221,4 +224,13 @@ private class SampleSessionSeedRoleRepository(private val role: RoleCard) : Role
   override suspend fun saveRole(role: RoleCard) = Unit
 
   override suspend fun deleteRole(roleId: String) = Unit
+}
+
+private class SampleCardsImportContext : ContextWrapper(null) {
+  private val rootDir =
+    createTempDir(prefix = "st-sample-cards").apply {
+      deleteOnExit()
+    }
+
+  override fun getFilesDir(): File = rootDir
 }

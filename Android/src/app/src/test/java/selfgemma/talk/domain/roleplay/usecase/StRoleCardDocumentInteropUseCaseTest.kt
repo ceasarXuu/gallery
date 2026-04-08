@@ -1,8 +1,11 @@
 package selfgemma.talk.domain.roleplay.usecase
 
+import android.content.ContextWrapper
 import java.util.Base64
+import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import selfgemma.talk.domain.roleplay.model.RoleCard
@@ -18,6 +21,7 @@ class StRoleCardDocumentInteropUseCaseTest {
   @Test
   fun importFromUri_readsPngRoleCard() = runBlocking {
     val repository = FakeRoleCardDocumentRepository()
+    val fakeContext = FakeImportContext()
     repository.metadata["content://cards/iris.png"] =
       RoleplayInteropDocumentMetadata(displayName = "iris.png", mimeType = "image/png")
     repository.metadata["content://cards/embedded.png"] =
@@ -42,13 +46,16 @@ class StRoleCardDocumentInteropUseCaseTest {
 
     val imported =
       ImportStRoleCardFromUriUseCase(
+        appContext = fakeContext,
         documentRepository = repository,
         importStV2RoleCardUseCase = ImportStV2RoleCardUseCase(),
-      ).importFromUri("content://cards/iris.png", now = 5L)
+    ).importFromUri("content://cards/iris.png", now = 5L)
 
     assertEquals("Iris", imported.name)
-    assertEquals("content://cards/iris.png", imported.avatarUri)
-    assertEquals("content://cards/iris.png", imported.mediaProfile?.primaryAvatar?.uri)
+    assertFalse(imported.avatarUri.isNullOrBlank())
+    assertFalse(imported.avatarUri!!.startsWith("content://"))
+    assertTrue(File(imported.avatarUri!!).exists())
+    assertEquals(imported.avatarUri, imported.mediaProfile?.primaryAvatar?.uri)
     assertEquals(RoleCardSourceFormat.ST_PNG, imported.interopState?.sourceFormat)
   }
 
@@ -75,6 +82,7 @@ class StRoleCardDocumentInteropUseCaseTest {
 
     val imported =
       ImportStRoleCardFromUriUseCase(
+        appContext = FakeImportContext(),
         documentRepository = repository,
         importStV2RoleCardUseCase = ImportStV2RoleCardUseCase(),
       ).importFromUri("content://cards/legacy.json", now = 9L)
@@ -185,4 +193,13 @@ private class FakeRoleCardDocumentRepository : RoleplayInteropDocumentRepository
   override suspend fun getMetadata(uri: String): RoleplayInteropDocumentMetadata {
     return metadata[uri] ?: RoleplayInteropDocumentMetadata(displayName = uri.substringAfterLast('/'))
   }
+}
+
+private class FakeImportContext : ContextWrapper(null) {
+  private val rootDir =
+    createTempDir(prefix = "st-import-test").apply {
+      deleteOnExit()
+    }
+
+  override fun getFilesDir(): File = rootDir
 }

@@ -1,8 +1,11 @@
 package selfgemma.talk.domain.roleplay.usecase
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import java.io.File
 import java.util.UUID
 import selfgemma.talk.data.roleplay.interop.stcardpng.StPngRoleCardCodec
 import javax.inject.Inject
@@ -19,6 +22,7 @@ import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentReposito
 class ImportStRoleCardFromUriUseCase
 @Inject
 constructor(
+  @param:ApplicationContext private val appContext: Context,
   private val documentRepository: RoleplayInteropDocumentRepository,
   private val importStV2RoleCardUseCase: ImportStV2RoleCardUseCase,
 ) {
@@ -29,9 +33,15 @@ constructor(
   ): RoleCard {
     val metadata = documentRepository.getMetadata(uri)
     val isPng = metadata.mimeType == "image/png" || metadata.displayName?.endsWith(".png", ignoreCase = true) == true
+    val sourceBytes =
+      if (isPng) {
+        documentRepository.readBytes(uri)
+      } else {
+        null
+      }
     val rawJson =
       if (isPng) {
-        StPngRoleCardCodec.extractCardJson(documentRepository.readBytes(uri))
+        StPngRoleCardCodec.extractCardJson(checkNotNull(sourceBytes))
       } else {
         documentRepository.readText(uri)
       }
@@ -48,15 +58,17 @@ constructor(
       return imported
     }
 
+    val persistedAvatarUri = persistImportedPngAvatar(roleId = imported.id, pngBytes = checkNotNull(sourceBytes))
+
     return imported.copy(
-      avatarUri = uri,
+      avatarUri = persistedAvatarUri,
       mediaProfile =
         (imported.mediaProfile ?: RoleMediaProfile()).copy(
           primaryAvatar =
             RoleMediaAsset(
-              id = UUID.nameUUIDFromBytes("st-avatar:$uri".toByteArray()).toString(),
+              id = UUID.nameUUIDFromBytes("st-avatar:${imported.id}".toByteArray()).toString(),
               kind = RoleMediaKind.PRIMARY_AVATAR,
-              uri = uri,
+              uri = persistedAvatarUri,
               source = RoleMediaSource.ST_PNG_IMPORT,
               createdAt = imported.createdAt,
               updatedAt = imported.updatedAt,
@@ -74,6 +86,13 @@ constructor(
           exportTargetDefault = RoleCardExportTarget.ST_PNG,
         )
     )
+  }
+
+  private fun persistImportedPngAvatar(roleId: String, pngBytes: ByteArray): String {
+    val avatarDir = File(appContext.filesDir, "roleplay/st-imported-avatars").apply { mkdirs() }
+    val avatarFile = File(avatarDir, "$roleId.png")
+    avatarFile.writeBytes(pngBytes)
+    return avatarFile.absolutePath
   }
 
   private fun normalizeSupportedSpec(rawJson: String): String {
