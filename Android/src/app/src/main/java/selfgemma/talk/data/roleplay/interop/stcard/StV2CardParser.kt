@@ -2,6 +2,8 @@ package selfgemma.talk.data.roleplay.interop.stcard
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import selfgemma.talk.domain.roleplay.model.RoleCardSourceFormat
 import selfgemma.talk.domain.roleplay.model.RoleInteropState
 import selfgemma.talk.domain.roleplay.model.StCharacterCard
@@ -13,6 +15,7 @@ class StV2CardParser {
   private val gson: Gson = GsonBuilder().create()
 
   fun parse(rawJson: String): ParsedStCardV2 {
+    val rawObject = JsonParser.parseString(rawJson).asJsonObject
     val parsed = gson.fromJson(rawJson, StCharacterCard::class.java)
     require(parsed.spec == ST_V2_SPEC) { "Unsupported ST card spec: ${parsed.spec}" }
     require(parsed.spec_version == ST_V2_SPEC_VERSION) {
@@ -31,8 +34,37 @@ class StV2CardParser {
           sourceSpec = normalized.spec,
           sourceSpecVersion = normalized.spec_version,
           rawCardJson = rawJson,
+          rawUnknownTopLevelJson = extractUnknownTopLevel(rawObject).takeIf { it.size() > 0 }?.toString(),
+          rawUnknownDataJson = extractUnknownData(rawObject).takeIf { it.size() > 0 }?.toString(),
+          rawUnknownExtensionsJson = extractUnknownExtensions(rawObject).takeIf { it.size() > 0 }?.toString(),
         ),
     )
+  }
+
+  private fun extractUnknownTopLevel(rawObject: JsonObject): JsonObject {
+    val known =
+      setOf(
+        "spec", "spec_version", "name", "description", "personality", "scenario", "first_mes", "mes_example",
+        "creatorcomment", "avatar", "chat", "talkativeness", "fav", "creator", "tags", "create_date", "data",
+      )
+    return rawObject.deepCopy().apply { known.forEach(::remove) }
+  }
+
+  private fun extractUnknownData(rawObject: JsonObject): JsonObject {
+    val data = rawObject.getAsJsonObject("data") ?: return JsonObject()
+    val known =
+      setOf(
+        "name", "description", "personality", "scenario", "first_mes", "mes_example", "creator_notes",
+        "system_prompt", "post_history_instructions", "alternate_greetings", "tags", "creator",
+        "character_version", "character_book", "extensions",
+      )
+    return data.deepCopy().apply { known.forEach(::remove) }
+  }
+
+  private fun extractUnknownExtensions(rawObject: JsonObject): JsonObject {
+    val extensions = rawObject.getAsJsonObject("data")?.getAsJsonObject("extensions") ?: return JsonObject()
+    val known = setOf("talkativeness", "fav", "world", "depth_prompt")
+    return extensions.deepCopy().apply { known.forEach(::remove) }
   }
 
   private fun readFromV2(card: StCharacterCard): StCharacterCard {

@@ -35,6 +35,7 @@ class StV2CardParserTest {
             "tags": ["fantasy", "healer"],
             "creator": "tester",
             "character_version": "1.2",
+            "x_prompt_hint": "keep the moonlit tone",
             "extensions": {"depth_prompt": {"depth": 4}},
             "character_book": {
               "name": "Lore",
@@ -56,7 +57,42 @@ class StV2CardParserTest {
     assertEquals("Warm and observant.", parsed.card.personality)
     assertEquals(2, parsed.card.data?.alternate_greetings?.size)
     assertEquals(1, parsed.card.data?.character_book?.entries?.size)
+    assertTrue(parsed.interopState.rawUnknownDataJson?.contains("x_prompt_hint") == true)
     assertTrue(parsed.interopState.rawCardJson?.contains("chara_card_v2") == true)
+  }
+
+  @Test
+  fun export_preserves_unknown_fields_from_interop_state() {
+    val json =
+      selfgemma.talk.domain.roleplay.usecase.ExportStV2RoleCardUseCase().exportToJson(
+        selfgemma.talk.domain.roleplay.model.RoleCard(
+          id = "role-unknown",
+          stCard =
+            StCharacterCard(
+              spec = "chara_card_v2",
+              spec_version = "2.0",
+              name = "Nova",
+              data =
+                StCharacterCardData(
+                  name = "Nova",
+                  description = "Scout",
+                  extensions = JsonObject().apply { addProperty("world", "baseline") },
+                ),
+            ),
+          interopState =
+            selfgemma.talk.domain.roleplay.model.RoleInteropState(
+              rawUnknownTopLevelJson = """{"x_top":"kept"}""",
+              rawUnknownDataJson = """{"x_data":"kept"}""",
+              rawUnknownExtensionsJson = """{"x_ext":"kept"}""",
+            ),
+          createdAt = 1L,
+          updatedAt = 1L,
+        )
+      )
+
+    assertTrue(json.contains(""""x_top": "kept""""))
+    assertTrue(json.contains(""""x_data": "kept""""))
+    assertTrue(json.contains(""""x_ext": "kept""""))
   }
 
   @Test
