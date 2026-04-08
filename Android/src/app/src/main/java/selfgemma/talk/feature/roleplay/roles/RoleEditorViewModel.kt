@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import selfgemma.talk.domain.roleplay.model.RoleCard
+import selfgemma.talk.domain.roleplay.model.RoleCardSourceFormat
 import selfgemma.talk.domain.roleplay.usecase.ExportStRoleCardToUriUseCase
 import selfgemma.talk.domain.roleplay.usecase.ImportStRoleCardFromUriUseCase
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
@@ -30,6 +31,9 @@ data class RoleEditorUiState(
   val safetyPolicy: String = "",
   val tagsText: String = "",
   val defaultModelId: String? = null,
+  val avatarUri: String? = null,
+  val coverUri: String? = null,
+  val importedFromStPng: Boolean = false,
   val statusMessage: String? = null,
   val errorMessage: String? = null,
 )
@@ -88,6 +92,36 @@ constructor(
     _uiState.update { it.copy(defaultModelId = value, errorMessage = null, statusMessage = null) }
   }
 
+  fun updateAvatarUri(value: String?) {
+    _uiState.update {
+      it.copy(
+        avatarUri = value,
+        errorMessage = null,
+        statusMessage =
+          if (value.isNullOrBlank()) {
+            "Cleared primary avatar."
+          } else {
+            "Updated primary avatar."
+          },
+      )
+    }
+  }
+
+  fun updateCoverUri(value: String?) {
+    _uiState.update {
+      it.copy(
+        coverUri = value,
+        errorMessage = null,
+        statusMessage =
+          if (value.isNullOrBlank()) {
+            "Cleared cover image."
+          } else {
+            "Updated cover image."
+          },
+      )
+    }
+  }
+
   fun importStCardFromUri(uri: String) {
     viewModelScope.launch {
       runCatching {
@@ -114,6 +148,9 @@ constructor(
               safetyPolicy = importedRole.safetyPolicy,
               tagsText = importedRole.tags.joinToString(", "),
               defaultModelId = importedRole.defaultModelId,
+              avatarUri = importedRole.avatarUri,
+              coverUri = importedRole.coverUri,
+              importedFromStPng = importedRole.interopState?.sourceFormat == RoleCardSourceFormat.ST_PNG,
               statusMessage = "Imported ST role card. Review and save to persist changes.",
             )
         }
@@ -209,8 +246,8 @@ constructor(
       summaryTurnThreshold = existingRole?.summaryTurnThreshold ?: 6,
       memoryEnabled = existingRole?.memoryEnabled ?: true,
       memoryMaxItems = existingRole?.memoryMaxItems ?: 32,
-      avatarUri = existingRole?.avatarUri,
-      coverUri = existingRole?.coverUri,
+      avatarUri = snapshot.avatarUri,
+      coverUri = snapshot.coverUri,
       cardCore = existingRole?.cardCore,
       runtimeProfile = existingRole?.runtimeProfile,
       interopState = existingRole?.interopState,
@@ -249,6 +286,9 @@ constructor(
           safetyPolicy = role.safetyPolicy,
           tagsText = role.tags.joinToString(", "),
           defaultModelId = role.defaultModelId,
+          avatarUri = role.avatarUri,
+          coverUri = role.coverUri,
+          importedFromStPng = role.interopState?.sourceFormat == RoleCardSourceFormat.ST_PNG,
           statusMessage = null,
         )
     }

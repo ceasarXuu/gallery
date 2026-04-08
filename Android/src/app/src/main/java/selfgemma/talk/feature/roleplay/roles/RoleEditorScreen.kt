@@ -2,6 +2,7 @@ package selfgemma.talk.feature.roleplay.roles
 
 import android.net.Uri
 import android.util.Log
+import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +18,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -55,9 +57,15 @@ fun RoleEditorScreen(
   val uiState by viewModel.uiState.collectAsState()
   val downloadedModels = modelManagerViewModel.getAllDownloadedModels()
   var modelMenuExpanded by remember { mutableStateOf(false) }
+  var showMissingAvatarExportDialog by remember { mutableStateOf(false) }
+  var exportPngAfterAvatarPick by remember { mutableStateOf(false) }
+  val context = androidx.compose.ui.platform.LocalContext.current
   val importLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-      uri?.let { viewModel.importStCardFromUri(it.toString()) }
+      uri?.let {
+        takeReadPermission(context = context, uri = it)
+        viewModel.importStCardFromUri(it.toString())
+      }
     }
   val exportJsonLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
@@ -66,6 +74,27 @@ fun RoleEditorScreen(
   val exportPngLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("image/png")) { uri: Uri? ->
       uri?.let { viewModel.exportStCardToUri(it.toString()) }
+    }
+  val avatarLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+      if (uri == null) {
+        exportPngAfterAvatarPick = false
+      } else {
+        takeReadPermission(context = context, uri = uri)
+        viewModel.updateAvatarUri(uri.toString())
+        if (exportPngAfterAvatarPick) {
+          exportPngAfterAvatarPick = false
+          val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+          exportPngLauncher.launch("${fileName}.png")
+        }
+      }
+    }
+  val coverLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+      uri?.let {
+        takeReadPermission(context = context, uri = it)
+        viewModel.updateCoverUri(it.toString())
+      }
     }
 
   val handleNavigateUp: () -> Unit = {
@@ -107,6 +136,17 @@ fun RoleEditorScreen(
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+      item {
+        RoleEditorMediaSection(
+          avatarUri = uiState.avatarUri,
+          coverUri = uiState.coverUri,
+          importedFromStPng = uiState.importedFromStPng,
+          onPickAvatar = { avatarLauncher.launch(arrayOf("image/*")) },
+          onClearAvatar = { viewModel.updateAvatarUri(null) },
+          onPickCover = { coverLauncher.launch(arrayOf("image/*")) },
+          onClearCover = { viewModel.updateCoverUri(null) },
+        )
+      }
       item {
         TextField(
           modifier = Modifier.fillMaxWidth().testTag("role_editor_name"),
@@ -230,8 +270,12 @@ fun RoleEditorScreen(
           }
           OutlinedButton(
             onClick = {
-              val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-              exportPngLauncher.launch("${fileName}.png")
+              if (uiState.avatarUri.isNullOrBlank()) {
+                showMissingAvatarExportDialog = true
+              } else {
+                val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                exportPngLauncher.launch("${fileName}.png")
+              }
             },
             modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_png"),
           ) {
@@ -276,5 +320,57 @@ fun RoleEditorScreen(
         }
       }
     }
+  }
+
+  if (showMissingAvatarExportDialog) {
+    AlertDialog(
+      onDismissRequest = {
+        showMissingAvatarExportDialog = false
+        exportPngAfterAvatarPick = false
+      },
+      title = { Text(stringResource(R.string.role_editor_export_png_missing_avatar_title)) },
+      text = { Text(stringResource(R.string.role_editor_export_png_missing_avatar_content)) },
+      confirmButton = {
+        FilledTonalButton(
+          onClick = {
+            showMissingAvatarExportDialog = false
+            val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            exportPngLauncher.launch("${fileName}.png")
+          },
+        ) {
+          Text(stringResource(R.string.role_editor_export_png_use_default))
+        }
+      },
+      dismissButton = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          OutlinedButton(
+            onClick = {
+              showMissingAvatarExportDialog = false
+              exportPngAfterAvatarPick = true
+              avatarLauncher.launch(arrayOf("image/*"))
+            },
+          ) {
+            Text(stringResource(R.string.role_editor_export_png_upload_image))
+          }
+          OutlinedButton(
+            onClick = {
+              showMissingAvatarExportDialog = false
+              exportPngAfterAvatarPick = false
+            },
+          ) {
+            Text(stringResource(R.string.cancel))
+          }
+        }
+      },
+    )
+  }
+}
+
+private fun takeReadPermission(context: android.content.Context, uri: Uri) {
+  runCatching {
+    context.contentResolver.takePersistableUriPermission(
+      uri,
+      Intent.FLAG_GRANT_READ_URI_PERMISSION,
+    )
   }
 }

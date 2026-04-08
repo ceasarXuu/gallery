@@ -41,6 +41,7 @@ constructor(
     }
 
     return imported.copy(
+      avatarUri = uri,
       interopState =
         imported.interopState?.copy(
           sourceFormat = RoleCardSourceFormat.ST_PNG,

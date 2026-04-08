@@ -219,6 +219,26 @@ Notes:
 
 - If user expectation is “chat sound follows media volume”, do not use sonification/system streams here.
 - A successful `streamId` from `SoundPool.play()` is not enough to prove audibility; stream routing must be checked against `dumpsys audio`.
+
+## 2026-04-08 Role editor media UX implementation notes
+
+- First-phase media editing stays intentionally narrow:
+  - primary avatar
+  - project-only cover image
+- Do not block media UX improvements on a full `RoleMediaProfile` schema migration. The existing `avatarUri` / `coverUri` fields are enough to make role creation and editing explicitly media-aware now.
+
+PNG import/export notes:
+
+- Importing an ST PNG role card should immediately surface the PNG document URI as the role's primary avatar, so the editor can show the asset the user expects.
+- Exporting ST PNG without a primary avatar should not silently fall back. Prompt the user first and offer:
+  - use default image
+  - upload image
+  - cancel
+
+URI handling notes:
+
+- `ActivityResultContracts.OpenDocument` results need `takePersistableUriPermission(..., FLAG_GRANT_READ_URI_PERMISSION)` before storing the URI into role state.
+- Keep image-picking launchers separate from ST card import launchers; once media UX exists, sharing a single picker creates confusing state coupling.
 ## 2026-04-07 Roleplay chat overflow menu positioning
 
 - Symptom: the chat page top-right overflow menu opened near the bottom-right of the screen instead of the app bar action.

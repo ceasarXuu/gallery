@@ -42,6 +42,7 @@ class StRoleCardDocumentInteropUseCaseTest {
       ).importFromUri("content://cards/iris.png", now = 5L)
 
     assertEquals("Iris", imported.name)
+    assertEquals("content://cards/iris.png", imported.avatarUri)
     assertEquals(RoleCardSourceFormat.ST_PNG, imported.interopState?.sourceFormat)
   }
 

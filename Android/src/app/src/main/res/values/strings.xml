@@ -113,6 +113,21 @@
   <string name="role_editor_summary_placeholder">Short one-line description</string>
   <string name="role_editor_system_prompt_label">System prompt</string>
   <string name="role_editor_system_prompt_placeholder">Describe exactly how the role should speak and behave</string>
+  <string name="role_editor_media_title">Media Assets</string>
+  <string name="role_editor_media_summary">Manage the primary avatar and project-only cover image. The primary avatar is used for chat display and ST PNG export.</string>
+  <string name="role_editor_avatar_title">Primary Avatar</string>
+  <string name="role_editor_avatar_summary">Used for chat display and exported as the image shell for ST PNG role cards.</string>
+  <string name="role_editor_avatar_empty">No primary avatar selected</string>
+  <string name="role_editor_cover_title">Cover Image</string>
+  <string name="role_editor_cover_summary">Used only inside this project. It is not part of the standard ST role card.</string>
+  <string name="role_editor_cover_empty">No cover image selected</string>
+  <string name="role_editor_media_status_missing">Missing</string>
+  <string name="role_editor_media_status_st_png">From ST PNG</string>
+  <string name="role_editor_media_status_local">Local</string>
+  <string name="role_editor_media_status_project_only">Project only</string>
+  <string name="role_editor_media_add">Add</string>
+  <string name="role_editor_media_replace">Replace</string>
+  <string name="role_editor_media_clear">Clear</string>
   <string name="role_editor_persona_label">Persona</string>
   <string name="role_editor_world_settings_label">World settings</string>
   <string name="role_editor_opening_line_label">Opening line</string>
@@ -124,6 +139,10 @@
   <string name="role_editor_create_button">Create Role</string>
   <string name="role_editor_save_button">Save Changes</string>
   <string name="role_editor_delete_button">Delete Role</string>
+  <string name="role_editor_export_png_missing_avatar_title">ST PNG export needs a primary avatar</string>
+  <string name="role_editor_export_png_missing_avatar_content">This role does not currently have a primary avatar. You can export with the default image, or pick one now and use it for the role and this export.</string>
+  <string name="role_editor_export_png_use_default">Use default image</string>
+  <string name="role_editor_export_png_upload_image">Upload image</string>
 
   <!-- Chat Screen -->
   <string name="chat_title">Chat</string>
