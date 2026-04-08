@@ -15,6 +15,7 @@ import selfgemma.talk.domain.roleplay.model.resolvedName
 import selfgemma.talk.domain.roleplay.model.resolvedPersonaDescription
 import selfgemma.talk.domain.roleplay.model.resolvedSummary
 import selfgemma.talk.domain.roleplay.model.resolvedSystemPrompt
+import selfgemma.talk.domain.roleplay.model.resolvedTags
 import selfgemma.talk.domain.roleplay.model.resolvedWorldSettings
 
 private const val RECENT_DIALOGUE_TOKEN_BUDGET = 1800
@@ -223,6 +224,8 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       }
 
     return StWorldScanContext(
+      roleName = role.resolvedName(),
+      roleTags = role.resolvedTags(),
       recentMessagesNewestFirst = recentMessagesNewestFirst,
       personaDescription = macroContext.substitute(role.resolvedPersonaDescription()),
       characterDescription = macroContext.substitute(role.resolvedSummary()),

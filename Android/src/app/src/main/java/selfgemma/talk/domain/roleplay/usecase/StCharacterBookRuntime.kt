@@ -9,6 +9,8 @@ import selfgemma.talk.domain.roleplay.model.StCharacterBook
 import selfgemma.talk.domain.roleplay.model.StCharacterBookEntry
 
 internal data class StWorldScanContext(
+  val roleName: String,
+  val roleTags: List<String>,
   val recentMessagesNewestFirst: List<String>,
   val personaDescription: String,
   val characterDescription: String,
@@ -63,6 +65,7 @@ internal data class StBookEntryRuntimeExtensions(
   val delayUntilRecursion: Int = 0,
   val probability: Int = 100,
   val useProbability: Boolean = true,
+  val useGroupScoring: Boolean? = null,
   val outletName: String = "",
   val group: String = "",
   val groupOverride: Boolean = false,
@@ -78,13 +81,15 @@ private data class RuntimeEntry(
   val order: Int,
   val extensions: StBookEntryRuntimeExtensions,
   val stableKey: String,
+  val decorators: Set<String>,
+  val characterFilter: StCharacterFilter?,
+  val normalizedContent: String,
 )
 
-private data class TimedEffectValue(
-  val hash: String,
-  val start: Int,
-  val end: Int,
-  val protected: Boolean = false,
+private data class StCharacterFilter(
+  val names: List<String> = emptyList(),
+  val tags: List<String> = emptyList(),
+  val isExclude: Boolean = false,
 )
 
 internal enum class StSelectiveLogic {
@@ -123,11 +128,15 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
         .orEmpty()
         .filter { (it.enabled ?: true) && !it.content.isNullOrBlank() }
         .mapIndexed { index, entry ->
+          val parsedContent = parseDecorators(entry.content.orEmpty())
           RuntimeEntry(
             entry = entry,
             order = entry.insertion_order ?: index,
             extensions = entry.toRuntimeExtensions(),
-            stableKey = entry.stableKey(index),
+            stableKey = entry.stableKey(index, parsedContent.contentWithoutDecorators),
+            decorators = parsedContent.decorators,
+            characterFilter = entry.character_filter.toCharacterFilter(),
+            normalizedContent = parsedContent.contentWithoutDecorators,
           )
         }
     if (entries.isEmpty()) {
@@ -159,6 +168,10 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
             return@filter false
           }
 
+          if (runtimeEntry.isFilteredOut(context)) {
+            return@filter false
+          }
+
           val stickyActive = metadata.isTimedEffectActive("sticky", runtimeEntry, entries, chatLength)
           val cooldownActive = metadata.isTimedEffectActive("cooldown", runtimeEntry, entries, chatLength)
           val delayActive = runtimeEntry.extensions.delay?.let { chatLength < it } ?: false
@@ -176,6 +189,12 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
             return@filter false
           }
           if (recursionBuffer.isNotEmpty() && (book.recursive_scanning == true) && runtimeEntry.extensions.excludeRecursion && !stickyActive) {
+            return@filter false
+          }
+          if (runtimeEntry.decorators.contains("@@activate")) {
+            return@filter true
+          }
+          if (runtimeEntry.decorators.contains("@@dont_activate")) {
             return@filter false
           }
           if (runtimeEntry.entry.constant == true || stickyActive) {
@@ -213,7 +232,7 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
           return@forEach
         }
 
-        val renderedContent = macroContext.substitute(runtimeEntry.entry.content).trim()
+        val renderedContent = macroContext.substitute(runtimeEntry.normalizedContent).trim()
         if (renderedContent.isBlank()) {
           return@forEach
         }
@@ -236,7 +255,7 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
         val recursionText =
           newlyActivated
             .filterNot { it.extensions.preventRecursion }
-            .joinToString("\n") { macroContext.substitute(it.entry.content).trim() }
+            .joinToString("\n") { macroContext.substitute(it.normalizedContent).trim() }
             .trim()
         if (recursionText.isNotBlank()) {
           recursionBuffer += recursionText
@@ -261,7 +280,7 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
     val outletEntries = linkedMapOf<String, MutableList<String>>()
 
     activated.values.sortedBy { it.order }.forEach { runtimeEntry ->
-      val content = macroContext.substitute(runtimeEntry.entry.content).trim()
+      val content = macroContext.substitute(runtimeEntry.normalizedContent).trim()
       if (content.isBlank()) {
         return@forEach
       }
@@ -280,7 +299,10 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
               role = runtimeEntry.extensions.role.toPromptRoleName(),
             )
         StWorldInfoPosition.OUTLET -> {
-          val outletName = runtimeEntry.extensions.outletName.ifBlank { "default" }
+          val outletName = runtimeEntry.extensions.outletName.trim()
+          if (outletName.isBlank()) {
+            return@forEach
+          }
           outletEntries.getOrPut(outletName) { mutableListOf() }.add(content)
         }
       }
@@ -376,15 +398,28 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
         kept.removeAll(groupEntries)
         return@forEach
       }
+      val scoreFiltered = filterGroupByScore(groupEntries)
       val overrides = groupEntries.filter { it.extensions.groupOverride }.sortedBy { it.order }
       val winner =
         when {
           overrides.isNotEmpty() -> overrides.first()
-          else -> weightedPick(groupEntries)
+          else -> weightedPick(scoreFiltered)
         }
       kept.removeAll(groupEntries.filterNot { it == winner })
     }
     return kept.sortedWith(compareByDescending<RuntimeEntry> { it.extensions.sticky ?: 0 }.thenBy { it.order })
+  }
+
+  private fun filterGroupByScore(entries: List<RuntimeEntry>): List<RuntimeEntry> {
+    val shouldScore = entries.any { it.extensions.useGroupScoring == true }
+    if (!shouldScore) {
+      return entries
+    }
+    val maxScore = entries.maxOfOrNull { it.keyMatchScore() } ?: return entries
+    return entries.filter { entry ->
+      val scored = entry.extensions.useGroupScoring ?: false
+      !scored || entry.keyMatchScore() == maxScore
+    }
   }
 
   private fun weightedPick(entries: List<RuntimeEntry>): RuntimeEntry {
@@ -401,12 +436,16 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
 }
 
 private fun StCharacterBookEntry.stableKey(index: Int): String {
+  return stableKey(index, content.orEmpty())
+}
+
+private fun StCharacterBookEntry.stableKey(index: Int, normalizedContent: String): String {
   val base = buildString {
     append(id ?: index)
     append(':')
     append(comment.orEmpty())
     append(':')
-    append(content.orEmpty())
+    append(normalizedContent)
   }
   return UUID.nameUUIDFromBytes(base.toByteArray()).toString()
 }
@@ -439,6 +478,7 @@ private fun StCharacterBookEntry.toRuntimeExtensions(): StBookEntryRuntimeExtens
     delayUntilRecursion = extensions.intOrNull("delay_until_recursion") ?: 0,
     probability = (extensions.doubleOrNull("probability") ?: 100.0).roundToInt().coerceIn(0, 100),
     useProbability = extensions.booleanOrNull("useProbability") ?: true,
+    useGroupScoring = extensions.booleanOrNull("use_group_scoring"),
     outletName = extensions.stringOrNull("outlet_name").orEmpty(),
     group = extensions.stringOrNull("group").orEmpty(),
     groupOverride = extensions.booleanOrNull("group_override") ?: false,
@@ -674,4 +714,80 @@ internal fun Int.toWorldInfoPosition(): StWorldInfoPosition {
     7 -> StWorldInfoPosition.OUTLET
     else -> StWorldInfoPosition.AFTER
   }
+}
+
+private data class ParsedDecorators(
+  val decorators: Set<String>,
+  val contentWithoutDecorators: String,
+)
+
+private fun parseDecorators(content: String): ParsedDecorators {
+  val decorators = linkedSetOf<String>()
+  val body = mutableListOf<String>()
+  var parsingDecorators = true
+  content.lineSequence().forEach { line ->
+    val trimmed = line.trim()
+    if (parsingDecorators && trimmed.startsWith("@@@")) {
+      body += line.drop(1)
+      parsingDecorators = false
+    } else if (parsingDecorators && (trimmed == "@@activate" || trimmed == "@@dont_activate")) {
+      decorators += trimmed
+    } else {
+      body += line
+      parsingDecorators = false
+    }
+  }
+  return ParsedDecorators(
+    decorators = decorators,
+    contentWithoutDecorators = body.joinToString("\n").trim(),
+  )
+}
+
+private fun JsonObject?.toCharacterFilter(): StCharacterFilter? {
+  if (this == null) {
+    return null
+  }
+  val names =
+    getAsJsonArray("names")
+      ?.mapNotNull { element -> element.takeIf { it.isJsonPrimitive }?.asString?.trim()?.ifBlank { null } }
+      .orEmpty()
+  val tags =
+    getAsJsonArray("tags")
+      ?.mapNotNull { element -> element.takeIf { it.isJsonPrimitive }?.asString?.trim()?.ifBlank { null } }
+      .orEmpty()
+  val isExclude = booleanOrNull("isExclude") ?: false
+  if (names.isEmpty() && tags.isEmpty() && !isExclude) {
+    return null
+  }
+  return StCharacterFilter(names = names, tags = tags, isExclude = isExclude)
+}
+
+private fun RuntimeEntry.isFilteredOut(context: StWorldScanContext): Boolean {
+  val filter = characterFilter ?: return false
+  if (filter.names.isNotEmpty()) {
+    val matched = filter.names.any { it.equals(context.roleName, ignoreCase = true) }
+    if (filter.isExclude && matched) {
+      return true
+    }
+    if (!filter.isExclude && !matched) {
+      return true
+    }
+  }
+  if (filter.tags.isNotEmpty()) {
+    val matched =
+      context.roleTags.any { roleTag ->
+        filter.tags.any { filterTag -> filterTag.equals(roleTag, ignoreCase = true) }
+      }
+    if (filter.isExclude && matched) {
+      return true
+    }
+    if (!filter.isExclude && !matched) {
+      return true
+    }
+  }
+  return false
+}
+
+private fun RuntimeEntry.keyMatchScore(): Int {
+  return entry.keys.orEmpty().count { it.isNotBlank() } + entry.secondary_keys.orEmpty().count { it.isNotBlank() }
 }

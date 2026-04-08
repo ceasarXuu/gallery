@@ -66,6 +66,7 @@ data class StCharacterBookEntry(
   val id: Int? = null,
   val keys: List<String>? = null,
   val secondary_keys: List<String>? = null,
+  val character_filter: JsonObject? = null,
   val comment: String? = null,
   val content: String? = null,
   val constant: Boolean? = null,

@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.google.gson.JsonArray
 import selfgemma.talk.domain.roleplay.model.MemoryCategory
 import selfgemma.talk.domain.roleplay.model.MemoryItem
 import selfgemma.talk.domain.roleplay.model.Message
@@ -505,5 +506,90 @@ class PromptAssemblerTest {
     assertTrue(first.prompt.contains("sticky lore entry"))
     assertTrue(second.prompt.contains("sticky lore entry"))
     assertTrue(first.updatedChatMetadataJson != null)
+  }
+
+  @Test
+  fun assemble_honors_decorators_and_character_filter() {
+    val now = System.currentTimeMillis()
+    val prompt =
+      assembler.assemble(
+        role =
+          RoleCard(
+            id = "role-7",
+            name = "Filter Tester",
+            summary = "Filter test.",
+            systemPrompt = "",
+            tags = listOf("catboy"),
+            cardCore =
+              StCharacterCard(
+                name = "Filter Tester",
+                data =
+                  StCharacterCardData(
+                    tags = listOf("catboy"),
+                    character_book =
+                      StCharacterBook(
+                        entries =
+                          listOf(
+                            StCharacterBookEntry(
+                              id = 1,
+                              keys = listOf("missing"),
+                              content = "@@activate\nforced activation",
+                              position = "before_char",
+                            ),
+                            StCharacterBookEntry(
+                              id = 2,
+                              keys = listOf("Filter"),
+                              content = "@@dont_activate\nblocked activation",
+                              position = "before_char",
+                            ),
+                            StCharacterBookEntry(
+                              id = 3,
+                              keys = listOf("Filter"),
+                              content = "character filter pass",
+                              position = "before_char",
+                              character_filter =
+                                JsonObject().apply {
+                                  add("names", JsonArray().apply { add("Filter Tester") })
+                                },
+                            ),
+                            StCharacterBookEntry(
+                              id = 4,
+                              keys = listOf("Filter"),
+                              content = "character filter fail",
+                              position = "before_char",
+                              character_filter =
+                                JsonObject().apply {
+                                  add("tags", JsonArray().apply { add("dog") })
+                                },
+                            ),
+                          ),
+                      ),
+                  ),
+              ),
+            createdAt = now,
+            updatedAt = now,
+          ),
+        summary = null,
+        memories = emptyList(),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-9",
+              sessionId = "session-7",
+              seq = 1,
+              side = MessageSide.USER,
+              content = "Filter",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            )
+          ),
+        pendingUserInput = "",
+      )
+
+    assertTrue(prompt.contains("forced activation"))
+    assertTrue(prompt.contains("character filter pass"))
+    assertFalse(prompt.contains("blocked activation"))
+    assertFalse(prompt.contains("character filter fail"))
   }
 }

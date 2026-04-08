@@ -434,9 +434,19 @@ Notes:
 
 ## 2026-04-09 ST world-info runtime note
 
+- `character_book` 对齐不能只停在 `enabled + position + keyword contains`。要把扫描阶段和插入阶段拆开实现，否则一旦补 `recursive_scanning`、`group`、`sticky/cooldown`，代码会直接缠死在 `PromptAssembler` 里。
+- 这个仓库当前最合适的 ST timed world-info 状态存放点是 `Session.interopChatMetadataJson`。它已经随会话持久化，也不会污染角色卡本身；把 `timedWorldInfo` 放进这里，比新加一套 session 表字段更便于继续兼容 ST chat metadata。
+- `sticky/cooldown` 的判定依赖“聊天条数前进”。如果第二次装配 prompt 时 chat 长度没有增长，ST 会把未受保护的 timed effect 移除，所以回归测试必须构造“会话已前进”的消息序列，不能只重复同一条消息。
+- `token_budget` 在当前实现里最稳定的近似方式是直接对 lore content 做 token 估算并限制激活条目。测试预算边界时不要按“词数”估，当前 `TokenEstimator` 是按 `normalized.length / 4` 近似。
+- `outlet` 在本项目里还没有 ST 那套 extension prompt outlet 基建时，至少要把内容显式挂到 prompt 中并保留 outlet 名称，避免解析到了却静默丢失。
+
+## 2026-04-09 ST world-info runtime note
+
 - The app now has a dedicated [`StCharacterBookRuntime`](D:/gallery/Android/src/app/src/main/java/selfgemma/talk/domain/roleplay/usecase/StCharacterBookRuntime.kt) path instead of burying all world-info logic inside `PromptAssembler`. Continue extending ST world-info semantics there, then keep `PromptAssembler` focused on prompt layout.
 - `sticky`, `cooldown`, and related ST world-info timed effects need session-level persistence. In this app the least invasive place is `Session.interopChatMetadataJson`; update it during prompt assembly so the next turn sees the timed world-info state.
 - `transformDebugUnitTestClassesWithAsm` is still an intermittent Gradle infrastructure failure in this workspace. If targeted roleplay tests compile and run but a broader unit-test invocation dies there with `NoSuchFileException ... transformDebugUnitTestClassesWithAsm`, treat it as a build-pipeline issue unless a focused test also fails.
 - Useful verification split for ST world-info work:
   - semantic regression: `.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.PromptAssemblerTest" --tests "selfgemma.talk.domain.roleplay.usecase.StSampleCardsRegressionTest" --tests "selfgemma.talk.domain.roleplay.usecase.CreateRoleplaySessionUseCaseTest" --no-daemon`
   - installable product check: `.\gradlew.bat :app:assembleDebug --no-daemon`
+- Remaining ST world-info parity work tends to hide in non-obvious fields, not the main key/content path. Prioritize checking `character_filter`, leading-content decorators like `@@activate` / `@@dont_activate`, inclusion-group scoring, and outlet naming before assuming a card is fully aligned.
+- In this app's single-character roleplay flow, `character_filter` can only be approximated against the active role name and role tags. ST has richer filtering through its character file/tag map, so keep this limitation explicit when reviewing parity claims.
