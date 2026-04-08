@@ -25,4 +25,8 @@ enum class AppBarActionType {
   MENU,
 }
 
-class AppBarAction(val actionType: AppBarActionType, val actionFn: () -> Unit)
+class AppBarAction(
+  val actionType: AppBarActionType,
+  val actionFn: () -> Unit,
+  val label: String? = null,
+)

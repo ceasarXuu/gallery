@@ -134,7 +134,7 @@ fun AppTopBar(
 
         // Click a button to navigate up.
         AppBarActionType.NAVIGATE_UP -> {
-          TextButton(onClick = rightAction.actionFn) { Text("Done") }
+          TextButton(onClick = rightAction.actionFn) { Text(rightAction.label ?: "Done") }
         }
 
         // Click an icon to open menu (three dots).

@@ -121,6 +121,12 @@ fun RoleEditorScreen(
       AppTopBar(
         title = if (uiState.isNewRole) stringResource(R.string.role_editor_create_title) else stringResource(R.string.role_editor_edit_title),
         leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = handleNavigateUp),
+        rightAction =
+          AppBarAction(
+            actionType = AppBarActionType.NAVIGATE_UP,
+            actionFn = { viewModel.saveRole { handleNavigateUp() } },
+            label = stringResource(R.string.save),
+          ),
       )
     },
   ) { innerPadding ->
@@ -356,21 +362,13 @@ fun RoleEditorScreen(
           )
         }
       }
-      item {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-          FilledTonalButton(
-            onClick = { viewModel.saveRole { handleNavigateUp() } },
-            modifier = Modifier.fillMaxWidth().testTag("role_editor_save"),
+      if (!uiState.isNewRole && !uiState.builtIn) {
+        item {
+          OutlinedButton(
+            onClick = { viewModel.deleteRole { handleNavigateUp() } },
+            modifier = Modifier.fillMaxWidth(),
           ) {
-            Text(if (uiState.isNewRole) stringResource(R.string.role_editor_create_button) else stringResource(R.string.role_editor_save_button))
-          }
-          if (!uiState.isNewRole && !uiState.builtIn) {
-            OutlinedButton(
-              onClick = { viewModel.deleteRole { handleNavigateUp() } },
-              modifier = Modifier.fillMaxWidth(),
-            ) {
-              Text(stringResource(R.string.role_editor_delete_button))
-            }
+            Text(stringResource(R.string.role_editor_delete_button))
           }
         }
       }
