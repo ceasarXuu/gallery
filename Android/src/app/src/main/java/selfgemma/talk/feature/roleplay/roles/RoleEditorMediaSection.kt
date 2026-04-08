@@ -42,32 +42,21 @@ import selfgemma.talk.common.decodeSampledBitmapFromUri
 import selfgemma.talk.domain.roleplay.model.RoleMediaAsset
 import selfgemma.talk.domain.roleplay.model.RoleMediaSource
 import selfgemma.talk.domain.roleplay.model.RoleMediaUsage
-import selfgemma.talk.domain.roleplay.model.RoleSpriteAsset
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RoleEditorMediaSection(
   avatarUri: String?,
-  coverUri: String?,
   avatarSource: RoleMediaSource?,
-  coverSource: RoleMediaSource?,
   galleryAssets: List<RoleMediaAsset>,
-  spriteAssets: List<RoleSpriteAsset>,
   importedFromStPng: Boolean,
   onPickAvatar: () -> Unit,
   onClearAvatar: () -> Unit,
-  onPickCover: () -> Unit,
-  onClearCover: () -> Unit,
   onAddGallery: () -> Unit,
   onRenameGalleryAsset: (String, String) -> Unit,
   onUpdateGalleryUsage: (String, RoleMediaUsage) -> Unit,
   onSetGalleryAsAvatar: (String) -> Unit,
-  onSetGalleryAsCover: (String) -> Unit,
   onRemoveGalleryAsset: (String) -> Unit,
-  onAddSprites: () -> Unit,
-  onRenameSpriteAsset: (String, String) -> Unit,
-  onUpdateSpriteStateTag: (String, String) -> Unit,
-  onRemoveSpriteAsset: (String) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -95,38 +84,13 @@ fun RoleEditorMediaSection(
       onClear = onClearAvatar,
       previewAspectRatio = 1f,
     )
-    RoleMediaCard(
-      title = stringResource(R.string.role_editor_cover_title),
-      subtitle = stringResource(R.string.role_editor_cover_summary),
-      uri = coverUri,
-      emptyLabel = stringResource(R.string.role_editor_cover_empty),
-      statusLabel =
-        if (coverUri.isNullOrBlank()) {
-          stringResource(R.string.role_editor_media_status_missing)
-        } else if (coverSource == RoleMediaSource.ST_PNG_IMPORT) {
-          stringResource(R.string.role_editor_media_status_st_png)
-        } else {
-          stringResource(R.string.role_editor_media_status_project_only)
-        },
-      onPick = onPickCover,
-      onClear = onClearCover,
-      previewAspectRatio = 16f / 9f,
-    )
     GalleryAssetsCard(
       assets = galleryAssets,
       onAddGallery = onAddGallery,
       onUpdateName = onRenameGalleryAsset,
       onUpdateUsage = onUpdateGalleryUsage,
       onSetAsAvatar = onSetGalleryAsAvatar,
-      onSetAsCover = onSetGalleryAsCover,
       onRemove = onRemoveGalleryAsset,
-    )
-    SpriteAssetsCard(
-      assets = spriteAssets,
-      onAddSprite = onAddSprites,
-      onUpdateName = onRenameSpriteAsset,
-      onUpdateStateTag = onUpdateSpriteStateTag,
-      onRemove = onRemoveSpriteAsset,
     )
   }
 }
@@ -190,7 +154,6 @@ private fun GalleryAssetsCard(
   onUpdateName: (String, String) -> Unit,
   onUpdateUsage: (String, RoleMediaUsage) -> Unit,
   onSetAsAvatar: (String) -> Unit,
-  onSetAsCover: (String) -> Unit,
   onRemove: (String) -> Unit,
 ) {
   Card {
@@ -229,7 +192,6 @@ private fun GalleryAssetsCard(
               onUpdateName = onUpdateName,
               onUpdateUsage = onUpdateUsage,
               onSetAsAvatar = onSetAsAvatar,
-              onSetAsCover = onSetAsCover,
               onRemove = onRemove,
             )
           }
@@ -246,7 +208,6 @@ private fun GalleryAssetItem(
   onUpdateName: (String, String) -> Unit,
   onUpdateUsage: (String, RoleMediaUsage) -> Unit,
   onSetAsAvatar: (String) -> Unit,
-  onSetAsCover: (String) -> Unit,
   onRemove: (String) -> Unit,
 ) {
   Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -283,9 +244,6 @@ private fun GalleryAssetItem(
       OutlinedButton(onClick = { onSetAsAvatar(asset.id) }) {
         Text(stringResource(R.string.role_editor_gallery_set_avatar))
       }
-      OutlinedButton(onClick = { onSetAsCover(asset.id) }) {
-        Text(stringResource(R.string.role_editor_gallery_set_cover))
-      }
       OutlinedButton(onClick = { onRemove(asset.id) }) {
         Text(stringResource(R.string.role_editor_media_remove))
       }
@@ -312,102 +270,6 @@ private fun UsageSelector(
             onSelected(usage)
           },
         )
-      }
-    }
-  }
-}
-
-@Composable
-private fun SpriteAssetsCard(
-  assets: List<RoleSpriteAsset>,
-  onAddSprite: () -> Unit,
-  onUpdateName: (String, String) -> Unit,
-  onUpdateStateTag: (String, String) -> Unit,
-  onRemove: (String) -> Unit,
-) {
-  Card {
-    Column(
-      modifier = Modifier.fillMaxWidth().padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-      ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-          Text(stringResource(R.string.role_editor_sprite_title), style = MaterialTheme.typography.titleSmall)
-          Text(
-            text = stringResource(R.string.role_editor_sprite_summary),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-        }
-        OutlinedButton(onClick = onAddSprite) {
-          Text(stringResource(R.string.role_editor_sprite_add))
-        }
-      }
-      if (assets.isEmpty()) {
-        Text(
-          text = stringResource(R.string.role_editor_sprite_empty),
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      } else {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-          assets.forEach { asset ->
-            SpriteAssetItem(
-              asset = asset,
-              onUpdateName = onUpdateName,
-              onUpdateStateTag = onUpdateStateTag,
-              onRemove = onRemove,
-            )
-          }
-        }
-      }
-    }
-  }
-}
-
-@Composable
-private fun SpriteAssetItem(
-  asset: RoleSpriteAsset,
-  onUpdateName: (String, String) -> Unit,
-  onUpdateStateTag: (String, String) -> Unit,
-  onRemove: (String) -> Unit,
-) {
-  Row(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.spacedBy(12.dp),
-    verticalAlignment = Alignment.Top,
-  ) {
-    Box(modifier = Modifier.size(88.dp)) {
-      RoleMediaPreview(
-        uri = asset.uri,
-        emptyLabel = stringResource(R.string.role_editor_sprite_empty),
-        previewAspectRatio = 1f,
-      )
-    }
-    Column(
-      modifier = Modifier.weight(1f),
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-      OutlinedTextField(
-        value = asset.displayName.orEmpty(),
-        onValueChange = { onUpdateName(asset.id, it) },
-        label = { Text(stringResource(R.string.role_editor_media_asset_name)) },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-      )
-      OutlinedTextField(
-        value = asset.stateTag,
-        onValueChange = { onUpdateStateTag(asset.id, it) },
-        label = { Text(stringResource(R.string.role_editor_sprite_state_tag)) },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-      )
-      OutlinedButton(onClick = { onRemove(asset.id) }) {
-        Text(stringResource(R.string.role_editor_media_remove))
       }
     }
   }
