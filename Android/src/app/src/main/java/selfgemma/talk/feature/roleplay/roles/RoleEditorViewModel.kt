@@ -347,30 +347,8 @@ constructor(
         .onSuccess { importedRole ->
           loadedRole = importedRole
           _uiState.value =
-            RoleEditorUiState(
-              loading = false,
-              roleId = importedRole.id,
+            importedRole.toEditorUiState(
               isNewRole = editingRoleId == null,
-              builtIn = false,
-              stCard = importedRole.stCard,
-              name = importedRole.name,
-              summary = importedRole.resolvedSummary(),
-              systemPrompt = importedRole.resolvedSystemPrompt(),
-              personaDescription = importedRole.resolvedPersonaDescription(),
-              worldSettings = importedRole.resolvedWorldSettings(),
-              openingLine = importedRole.resolvedOpeningLine(),
-              safetyPolicy = importedRole.safetyPolicy,
-              tagsText = importedRole.resolvedTags().joinToString(", "),
-              defaultModelId = importedRole.defaultModelId,
-              avatarUri = importedRole.primaryAvatarUri(),
-              coverUri = importedRole.coverImageUri(),
-              avatarSource = importedRole.mediaProfile?.primaryAvatar?.source,
-              coverSource = importedRole.mediaProfile?.coverImage?.source,
-              galleryAssets = importedRole.mediaProfile?.galleryAssets.orEmpty(),
-              spriteAssets = importedRole.mediaProfile?.spriteAssets.orEmpty(),
-              importedFromStPng =
-                importedRole.mediaProfile?.importState?.importedFromStPng
-                  ?: (importedRole.interopState?.sourceFormat == RoleCardSourceFormat.ST_PNG),
               statusMessage = appContext.getString(R.string.role_editor_status_st_imported),
             )
         }
@@ -515,33 +493,7 @@ constructor(
       }
 
       loadedRole = role
-      _uiState.value =
-        RoleEditorUiState(
-          loading = false,
-          roleId = role.id,
-          isNewRole = false,
-          builtIn = role.builtIn,
-          stCard = role.stCard,
-          name = role.name,
-          summary = role.resolvedSummary(),
-          systemPrompt = role.resolvedSystemPrompt(),
-          personaDescription = role.resolvedPersonaDescription(),
-          worldSettings = role.resolvedWorldSettings(),
-          openingLine = role.resolvedOpeningLine(),
-          safetyPolicy = role.safetyPolicy,
-          tagsText = role.resolvedTags().joinToString(", "),
-          defaultModelId = role.defaultModelId,
-          avatarUri = role.primaryAvatarUri(),
-          coverUri = role.coverImageUri(),
-          avatarSource = role.mediaProfile?.primaryAvatar?.source,
-          coverSource = role.mediaProfile?.coverImage?.source,
-          galleryAssets = role.mediaProfile?.galleryAssets.orEmpty(),
-          spriteAssets = role.mediaProfile?.spriteAssets.orEmpty(),
-          importedFromStPng =
-            role.mediaProfile?.importState?.importedFromStPng
-              ?: (role.interopState?.sourceFormat == RoleCardSourceFormat.ST_PNG),
-          statusMessage = null,
-        )
+      _uiState.value = role.toEditorUiState(isNewRole = false)
     }
   }
 
@@ -644,5 +596,37 @@ private fun emptyEditorStCard(systemPrompt: String = ""): StCharacterCard {
     spec = "chara_card_v2",
     spec_version = "2.0",
     data = StCharacterCardData(system_prompt = systemPrompt),
+  )
+}
+
+internal fun RoleCard.toEditorUiState(
+  isNewRole: Boolean,
+  statusMessage: String? = null,
+): RoleEditorUiState {
+  return RoleEditorUiState(
+    loading = false,
+    roleId = id,
+    isNewRole = isNewRole,
+    builtIn = builtIn,
+    stCard = stCard,
+    name = name,
+    summary = resolvedSummary(),
+    systemPrompt = resolvedSystemPrompt(),
+    personaDescription = resolvedPersonaDescription(),
+    worldSettings = resolvedWorldSettings(),
+    openingLine = resolvedOpeningLine(),
+    safetyPolicy = safetyPolicy,
+    tagsText = resolvedTags().joinToString(", "),
+    defaultModelId = defaultModelId,
+    avatarUri = primaryAvatarUri(),
+    coverUri = coverImageUri(),
+    avatarSource = mediaProfile?.primaryAvatar?.source,
+    coverSource = mediaProfile?.coverImage?.source,
+    galleryAssets = mediaProfile?.galleryAssets.orEmpty(),
+    spriteAssets = mediaProfile?.spriteAssets.orEmpty(),
+    importedFromStPng =
+      mediaProfile?.importState?.importedFromStPng
+        ?: (interopState?.sourceFormat == RoleCardSourceFormat.ST_PNG),
+    statusMessage = statusMessage,
   )
 }

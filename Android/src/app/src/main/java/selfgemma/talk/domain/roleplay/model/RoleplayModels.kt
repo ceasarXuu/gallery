@@ -93,7 +93,7 @@ data class RoleCard(
   ) : this(
     id = id,
     stCard =
-      cardCore ?: legacyFieldsToStCard(
+      (cardCore ?: legacyFieldsToStCard(
         name = name,
         summary = summary,
         systemPrompt = systemPrompt,
@@ -102,6 +102,15 @@ data class RoleCard(
         openingLine = openingLine,
         exampleDialogues = exampleDialogues,
         tags = tags,
+      )).mergedWithFallbackFields(
+        fallbackName = name,
+        fallbackSummary = summary,
+        fallbackSystemPrompt = systemPrompt,
+        fallbackPersonaDescription = personaDescription,
+        fallbackWorldSettings = worldSettings,
+        fallbackOpeningLine = openingLine,
+        fallbackExampleDialogues = exampleDialogues,
+        fallbackTags = tags,
       ),
     avatarUri = avatarUri,
     coverUri = coverUri,
@@ -255,6 +264,54 @@ private fun legacyFieldsToStCard(
     mes_example = mesExample,
     tags = tags,
     data = data,
+  )
+}
+
+private fun StCharacterCard.mergedWithFallbackFields(
+  fallbackName: String,
+  fallbackSummary: String,
+  fallbackSystemPrompt: String,
+  fallbackPersonaDescription: String,
+  fallbackWorldSettings: String,
+  fallbackOpeningLine: String,
+  fallbackExampleDialogues: List<String>,
+  fallbackTags: List<String>,
+): StCharacterCard {
+  val fallbackMesExample =
+    fallbackExampleDialogues
+      .map(String::trim)
+      .filter(String::isNotBlank)
+      .joinToString("\n\n")
+  val data = cardDataOrEmpty()
+  val mergedName = resolvedName().ifBlank { fallbackName }
+  val mergedSummary = resolvedDescription().ifBlank { fallbackSummary }
+  val mergedPersonality = resolvedPersonality().ifBlank { fallbackPersonaDescription }
+  val mergedScenario = resolvedScenario().ifBlank { fallbackWorldSettings }
+  val mergedFirstMessage = resolvedFirstMessage().ifBlank { fallbackOpeningLine }
+  val mergedMesExample = resolvedMessageExample().ifBlank { fallbackMesExample }
+  val mergedSystemPrompt = resolvedSystemPrompt().ifBlank { fallbackSystemPrompt }
+  val mergedTags = resolvedTags().ifEmpty { fallbackTags }
+  return copy(
+    spec = spec ?: "chara_card_v2",
+    spec_version = spec_version ?: "2.0",
+    name = mergedName,
+    description = mergedSummary,
+    personality = mergedPersonality,
+    scenario = mergedScenario,
+    first_mes = mergedFirstMessage,
+    mes_example = mergedMesExample,
+    tags = mergedTags,
+    data =
+      data.copy(
+        name = data.name ?: mergedName,
+        description = data.description ?: mergedSummary,
+        personality = data.personality ?: mergedPersonality,
+        scenario = data.scenario ?: mergedScenario,
+        first_mes = data.first_mes ?: mergedFirstMessage,
+        mes_example = data.mes_example ?: mergedMesExample,
+        system_prompt = data.system_prompt ?: mergedSystemPrompt,
+        tags = data.tags ?: mergedTags,
+      ),
   )
 }
 
