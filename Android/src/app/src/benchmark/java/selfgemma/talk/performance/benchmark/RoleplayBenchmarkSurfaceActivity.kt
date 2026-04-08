@@ -95,7 +95,6 @@ private fun RoleplayBenchmarkSurfaceHost(
         onOpenChat = {},
         onCreateRole = {},
         onEditRole = {},
-        onOpenModelLibrary = {},
       )
     }
 

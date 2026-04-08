@@ -197,7 +197,6 @@ fun MainTabScreen(
             onOpenChat = onOpenChat,
             onCreateRole = onCreateRole,
             onEditRole = onEditRole,
-            onOpenModelLibrary = onOpenModelLibrary,
             showNavigateUp = false,
             contentPadding = innerPadding,
           )

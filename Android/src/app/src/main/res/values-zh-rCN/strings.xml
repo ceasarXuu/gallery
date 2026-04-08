@@ -85,10 +85,13 @@
   <string name="sessions_just_now">刚刚</string>
 
   <!-- Roles Screen -->
+  <string name="roles_menu_create">新建</string>
+  <string name="roles_menu_import">导入</string>
   <string name="roles_create_tune_title">创建和调整角色</string>
   <string name="roles_create_tune_content_model">您现在可以创建和编辑角色卡片。在开始会话之前请下载本地模型。</string>
   <string name="roles_create_tune_content_no_model">仅使用文本字段创建自定义角色，然后使用本地模型开始新会话。</string>
   <string name="roles_create_button">创建角色</string>
+  <string name="roles_import_st_card">导入ST卡片</string>
   <string name="roles_model_library">模型库</string>
   <string name="roles_builtin_title">内置角色</string>
   <string name="roles_custom_title">自定义角色</string>

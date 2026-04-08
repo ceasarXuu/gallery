@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,15 +15,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -58,7 +63,6 @@ fun RoleCatalogScreen(
   onOpenChat: (String) -> Unit,
   onCreateRole: () -> Unit,
   onEditRole: (String) -> Unit,
-  onOpenModelLibrary: () -> Unit,
   showNavigateUp: Boolean = false,
   modifier: Modifier = Modifier,
   contentPadding: PaddingValues = PaddingValues(0.dp),
@@ -71,6 +75,8 @@ fun RoleCatalogScreen(
   val defaultModelId = downloadedModels.firstOrNull()?.name
   var pendingDeleteRoleId by rememberSaveable { mutableStateOf<String?>(null) }
   val listState = rememberLazyListState()
+  var showMenu by rememberSaveable { mutableStateOf(false) }
+  
   val importLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
       uri?.let { viewModel.importStRoleCard(it.toString()) }
@@ -107,7 +113,27 @@ fun RoleCatalogScreen(
           } else {
             null
           },
+        rightAction = AppBarAction(actionType = AppBarActionType.MENU, actionFn = { showMenu = true }),
       )
+      DropdownMenu(
+        expanded = showMenu,
+        onDismissRequest = { showMenu = false },
+      ) {
+        DropdownMenuItem(
+          text = { Text(stringResource(R.string.roles_menu_create)) },
+          onClick = {
+            showMenu = false
+            onCreateRole()
+          },
+        )
+        DropdownMenuItem(
+          text = { Text(stringResource(R.string.roles_menu_import)) },
+          onClick = {
+            showMenu = false
+            importLauncher.launch(arrayOf("application/json", "image/png"))
+          },
+        )
+      }
     },
   ) { innerPadding ->
     val combinedPadding = PaddingValues(
@@ -123,42 +149,6 @@ fun RoleCatalogScreen(
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-      item {
-        Card(shape = RoundedCornerShape(20.dp)) {
-          Column(
-            modifier =
-              Modifier.fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-          ) {
-            Text(stringResource(R.string.roles_create_tune_title), style = MaterialTheme.typography.titleMedium)
-            Text(
-              if (downloadedModels.isEmpty()) {
-                stringResource(R.string.roles_create_tune_content_no_model)
-              } else {
-                stringResource(R.string.roles_create_tune_content_model)
-              },
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-              FilledTonalButton(onClick = onCreateRole, modifier = Modifier.testTag("role_catalog_create_role")) {
-                Text(stringResource(R.string.roles_create_button))
-              }
-              OutlinedButton(
-                onClick = { importLauncher.launch(arrayOf("application/json", "image/png")) },
-                modifier = Modifier.testTag("role_catalog_import_st_json"),
-              ) {
-                Text(stringResource(R.string.roles_import_st_card))
-              }
-              OutlinedButton(onClick = onOpenModelLibrary) {
-                Text(stringResource(R.string.roles_model_library))
-              }
-            }
-          }
-        }
-      }
       uiState.errorMessage?.let { errorMessage ->
         item {
           Text(

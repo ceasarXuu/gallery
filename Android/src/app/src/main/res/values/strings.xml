@@ -87,6 +87,8 @@
   <string name="sessions_just_now">Just now</string>
 
   <!-- Roles Screen -->
+  <string name="roles_menu_create">Create</string>
+  <string name="roles_menu_import">Import</string>
   <string name="roles_create_tune_title">Create and tune roles</string>
   <string name="roles_create_tune_content_model">You can create and edit role cards now. Download a local model before starting a session.</string>
   <string name="roles_create_tune_content_no_model">Create custom roles with text fields only, then start a new session with a local model.</string>

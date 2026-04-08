@@ -272,7 +272,7 @@ fun AppNavHost(
       )
     }
 
-    composable(route = RoleplayRoutes.ROLE_CATALOG, enterTransition = { slideEnter() }, exitTransition = { slideExit() }) {
+composable(route = RoleplayRoutes.ROLE_CATALOG, enterTransition = { slideEnter() }, exitTransition = { slideExit() }) {
       RoleCatalogScreen(
         modelManagerViewModel = modelManagerViewModel,
         navigateUp = { navController.navigateUp() },
@@ -284,7 +284,6 @@ fun AppNavHost(
         },
         onCreateRole = { navController.navigate(RoleplayRoutes.roleEditor()) },
         onEditRole = { roleId -> navController.navigate(RoleplayRoutes.roleEditor(roleId)) },
-        onOpenModelLibrary = { navController.navigate(ROUTE_MODEL_MANAGER) },
         showNavigateUp = true,
       )
     }
