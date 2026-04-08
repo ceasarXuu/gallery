@@ -94,11 +94,26 @@ private data class RuntimeCandidate(
   val stickyActive: Boolean,
 )
 
+private data class StWorldRuntimeSettings(
+  val defaultScanDepth: Int = 2,
+  val minActivations: Int = 0,
+  val minActivationsDepthMax: Int = 0,
+  val caseSensitive: Boolean = false,
+  val matchWholeWords: Boolean = false,
+  val useGroupScoring: Boolean = false,
+)
+
 private data class StCharacterFilter(
   val names: List<String> = emptyList(),
   val tags: List<String> = emptyList(),
   val isExclude: Boolean = false,
 )
+
+private enum class StScanPhase {
+  INITIAL,
+  RECURSION,
+  MIN_ACTIVATIONS,
+}
 
 internal enum class StSelectiveLogic {
   AND_ANY,
@@ -131,6 +146,7 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
     }
 
     val metadata = parseChatMetadata(chatMetadataJson)
+    val runtimeSettings = book.toRuntimeSettings()
     val entries =
       book.entries
         .orEmpty()
@@ -140,7 +156,7 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
           RuntimeEntry(
             entry = entry,
             order = entry.insertion_order ?: index,
-            extensions = entry.toRuntimeExtensions(),
+            extensions = entry.toRuntimeExtensions(runtimeSettings),
             stableKey = entry.stableKey(index, parsedContent.contentWithoutDecorators),
             decorators = parsedContent.decorators,
             characterFilter = entry.character_filter.toCharacterFilter(),
@@ -166,10 +182,10 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
     }
     val budget = book.token_budget?.takeIf { it > 0 } ?: Int.MAX_VALUE
     var budgetOverflowed = false
-    var recurse = true
+    var scanPhase = StScanPhase.INITIAL
+    var scanDepthSkew = 0
 
-    while (recurse) {
-      recurse = false
+    while (true) {
       val candidates =
         entries.mapNotNull { runtimeEntry ->
           if (activated.containsKey(runtimeEntry.stableKey)) {
@@ -199,13 +215,13 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
           if (cooldownActive && !stickyActive) {
             return@mapNotNull null
           }
-          if (recursionBuffer.isEmpty() && runtimeEntry.extensions.delayUntilRecursion > 0 && !stickyActive) {
+          if (scanPhase != StScanPhase.RECURSION && runtimeEntry.extensions.delayUntilRecursion > 0 && !stickyActive) {
             return@mapNotNull null
           }
-          if (recursionBuffer.isNotEmpty() && runtimeEntry.extensions.delayUntilRecursion > currentDelayLevel && !stickyActive) {
+          if (scanPhase == StScanPhase.RECURSION && runtimeEntry.extensions.delayUntilRecursion > currentDelayLevel && !stickyActive) {
             return@mapNotNull null
           }
-          if (recursionBuffer.isNotEmpty() && (book.recursive_scanning == true) && runtimeEntry.extensions.excludeRecursion && !stickyActive) {
+          if (scanPhase == StScanPhase.RECURSION && (book.recursive_scanning == true) && runtimeEntry.extensions.excludeRecursion && !stickyActive) {
             return@mapNotNull null
           }
           if (runtimeEntry.decorators.contains("@@activate")) {
@@ -225,7 +241,10 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
           val textToScan =
             context.toScanText(
               extensions = runtimeEntry.extensions,
+              runtimeSettings = runtimeSettings,
               defaultScanDepth = book.scan_depth,
+              scanDepthSkew = scanDepthSkew,
+              includeRecursionBuffer = scanPhase != StScanPhase.MIN_ACTIVATIONS,
               recursionBuffer = recursionBuffer,
             )
           val score = runtimeEntry.matchScore(textToScan, macroContext) ?: return@mapNotNull null
@@ -234,12 +253,26 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
       if (candidates.isEmpty()) {
         if (availableRecursionDelayLevels.isNotEmpty()) {
           currentDelayLevel = availableRecursionDelayLevels.removeAt(0)
-          recurse = true
+          scanPhase = StScanPhase.RECURSION
+          continue
         }
-        continue
+        val minActivationsNotSatisfied =
+          runtimeSettings.minActivations > 0 && activated.size < runtimeSettings.minActivations
+        val maxMinActivationDepth =
+          when {
+            runtimeSettings.minActivationsDepthMax > 0 -> runtimeSettings.minActivationsDepthMax
+            else -> context.recentMessagesNewestFirst.size
+          }
+        val currentScanDepth = (book.scan_depth ?: runtimeSettings.defaultScanDepth) + scanDepthSkew
+        if (!budgetOverflowed && minActivationsNotSatisfied && currentScanDepth < maxMinActivationDepth) {
+          scanDepthSkew += 1
+          scanPhase = StScanPhase.MIN_ACTIVATIONS
+          continue
+        }
+        break
       }
 
-      val grouped = filterGroupedCandidates(candidates, activated)
+      val grouped = filterGroupedCandidates(candidates, activated, runtimeSettings)
       val newlyActivated = mutableListOf<RuntimeEntry>()
       var currentBudgetUsage =
         activated.values
@@ -270,6 +303,7 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
 
       metadata.setTimedEffects(newlyActivated, chatLength)
 
+      var nextScanPhase: StScanPhase? = null
       if (!budgetOverflowed && book.recursive_scanning == true) {
         val recursionText =
           newlyActivated
@@ -278,15 +312,48 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
             .trim()
         if (recursionText.isNotBlank()) {
           recursionBuffer += recursionText
-          recurse = true
+          nextScanPhase = StScanPhase.RECURSION
         } else if (availableRecursionDelayLevels.isNotEmpty()) {
           currentDelayLevel = availableRecursionDelayLevels.removeAt(0)
-          recurse = true
+          nextScanPhase = StScanPhase.RECURSION
         }
       } else if (!budgetOverflowed && availableRecursionDelayLevels.isNotEmpty()) {
         currentDelayLevel = availableRecursionDelayLevels.removeAt(0)
-        recurse = true
+        nextScanPhase = StScanPhase.RECURSION
       }
+
+      if (
+        nextScanPhase == null &&
+          !budgetOverflowed &&
+          runtimeSettings.minActivations > 0 &&
+          activated.size < runtimeSettings.minActivations
+      ) {
+        val maxMinActivationDepth =
+          when {
+            runtimeSettings.minActivationsDepthMax > 0 -> runtimeSettings.minActivationsDepthMax
+            else -> context.recentMessagesNewestFirst.size
+          }
+        val currentScanDepth = (book.scan_depth ?: runtimeSettings.defaultScanDepth) + scanDepthSkew
+        if (currentScanDepth < maxMinActivationDepth) {
+          scanDepthSkew += 1
+          nextScanPhase = StScanPhase.MIN_ACTIVATIONS
+        }
+      }
+
+      if (
+        nextScanPhase == null &&
+          !budgetOverflowed &&
+          book.recursive_scanning == true &&
+          scanPhase == StScanPhase.MIN_ACTIVATIONS &&
+          recursionBuffer.isNotEmpty()
+      ) {
+        nextScanPhase = StScanPhase.RECURSION
+      }
+
+      if (nextScanPhase == null) {
+        break
+      }
+      scanPhase = nextScanPhase
     }
 
     val beforePrompt = mutableListOf<String>()
@@ -399,6 +466,7 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
   private fun filterGroupedCandidates(
     candidates: List<RuntimeCandidate>,
     activated: Map<String, RuntimeEntry>,
+    runtimeSettings: StWorldRuntimeSettings,
   ): List<RuntimeEntry> {
     if (candidates.none { it.entry.extensions.group.isNotBlank() }) {
       return candidates
@@ -434,7 +502,7 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
         kept.removeAll(groupEntries.filterNot { it in stickyEntries })
         return@forEach
       }
-      val scoreFiltered = filterGroupByScore(groupEntries)
+      val scoreFiltered = filterGroupByScore(groupEntries, runtimeSettings)
       val overrides = groupEntries.filter { it.entry.extensions.groupOverride }.sortedBy { it.entry.order }
       val winner =
         when {
@@ -448,14 +516,17 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
       .map { it.entry }
   }
 
-  private fun filterGroupByScore(entries: List<RuntimeCandidate>): List<RuntimeCandidate> {
-    val shouldScore = entries.any { it.entry.extensions.useGroupScoring == true }
+  private fun filterGroupByScore(
+    entries: List<RuntimeCandidate>,
+    runtimeSettings: StWorldRuntimeSettings,
+  ): List<RuntimeCandidate> {
+    val shouldScore = runtimeSettings.useGroupScoring || entries.any { it.entry.extensions.useGroupScoring == true }
     if (!shouldScore) {
       return entries
     }
     val maxScore = entries.maxOfOrNull { it.score } ?: return entries
     return entries.filter { entry ->
-      val scored = entry.entry.extensions.useGroupScoring ?: false
+      val scored = entry.entry.extensions.useGroupScoring ?: runtimeSettings.useGroupScoring
       !scored || entry.score == maxScore
     }
   }
@@ -488,7 +559,9 @@ private fun StCharacterBookEntry.stableKey(index: Int, normalizedContent: String
   return UUID.nameUUIDFromBytes(base.toByteArray()).toString()
 }
 
-private fun StCharacterBookEntry.toRuntimeExtensions(): StBookEntryRuntimeExtensions {
+private fun StCharacterBookEntry.toRuntimeExtensions(
+  runtimeSettings: StWorldRuntimeSettings,
+): StBookEntryRuntimeExtensions {
   val extensions = extensions ?: JsonObject()
   return StBookEntryRuntimeExtensions(
     position = extensions.intOrNull("position"),
@@ -502,8 +575,8 @@ private fun StCharacterBookEntry.toRuntimeExtensions(): StBookEntryRuntimeExtens
         else -> StSelectiveLogic.AND_ANY
       },
     scanDepth = extensions.intOrNull("scan_depth"),
-    caseSensitive = extensions.booleanOrNull("case_sensitive"),
-    matchWholeWords = extensions.booleanOrNull("match_whole_words"),
+    caseSensitive = extensions.booleanOrNull("case_sensitive") ?: runtimeSettings.caseSensitive,
+    matchWholeWords = extensions.booleanOrNull("match_whole_words") ?: runtimeSettings.matchWholeWords,
     matchPersonaDescription = extensions.booleanOrNull("match_persona_description") ?: false,
     matchCharacterDescription = extensions.booleanOrNull("match_character_description") ?: false,
     matchCharacterPersonality = extensions.booleanOrNull("match_character_personality") ?: false,
@@ -516,7 +589,7 @@ private fun StCharacterBookEntry.toRuntimeExtensions(): StBookEntryRuntimeExtens
     delayUntilRecursion = extensions.intOrNull("delay_until_recursion") ?: 0,
     probability = (extensions.doubleOrNull("probability") ?: 100.0).roundToInt().coerceIn(0, 100),
     useProbability = extensions.booleanOrNull("useProbability") ?: true,
-    useGroupScoring = extensions.booleanOrNull("use_group_scoring"),
+    useGroupScoring = extensions.booleanOrNull("use_group_scoring") ?: runtimeSettings.useGroupScoring,
     outletName = extensions.stringOrNull("outlet_name").orEmpty(),
     group = extensions.stringOrNull("group").orEmpty(),
     groupOverride = extensions.booleanOrNull("group_override") ?: false,
@@ -526,6 +599,24 @@ private fun StCharacterBookEntry.toRuntimeExtensions(): StBookEntryRuntimeExtens
     delay = extensions.intOrNull("delay"),
     ignoreBudget = extensions.booleanOrNull("ignore_budget") ?: false,
     triggers = extensions.stringListOrEmpty("triggers"),
+  )
+}
+
+private fun StCharacterBook.toRuntimeSettings(): StWorldRuntimeSettings {
+  val runtimeExtensions = extensions ?: JsonObject()
+  return StWorldRuntimeSettings(
+    defaultScanDepth = scan_depth ?: 2,
+    minActivations =
+      runtimeExtensions.intOrNull("min_activations")
+        ?: runtimeExtensions.intOrNull("world_info_min_activations")
+        ?: 0,
+    minActivationsDepthMax =
+      runtimeExtensions.intOrNull("min_activations_depth_max")
+        ?: runtimeExtensions.intOrNull("world_info_min_activations_depth_max")
+        ?: 0,
+    caseSensitive = runtimeExtensions.booleanOrNull("case_sensitive") ?: false,
+    matchWholeWords = runtimeExtensions.booleanOrNull("match_whole_words") ?: false,
+    useGroupScoring = runtimeExtensions.booleanOrNull("use_group_scoring") ?: false,
   )
 }
 
@@ -540,10 +631,13 @@ private fun RuntimeEntry.resolvePromptPosition(): StWorldInfoPosition {
 
 private fun StWorldScanContext.toScanText(
   extensions: StBookEntryRuntimeExtensions,
+  runtimeSettings: StWorldRuntimeSettings,
   defaultScanDepth: Int?,
+  scanDepthSkew: Int,
+  includeRecursionBuffer: Boolean,
   recursionBuffer: List<String>,
 ): String {
-  val scanDepth = (extensions.scanDepth ?: defaultScanDepth ?: 4).coerceAtLeast(0)
+  val scanDepth = (extensions.scanDepth ?: defaultScanDepth ?: runtimeSettings.defaultScanDepth).coerceAtLeast(0) + scanDepthSkew
   val recentChat =
     recentMessagesNewestFirst
       .take(scanDepth)
@@ -558,17 +652,12 @@ private fun StWorldScanContext.toScanText(
         if (extensions.matchCreatorNotes) add(creatorNotes)
       }
       .filter(String::isNotBlank)
-  val appContext =
-    buildList {
-      sessionSummary.takeIf(String::isNotBlank)?.let(::add)
-      addAll(memories)
-    }
-
   return buildList {
-      recursionBuffer.filter(String::isNotBlank).forEach(::add)
+      if (includeRecursionBuffer) {
+        recursionBuffer.filter(String::isNotBlank).forEach(::add)
+      }
       recentChat.takeIf(String::isNotBlank)?.let(::add)
       addAll(selectedGlobalFields)
-      addAll(appContext)
     }
     .joinToString("\n")
 }

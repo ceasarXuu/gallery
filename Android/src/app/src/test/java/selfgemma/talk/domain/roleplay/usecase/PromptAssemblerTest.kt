@@ -859,4 +859,159 @@ class PromptAssemblerTest {
 
     assertTrue(result.prompt.contains("sticky by imported metadata"))
   }
+
+  @Test
+  fun assemble_advances_scan_depth_to_meet_min_activations() {
+    val now = System.currentTimeMillis()
+    val prompt =
+      assembler.assemble(
+        role =
+          RoleCard(
+            id = "role-11",
+            name = "Depth Skew Tester",
+            summary = "Depth skew test.",
+            systemPrompt = "",
+            cardCore =
+              StCharacterCard(
+                name = "Depth Skew Tester",
+                data =
+                  StCharacterCardData(
+                    character_book =
+                      StCharacterBook(
+                        scan_depth = 1,
+                        extensions =
+                          JsonObject().apply {
+                            addProperty("min_activations", 1)
+                            addProperty("min_activations_depth_max", 3)
+                          },
+                        entries =
+                          listOf(
+                            StCharacterBookEntry(
+                              id = 1,
+                              keys = listOf("first clue"),
+                              content = "min activation lore",
+                              position = "before_char",
+                            )
+                          ),
+                      ),
+                  ),
+              ),
+            createdAt = now,
+            updatedAt = now,
+          ),
+        summary = null,
+        memories = emptyList(),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-15",
+              sessionId = "session-11",
+              seq = 1,
+              side = MessageSide.USER,
+              content = "first clue",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            ),
+            Message(
+              id = "message-16",
+              sessionId = "session-11",
+              seq = 2,
+              side = MessageSide.ASSISTANT,
+              content = "middle line",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            ),
+            Message(
+              id = "message-17",
+              sessionId = "session-11",
+              seq = 3,
+              side = MessageSide.USER,
+              content = "latest line",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            ),
+          ),
+        pendingUserInput = "",
+      )
+
+    assertTrue(prompt.contains("min activation lore"))
+  }
+
+  @Test
+  fun assemble_does_not_use_summary_or_memories_for_lore_scanning() {
+    val now = System.currentTimeMillis()
+    val prompt =
+      assembler.assemble(
+        role =
+          RoleCard(
+            id = "role-12",
+            name = "Scan Buffer Tester",
+            summary = "Buffer test.",
+            systemPrompt = "",
+            cardCore =
+              StCharacterCard(
+                name = "Scan Buffer Tester",
+                data =
+                  StCharacterCardData(
+                    character_book =
+                      StCharacterBook(
+                        entries =
+                          listOf(
+                            StCharacterBookEntry(
+                              id = 1,
+                              keys = listOf("memory-only-key"),
+                              content = "should not activate from app memory",
+                              position = "before_char",
+                            )
+                          ),
+                      ),
+                  ),
+              ),
+            createdAt = now,
+            updatedAt = now,
+          ),
+        summary =
+          SessionSummary(
+            sessionId = "session-12",
+            version = 1,
+            coveredUntilSeq = 0,
+            summaryText = "memory-only-key appears in summary",
+            tokenEstimate = 5,
+            updatedAt = now,
+          ),
+        memories =
+          listOf(
+            MemoryItem(
+              id = "memory-2",
+              roleId = "role-12",
+              sessionId = "session-12",
+              category = MemoryCategory.PLOT,
+              content = "memory-only-key appears in memory",
+              normalizedHash = "hash-2",
+              pinned = true,
+              createdAt = now,
+              updatedAt = now,
+            )
+          ),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-18",
+              sessionId = "session-12",
+              seq = 1,
+              side = MessageSide.USER,
+              content = "ordinary chat",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            )
+          ),
+        pendingUserInput = "",
+      )
+
+    assertFalse(prompt.contains("should not activate from app memory"))
+  }
 }

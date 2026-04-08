@@ -463,3 +463,8 @@ Notes:
 - `timedWorldInfo` compatibility is not only about persisting some JSON. ST keys timed entries by lore entry uid, so local runtime should read id-keyed metadata in addition to any app-specific fallback key, or imported ST chats will lose sticky/cooldown state.
 - Group scoring must use the current scan's actual match score, not the number of configured keys on the entry. Otherwise inclusion groups drift exactly on the cards that depend on overlapping keyword sets.
 - `atDepth` entries should be merged by `(depth, role)` before prompt assembly. Emitting one block per lore row preserves data but still changes ST ordering and injection shape.
+
+## 2026-04-09 ST scan-depth note
+
+- ST `min activations` is a separate scan phase, not just more recursion. When the runtime deepens scanning to satisfy minimum activations, it should increase chat depth without pulling in the recursion buffer.
+- Lore activation should scan ST-style sources only: recent chat plus explicitly opted-in character fields. App-local session summaries and memory items are useful prompt context, but they should not secretly participate in ST world-info keyword activation.
