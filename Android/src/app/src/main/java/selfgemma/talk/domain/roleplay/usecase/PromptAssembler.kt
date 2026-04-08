@@ -31,6 +31,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     memories: List<MemoryItem>,
     recentMessages: List<Message>,
     pendingUserInput: String = "",
+    generationTrigger: String = "normal",
   ): String {
     return assembleForSession(
       role = role,
@@ -38,6 +39,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       memories = memories,
       recentMessages = recentMessages,
       pendingUserInput = pendingUserInput,
+      generationTrigger = generationTrigger,
       chatMetadataJson = null,
     ).prompt
   }
@@ -48,6 +50,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     memories: List<MemoryItem>,
     recentMessages: List<Message>,
     pendingUserInput: String = "",
+    generationTrigger: String = "normal",
     chatMetadataJson: String? = null,
   ): PromptAssemblyResult {
     val dialogueWindow = selectRecentMessages(recentMessages)
@@ -59,6 +62,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
         memories = memories,
         dialogueWindow = dialogueWindow,
         pendingUserInput = pendingUserInput,
+        generationTrigger = generationTrigger,
         macroContext = macroContext,
       )
     val cardData = role.stCard.cardDataOrEmpty()
@@ -209,6 +213,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     memories: List<MemoryItem>,
     dialogueWindow: List<Message>,
     pendingUserInput: String,
+    generationTrigger: String,
     macroContext: StMacroContext,
   ): StWorldScanContext {
     val core = role.stCard
@@ -226,6 +231,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     return StWorldScanContext(
       roleName = role.resolvedName(),
       roleTags = role.resolvedTags(),
+      generationTrigger = generationTrigger,
       recentMessagesNewestFirst = recentMessagesNewestFirst,
       personaDescription = macroContext.substitute(role.resolvedPersonaDescription()),
       characterDescription = macroContext.substitute(role.resolvedSummary()),
@@ -270,7 +276,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
   private fun StRuntimeDepthPromptInsertion.toPromptSection(): String {
     return buildString {
       appendLine("role=$role depth=$depth")
-      append(prompt)
+      append(prompts.joinToString("\n"))
     }
   }
 

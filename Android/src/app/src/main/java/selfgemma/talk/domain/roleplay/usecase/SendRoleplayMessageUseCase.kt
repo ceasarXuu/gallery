@@ -207,6 +207,7 @@ constructor(
         memories = relevantMemories,
         recentMessages = recentMessages,
         pendingUserInput = trimmedInput,
+        generationTrigger = "normal",
         chatMetadataJson = session.interopChatMetadataJson,
       )
     promptAssembly.updatedChatMetadataJson
@@ -222,7 +223,7 @@ constructor(
     val systemInstruction = Contents.of(promptAssembly.prompt)
     Log.d(
       TAG,
-      "assembled prompt sessionId=$sessionId recentMessages=${recentMessages.size} memories=${relevantMemories.size} promptChars=${systemInstruction.toString().length}",
+      "assembled prompt sessionId=$sessionId trigger=normal recentMessages=${recentMessages.size} memories=${relevantMemories.size} promptChars=${systemInstruction.toString().length}",
     )
 
     try {

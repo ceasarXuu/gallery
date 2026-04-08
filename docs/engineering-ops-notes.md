@@ -450,3 +450,16 @@ Notes:
   - installable product check: `.\gradlew.bat :app:assembleDebug --no-daemon`
 - Remaining ST world-info parity work tends to hide in non-obvious fields, not the main key/content path. Prioritize checking `character_filter`, leading-content decorators like `@@activate` / `@@dont_activate`, inclusion-group scoring, and outlet naming before assuming a card is fully aligned.
 - In this app's single-character roleplay flow, `character_filter` can only be approximated against the active role name and role tags. ST has richer filtering through its character file/tag map, so keep this limitation explicit when reviewing parity claims.
+
+## 2026-04-09 ST trigger alignment note
+
+- ST world-info `extensions.triggers` is not just a preserved field. If runtime ignores it, cards that rely on `normal` / `quiet` / `continue` separation will silently over-activate lore entries.
+- In this app, wire generation-type filtering through prompt assembly explicitly instead of leaving it implicit in UI state. Default to `normal` for standard send-message turns until more ST generation modes are added.
+- After touching trigger filtering, rerun:
+  - `.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.PromptAssemblerTest" --tests "selfgemma.talk.domain.roleplay.usecase.StSampleCardsRegressionTest" --no-daemon`
+
+## 2026-04-09 ST timed/group note
+
+- `timedWorldInfo` compatibility is not only about persisting some JSON. ST keys timed entries by lore entry uid, so local runtime should read id-keyed metadata in addition to any app-specific fallback key, or imported ST chats will lose sticky/cooldown state.
+- Group scoring must use the current scan's actual match score, not the number of configured keys on the entry. Otherwise inclusion groups drift exactly on the cards that depend on overlapping keyword sets.
+- `atDepth` entries should be merged by `(depth, role)` before prompt assembly. Emitting one block per lore row preserves data but still changes ST ordering and injection shape.

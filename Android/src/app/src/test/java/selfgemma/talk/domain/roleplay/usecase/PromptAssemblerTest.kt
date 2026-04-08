@@ -592,4 +592,271 @@ class PromptAssemblerTest {
     assertFalse(prompt.contains("blocked activation"))
     assertFalse(prompt.contains("character filter fail"))
   }
+
+  @Test
+  fun assemble_honors_generation_type_triggers() {
+    val now = System.currentTimeMillis()
+    val role =
+      RoleCard(
+        id = "role-8",
+        name = "Trigger Tester",
+        summary = "Trigger test.",
+        systemPrompt = "",
+        cardCore =
+          StCharacterCard(
+            name = "Trigger Tester",
+            data =
+              StCharacterCardData(
+                character_book =
+                  StCharacterBook(
+                    entries =
+                      listOf(
+                        StCharacterBookEntry(
+                          id = 1,
+                          keys = listOf("hello"),
+                          content = "normal trigger lore",
+                          position = "before_char",
+                          extensions =
+                            JsonObject().apply {
+                              add(
+                                "triggers",
+                                JsonArray().apply {
+                                  add("normal")
+                                },
+                              )
+                            },
+                        ),
+                        StCharacterBookEntry(
+                          id = 2,
+                          keys = listOf("hello"),
+                          content = "quiet trigger lore",
+                          position = "before_char",
+                          extensions =
+                            JsonObject().apply {
+                              add(
+                                "triggers",
+                                JsonArray().apply {
+                                  add("quiet")
+                                },
+                              )
+                            },
+                        ),
+                      ),
+                  ),
+              ),
+          ),
+        createdAt = now,
+        updatedAt = now,
+      )
+
+    val normalPrompt =
+      assembler.assemble(
+        role = role,
+        summary = null,
+        memories = emptyList(),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-10",
+              sessionId = "session-8",
+              seq = 1,
+              side = MessageSide.USER,
+              content = "hello",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            )
+          ),
+        pendingUserInput = "",
+        generationTrigger = "normal",
+      )
+    val quietPrompt =
+      assembler.assemble(
+        role = role,
+        summary = null,
+        memories = emptyList(),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-11",
+              sessionId = "session-8",
+              seq = 1,
+              side = MessageSide.USER,
+              content = "hello",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            )
+          ),
+        pendingUserInput = "",
+        generationTrigger = "quiet",
+      )
+
+    assertTrue(normalPrompt.contains("normal trigger lore"))
+    assertFalse(normalPrompt.contains("quiet trigger lore"))
+    assertTrue(quietPrompt.contains("quiet trigger lore"))
+    assertFalse(quietPrompt.contains("normal trigger lore"))
+  }
+
+  @Test
+  fun assemble_prefers_highest_scored_group_entry_and_merges_depth_prompts() {
+    val now = System.currentTimeMillis()
+    val prompt =
+      assembler.assemble(
+        role =
+          RoleCard(
+            id = "role-9",
+            name = "Score Tester",
+            summary = "Score test.",
+            systemPrompt = "",
+            cardCore =
+              StCharacterCard(
+                name = "Score Tester",
+                data =
+                  StCharacterCardData(
+                    character_book =
+                      StCharacterBook(
+                        entries =
+                          listOf(
+                            StCharacterBookEntry(
+                              id = 1,
+                              keys = listOf("alpha", "beta"),
+                              content = "high score entry",
+                              position = "before_char",
+                              extensions =
+                                JsonObject().apply {
+                                  addProperty("group", "score")
+                                  addProperty("use_group_scoring", true)
+                                },
+                            ),
+                            StCharacterBookEntry(
+                              id = 2,
+                              keys = listOf("alpha"),
+                              content = "low score entry",
+                              position = "before_char",
+                              extensions =
+                                JsonObject().apply {
+                                  addProperty("group", "score")
+                                  addProperty("use_group_scoring", true)
+                                },
+                            ),
+                            StCharacterBookEntry(
+                              id = 3,
+                              keys = listOf("alpha"),
+                              content = "depth one",
+                              position = "before_char",
+                              extensions =
+                                JsonObject().apply {
+                                  addProperty("position", 4)
+                                  addProperty("depth", 3)
+                                  addProperty("role", 2)
+                                },
+                            ),
+                            StCharacterBookEntry(
+                              id = 4,
+                              keys = listOf("beta"),
+                              content = "depth two",
+                              position = "before_char",
+                              extensions =
+                                JsonObject().apply {
+                                  addProperty("position", 4)
+                                  addProperty("depth", 3)
+                                  addProperty("role", 2)
+                                },
+                            ),
+                          ),
+                      ),
+                  ),
+              ),
+            createdAt = now,
+            updatedAt = now,
+          ),
+        summary = null,
+        memories = emptyList(),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-12",
+              sessionId = "session-9",
+              seq = 1,
+              side = MessageSide.USER,
+              content = "alpha beta",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            )
+          ),
+        pendingUserInput = "",
+      )
+
+    assertTrue(prompt.contains("high score entry"))
+    assertFalse(prompt.contains("low score entry"))
+    assertTrue(prompt.contains("role=assistant depth=3\ndepth one\ndepth two"))
+  }
+
+  @Test
+  fun assemble_reads_styled_timed_world_info_metadata_by_entry_id() {
+    val now = System.currentTimeMillis()
+    val result =
+      assembler.assembleForSession(
+        role =
+          RoleCard(
+            id = "role-10",
+            name = "Timed Tester",
+            summary = "Timed test.",
+            systemPrompt = "",
+            cardCore =
+              StCharacterCard(
+                name = "Timed Tester",
+                data =
+                  StCharacterCardData(
+                    character_book =
+                      StCharacterBook(
+                        entries =
+                          listOf(
+                            StCharacterBookEntry(
+                              id = 1,
+                              keys = listOf("missing"),
+                              content = "sticky by imported metadata",
+                              position = "before_char",
+                              extensions = JsonObject().apply { addProperty("sticky", 2) },
+                            )
+                          ),
+                      ),
+                  ),
+              ),
+            createdAt = now,
+            updatedAt = now,
+          ),
+        summary = null,
+        memories = emptyList(),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-13",
+              sessionId = "session-10",
+              seq = 1,
+              side = MessageSide.USER,
+              content = "no keyword",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            ),
+            Message(
+              id = "message-14",
+              sessionId = "session-10",
+              seq = 2,
+              side = MessageSide.ASSISTANT,
+              content = "reply",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            ),
+          ),
+        pendingUserInput = "",
+        chatMetadataJson = """{"timedWorldInfo":{"sticky":{"1":{"hash":"1","start":0,"end":4,"protected":false}}}}""",
+      )
+
+    assertTrue(result.prompt.contains("sticky by imported metadata"))
+  }
 }

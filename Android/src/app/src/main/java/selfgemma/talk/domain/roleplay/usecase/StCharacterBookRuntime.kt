@@ -11,6 +11,7 @@ import selfgemma.talk.domain.roleplay.model.StCharacterBookEntry
 internal data class StWorldScanContext(
   val roleName: String,
   val roleTags: List<String>,
+  val generationTrigger: String,
   val recentMessagesNewestFirst: List<String>,
   val personaDescription: String,
   val characterDescription: String,
@@ -23,7 +24,7 @@ internal data class StWorldScanContext(
 )
 
 internal data class StRuntimeDepthPromptInsertion(
-  val prompt: String,
+  val prompts: List<String>,
   val depth: Int,
   val role: String,
 )
@@ -74,6 +75,7 @@ internal data class StBookEntryRuntimeExtensions(
   val cooldown: Int? = null,
   val delay: Int? = null,
   val ignoreBudget: Boolean = false,
+  val triggers: List<String> = emptyList(),
 )
 
 private data class RuntimeEntry(
@@ -84,6 +86,12 @@ private data class RuntimeEntry(
   val decorators: Set<String>,
   val characterFilter: StCharacterFilter?,
   val normalizedContent: String,
+)
+
+private data class RuntimeCandidate(
+  val entry: RuntimeEntry,
+  val score: Int,
+  val stickyActive: Boolean,
 )
 
 private data class StCharacterFilter(
@@ -163,13 +171,22 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
     while (recurse) {
       recurse = false
       val candidates =
-        entries.filter { runtimeEntry ->
+        entries.mapNotNull { runtimeEntry ->
           if (activated.containsKey(runtimeEntry.stableKey)) {
-            return@filter false
+            return@mapNotNull null
           }
 
           if (runtimeEntry.isFilteredOut(context)) {
-            return@filter false
+            return@mapNotNull null
+          }
+
+          if (
+            runtimeEntry.extensions.triggers.isNotEmpty() &&
+              runtimeEntry.extensions.triggers.none { trigger ->
+                trigger.equals(context.generationTrigger, ignoreCase = true)
+              }
+          ) {
+            return@mapNotNull null
           }
 
           val stickyActive = metadata.isTimedEffectActive("sticky", runtimeEntry, entries, chatLength)
@@ -177,28 +194,32 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
           val delayActive = runtimeEntry.extensions.delay?.let { chatLength < it } ?: false
 
           if (delayActive) {
-            return@filter false
+            return@mapNotNull null
           }
           if (cooldownActive && !stickyActive) {
-            return@filter false
+            return@mapNotNull null
           }
           if (recursionBuffer.isEmpty() && runtimeEntry.extensions.delayUntilRecursion > 0 && !stickyActive) {
-            return@filter false
+            return@mapNotNull null
           }
           if (recursionBuffer.isNotEmpty() && runtimeEntry.extensions.delayUntilRecursion > currentDelayLevel && !stickyActive) {
-            return@filter false
+            return@mapNotNull null
           }
           if (recursionBuffer.isNotEmpty() && (book.recursive_scanning == true) && runtimeEntry.extensions.excludeRecursion && !stickyActive) {
-            return@filter false
+            return@mapNotNull null
           }
           if (runtimeEntry.decorators.contains("@@activate")) {
-            return@filter true
+            return@mapNotNull RuntimeCandidate(entry = runtimeEntry, score = Int.MAX_VALUE, stickyActive = stickyActive)
           }
           if (runtimeEntry.decorators.contains("@@dont_activate")) {
-            return@filter false
+            return@mapNotNull null
           }
           if (runtimeEntry.entry.constant == true || stickyActive) {
-            return@filter true
+            return@mapNotNull RuntimeCandidate(
+              entry = runtimeEntry,
+              score = Int.MAX_VALUE - 1,
+              stickyActive = stickyActive,
+            )
           }
 
           val textToScan =
@@ -207,10 +228,8 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
               defaultScanDepth = book.scan_depth,
               recursionBuffer = recursionBuffer,
             )
-          if (!runtimeEntry.matchesPrimary(textToScan, macroContext)) {
-            return@filter false
-          }
-          runtimeEntry.matchesSecondary(textToScan, macroContext)
+          val score = runtimeEntry.matchScore(textToScan, macroContext) ?: return@mapNotNull null
+          RuntimeCandidate(entry = runtimeEntry, score = score, stickyActive = stickyActive)
         }
       if (candidates.isEmpty()) {
         if (availableRecursionDelayLevels.isNotEmpty()) {
@@ -276,7 +295,7 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
     val authorNoteAfter = mutableListOf<String>()
     val exampleBefore = mutableListOf<String>()
     val exampleAfter = mutableListOf<String>()
-    val depthPrompts = mutableListOf<StRuntimeDepthPromptInsertion>()
+    val depthPrompts = linkedMapOf<Pair<Int, String>, MutableList<String>>()
     val outletEntries = linkedMapOf<String, MutableList<String>>()
 
     activated.values.sortedBy { it.order }.forEach { runtimeEntry ->
@@ -292,12 +311,11 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
         StWorldInfoPosition.EXAMPLE_BEFORE -> exampleBefore += content
         StWorldInfoPosition.EXAMPLE_AFTER -> exampleAfter += content
         StWorldInfoPosition.AT_DEPTH ->
-          depthPrompts +=
-            StRuntimeDepthPromptInsertion(
-              prompt = content,
-              depth = runtimeEntry.extensions.depth ?: 4,
-              role = runtimeEntry.extensions.role.toPromptRoleName(),
-            )
+          depthPrompts
+            .getOrPut(
+              (runtimeEntry.extensions.depth ?: 4) to runtimeEntry.extensions.role.toPromptRoleName()
+            ) { mutableListOf() }
+            .add(content)
         StWorldInfoPosition.OUTLET -> {
           val outletName = runtimeEntry.extensions.outletName.trim()
           if (outletName.isBlank()) {
@@ -315,41 +333,52 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
       authorNoteAfter = authorNoteAfter,
       exampleBefore = exampleBefore,
       exampleAfter = exampleAfter,
-      depthPrompts = depthPrompts.sortedBy { it.depth },
+      depthPrompts =
+        depthPrompts.entries
+          .map { (key, prompts) ->
+            StRuntimeDepthPromptInsertion(
+              prompts = prompts.toList(),
+              depth = key.first,
+              role = key.second,
+            )
+          }
+          .sortedWith(compareBy<StRuntimeDepthPromptInsertion> { it.depth }.thenBy { it.role }),
       outletEntries = outletEntries,
       updatedChatMetadataJson = serializeChatMetadata(metadata),
     )
   }
 
-  private fun RuntimeEntry.matchesPrimary(textToScan: String, macroContext: StMacroContext): Boolean {
-    return entry.keys
+  private fun RuntimeEntry.matchScore(textToScan: String, macroContext: StMacroContext): Int? {
+    val primaryMatches =
+      entry.keys
       .orEmpty()
       .filter(String::isNotBlank)
-      .any { key ->
+      .count { key ->
         textToScan.matchesKeyword(
           keyword = macroContext.substitute(key).trim(),
           extensions = extensions,
         )
       }
-  }
-
-  private fun RuntimeEntry.matchesSecondary(textToScan: String, macroContext: StMacroContext): Boolean {
+    if (primaryMatches == 0) {
+      return null
+    }
     val keys = entry.secondary_keys.orEmpty().filter(String::isNotBlank)
     if (entry.selective != true || keys.isEmpty()) {
-      return true
+      return primaryMatches
     }
     val matches =
       keys.map { key ->
         textToScan.matchesKeyword(
           keyword = macroContext.substitute(key).trim(),
           extensions = extensions,
-        )
-      }
+          )
+        }
+    val secondaryMatches = matches.count { it }
     return when (extensions.selectiveLogic) {
-      StSelectiveLogic.AND_ANY -> matches.any { it }
-      StSelectiveLogic.NOT_ALL -> matches.any { matched -> !matched }
-      StSelectiveLogic.NOT_ANY -> matches.none { it }
-      StSelectiveLogic.AND_ALL -> matches.all { it }
+      StSelectiveLogic.AND_ANY -> secondaryMatches.takeIf { it > 0 }?.let { primaryMatches + it }
+      StSelectiveLogic.NOT_ALL -> (!matches.all { it }).takeIf { it }?.let { primaryMatches }
+      StSelectiveLogic.NOT_ANY -> matches.none { it }.takeIf { it }?.let { primaryMatches }
+      StSelectiveLogic.AND_ALL -> matches.all { it }.takeIf { it }?.let { primaryMatches + secondaryMatches }
     }
   }
 
@@ -368,28 +397,30 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
   }
 
   private fun filterGroupedCandidates(
-    candidates: List<RuntimeEntry>,
+    candidates: List<RuntimeCandidate>,
     activated: Map<String, RuntimeEntry>,
   ): List<RuntimeEntry> {
-    if (candidates.none { it.extensions.group.isNotBlank() }) {
-      return candidates.sortedWith(compareByDescending<RuntimeEntry> { it.extensions.sticky ?: 0 }.thenBy { it.order })
+    if (candidates.none { it.entry.extensions.group.isNotBlank() }) {
+      return candidates
+        .sortedWith(compareByDescending<RuntimeCandidate> { it.stickyActive }.thenBy { it.entry.order })
+        .map { it.entry }
     }
 
     val kept = candidates.toMutableList()
     val grouped =
-      linkedMapOf<String, MutableList<RuntimeEntry>>().apply {
+      linkedMapOf<String, MutableList<RuntimeCandidate>>().apply {
         candidates
-          .filter { it.extensions.group.isNotBlank() }
-          .forEach { runtimeEntry ->
-            runtimeEntry.extensions.group
+          .filter { it.entry.extensions.group.isNotBlank() }
+          .forEach { runtimeCandidate ->
+            runtimeCandidate.entry.extensions.group
               .split(',')
               .map(String::trim)
               .filter(String::isNotBlank)
               .forEach { groupName ->
-                getOrPut(groupName) { mutableListOf() }.add(runtimeEntry)
+                getOrPut(groupName) { mutableListOf() }.add(runtimeCandidate)
               }
           }
-        }
+      }
     grouped.forEach { (groupName, groupEntries) ->
       if (groupEntries.isEmpty()) {
         return@forEach
@@ -398,8 +429,13 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
         kept.removeAll(groupEntries)
         return@forEach
       }
+      val stickyEntries = groupEntries.filter { it.stickyActive }
+      if (stickyEntries.isNotEmpty()) {
+        kept.removeAll(groupEntries.filterNot { it in stickyEntries })
+        return@forEach
+      }
       val scoreFiltered = filterGroupByScore(groupEntries)
-      val overrides = groupEntries.filter { it.extensions.groupOverride }.sortedBy { it.order }
+      val overrides = groupEntries.filter { it.entry.extensions.groupOverride }.sortedBy { it.entry.order }
       val winner =
         when {
           overrides.isNotEmpty() -> overrides.first()
@@ -407,26 +443,28 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
         }
       kept.removeAll(groupEntries.filterNot { it == winner })
     }
-    return kept.sortedWith(compareByDescending<RuntimeEntry> { it.extensions.sticky ?: 0 }.thenBy { it.order })
+    return kept
+      .sortedWith(compareByDescending<RuntimeCandidate> { it.stickyActive }.thenBy { it.entry.order })
+      .map { it.entry }
   }
 
-  private fun filterGroupByScore(entries: List<RuntimeEntry>): List<RuntimeEntry> {
-    val shouldScore = entries.any { it.extensions.useGroupScoring == true }
+  private fun filterGroupByScore(entries: List<RuntimeCandidate>): List<RuntimeCandidate> {
+    val shouldScore = entries.any { it.entry.extensions.useGroupScoring == true }
     if (!shouldScore) {
       return entries
     }
-    val maxScore = entries.maxOfOrNull { it.keyMatchScore() } ?: return entries
+    val maxScore = entries.maxOfOrNull { it.score } ?: return entries
     return entries.filter { entry ->
-      val scored = entry.extensions.useGroupScoring ?: false
-      !scored || entry.keyMatchScore() == maxScore
+      val scored = entry.entry.extensions.useGroupScoring ?: false
+      !scored || entry.score == maxScore
     }
   }
 
-  private fun weightedPick(entries: List<RuntimeEntry>): RuntimeEntry {
-    val total = entries.sumOf { it.extensions.groupWeight.coerceAtLeast(1) }
+  private fun weightedPick(entries: List<RuntimeCandidate>): RuntimeCandidate {
+    val total = entries.sumOf { it.entry.extensions.groupWeight.coerceAtLeast(1) }
     var roll = Random.nextInt(total.coerceAtLeast(1))
     entries.forEach { entry ->
-      roll -= entry.extensions.groupWeight.coerceAtLeast(1)
+      roll -= entry.entry.extensions.groupWeight.coerceAtLeast(1)
       if (roll < 0) {
         return entry
       }
@@ -487,6 +525,7 @@ private fun StCharacterBookEntry.toRuntimeExtensions(): StBookEntryRuntimeExtens
     cooldown = extensions.intOrNull("cooldown"),
     delay = extensions.intOrNull("delay"),
     ignoreBudget = extensions.booleanOrNull("ignore_budget") ?: false,
+    triggers = extensions.stringListOrEmpty("triggers"),
   )
 }
 
@@ -595,7 +634,8 @@ private fun JsonObject.isTimedEffectActive(
 ): Boolean {
   val timedWorldInfo = getOrCreateObject("timedWorldInfo")
   val bucket = timedWorldInfo.getOrCreateObject(type)
-  val effect = bucket.getAsJsonObject(entry.stableKey)
+  val effectKey = entry.timedEffectKey()
+  val effect = bucket.getAsJsonObject(effectKey) ?: bucket.getAsJsonObject(entry.stableKey)
   if (effect == null) {
     return false
   }
@@ -604,25 +644,34 @@ private fun JsonObject.isTimedEffectActive(
   val end = effect.intOrNull("end") ?: 0
   val protected = effect.booleanOrNull("protected") ?: false
   val hash = effect.stringOrNull("hash").orEmpty()
-  val matchingEntry = allEntries.find { it.stableKey == hash || it.stableKey == entry.stableKey }
+  val matchingEntry =
+    allEntries.find {
+      it.stableKey == hash ||
+        it.timedEffectKey() == hash ||
+        it.stableKey == entry.stableKey ||
+        it.timedEffectKey() == effectKey
+    }
   if (chatLength <= start && !protected) {
+    bucket.remove(effectKey)
     bucket.remove(entry.stableKey)
     return false
   }
   if (matchingEntry == null) {
     if (chatLength >= end) {
+      bucket.remove(effectKey)
       bucket.remove(entry.stableKey)
     }
     return false
   }
   if (chatLength >= end) {
+    bucket.remove(effectKey)
     bucket.remove(entry.stableKey)
     if (type == "sticky" && entry.extensions.cooldown != null) {
       val cooldownBucket = timedWorldInfo.getOrCreateObject("cooldown")
       cooldownBucket.add(
-        entry.stableKey,
+        effectKey,
         JsonObject().apply {
-          addProperty("hash", entry.stableKey)
+          addProperty("hash", effectKey)
           addProperty("start", chatLength)
           addProperty("end", chatLength + entry.extensions.cooldown)
           addProperty("protected", true)
@@ -639,12 +688,13 @@ private fun JsonObject.setTimedEffects(entries: List<RuntimeEntry>, chatLength: 
   val stickyBucket = timedWorldInfo.getOrCreateObject("sticky")
   val cooldownBucket = timedWorldInfo.getOrCreateObject("cooldown")
   entries.forEach { entry ->
+    val effectKey = entry.timedEffectKey()
     entry.extensions.sticky?.takeIf { it > 0 }?.let { sticky ->
-      if (!stickyBucket.has(entry.stableKey)) {
+      if (!stickyBucket.has(effectKey) && !stickyBucket.has(entry.stableKey)) {
         stickyBucket.add(
-          entry.stableKey,
+          effectKey,
           JsonObject().apply {
-            addProperty("hash", entry.stableKey)
+            addProperty("hash", effectKey)
             addProperty("start", chatLength)
             addProperty("end", chatLength + sticky)
             addProperty("protected", false)
@@ -653,11 +703,11 @@ private fun JsonObject.setTimedEffects(entries: List<RuntimeEntry>, chatLength: 
       }
     }
     entry.extensions.cooldown?.takeIf { it > 0 }?.let { cooldown ->
-      if (!cooldownBucket.has(entry.stableKey)) {
+      if (!cooldownBucket.has(effectKey) && !cooldownBucket.has(entry.stableKey)) {
         cooldownBucket.add(
-          entry.stableKey,
+          effectKey,
           JsonObject().apply {
-            addProperty("hash", entry.stableKey)
+            addProperty("hash", effectKey)
             addProperty("start", chatLength)
             addProperty("end", chatLength + cooldown)
             addProperty("protected", false)
@@ -693,6 +743,18 @@ private fun JsonObject.booleanOrNull(key: String): Boolean? {
 
 private fun JsonObject.stringOrNull(key: String): String? =
   get(key)?.takeIf { it.isJsonPrimitive }?.asString
+
+private fun JsonObject.stringListOrEmpty(key: String): List<String> {
+  return getAsJsonArray(key)
+    ?.mapNotNull { element ->
+      element
+        .takeIf { it.isJsonPrimitive }
+        ?.asString
+        ?.trim()
+        ?.ifBlank { null }
+    }
+    .orEmpty()
+}
 
 private fun Int?.toPromptRoleName(): String {
   return when (this) {
@@ -788,6 +850,4 @@ private fun RuntimeEntry.isFilteredOut(context: StWorldScanContext): Boolean {
   return false
 }
 
-private fun RuntimeEntry.keyMatchScore(): Int {
-  return entry.keys.orEmpty().count { it.isNotBlank() } + entry.secondary_keys.orEmpty().count { it.isNotBlank() }
-}
+private fun RuntimeEntry.timedEffectKey(): String = entry.id?.toString()?.ifBlank { null } ?: stableKey
