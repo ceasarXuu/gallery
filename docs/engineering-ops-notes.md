@@ -238,6 +238,35 @@ PNG import/export notes:
 URI handling notes:
 
 - `ActivityResultContracts.OpenDocument` results need `takePersistableUriPermission(..., FLAG_GRANT_READ_URI_PERMISSION)` before storing the URI into role state.
+
+## 2026-04-08 ST runtime alignment verification notes
+
+- Goal: verify imported SillyTavern cards keep ST field semantics at runtime, not just pass parser import.
+- Focus for this round:
+  - `first_mes` as seeded assistant opener
+  - `alternate_greetings` fallback
+  - `character_book` activation and position handling
+  - `extensions.depth_prompt`
+  - `post_history_instructions`
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.PromptAssemblerTest" --tests "selfgemma.talk.domain.roleplay.usecase.CreateRoleplaySessionUseCaseTest" --tests "selfgemma.talk.domain.roleplay.usecase.StRoleCardDocumentInteropUseCaseTest"
+adb install -r .\app\build\outputs\apk\debug\app-debug.apk
+adb logcat -c
+adb shell am force-stop selfgemma.talk
+adb shell am start -n selfgemma.talk/.MainActivity
+adb logcat -d -v time | Select-String -Pattern 'SendRoleplayMessage|AndroidRuntime'
+```
+
+Notes:
+
+- For ST runtime regressions, unit tests are necessary but not sufficient; always do one overwrite install and one fresh in-app send after prompt assembly changes.
+- `SendRoleplayMessage` now logs one `assembled prompt ...` line per generation. Use it to confirm prompt construction happened and to spot abnormal prompt growth after lorebook changes.
+- When checking imported cards that contain HTML-heavy greetings, verify both the first seeded assistant bubble and the next generated assistant reply. The opener and the runtime prompt path are different codepaths.
 - Keep image-picking launchers separate from ST card import launchers; once media UX exists, sharing a single picker creates confusing state coupling.
 ## 2026-04-07 Roleplay chat overflow menu positioning
 

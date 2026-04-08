@@ -210,6 +210,10 @@ constructor(
           pendingUserInput = trimmedInput,
         )
       )
+    Log.d(
+      TAG,
+      "assembled prompt sessionId=$sessionId recentMessages=${recentMessages.size} memories=${relevantMemories.size} promptChars=${systemInstruction.toString().length}",
+    )
 
     try {
       model.runtimeHelper.resetConversation(
