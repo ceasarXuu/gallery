@@ -317,3 +317,5 @@ Verification notes:
 - For `role_editor_*` resources, the first pass is easy to miss because media titles, summaries, compatibility hints, and export prompt text are separate from the later status/error strings. Diff locale keys against base `values/strings.xml` instead of relying on eyeballing the page.
 - If `adb install -r` fails with `INSTALL_PARSE_FAILED_NOT_APK` right after a successful local build, retry with `adb install --no-streaming -r ...` before suspecting the APK itself. This repo's debug APK is large enough that streamed install can fail while push install still succeeds.
 - When trimming role editor media UI, prefer deleting only screen-level modules first and leaving the underlying `RoleMediaProfile` schema untouched. This keeps ST import/export compatibility stable while simplifying the editing experience.
+
+- 2026-04-08 Role editor UI verification: startup success does not prove the editor page changed. For navigation-sensitive Compose screens, verify the real target page with db shell uiautomator dump after each tap, and confirm distinctive texts such as the role editor tab titles before calling the change installed.
