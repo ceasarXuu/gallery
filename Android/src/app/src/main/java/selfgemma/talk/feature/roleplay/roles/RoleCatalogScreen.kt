@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,9 +17,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,7 +32,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,8 +39,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
@@ -48,9 +50,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import selfgemma.talk.R
 import kotlinx.coroutines.launch
 import selfgemma.talk.performance.TrackPerformanceState
-import selfgemma.talk.AppTopBar
-import selfgemma.talk.data.AppBarAction
-import selfgemma.talk.data.AppBarActionType
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 
 private const val TAG = "RoleCatalogScreen"
@@ -76,7 +75,7 @@ fun RoleCatalogScreen(
   var pendingDeleteRoleId by rememberSaveable { mutableStateOf<String?>(null) }
   val listState = rememberLazyListState()
   var showMenu by rememberSaveable { mutableStateOf(false) }
-  
+
   val importLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
       uri?.let { viewModel.importStRoleCard(it.toString()) }
@@ -101,163 +100,178 @@ fun RoleCatalogScreen(
     handleNavigateUp()
   }
 
-  Scaffold(
-    modifier = modifier.semantics { testTagsAsResourceId = true },
-    contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
-    topBar = {
-      AppTopBar(
-        title = stringResource(R.string.tab_roles),
-        leftAction =
-          if (showNavigateUp) {
-            AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = handleNavigateUp)
-          } else {
-            null
+  Box(modifier = modifier.semantics { testTagsAsResourceId = true }) {
+    Scaffold(
+      contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
+      topBar = {
+        CenterAlignedTopAppBar(
+          title = { Text(stringResource(R.string.tab_roles)) },
+          navigationIcon = {
+            if (showNavigateUp) {
+              IconButton(onClick = handleNavigateUp) {
+                Icon(
+                  imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                  contentDescription = stringResource(R.string.navigate_back),
+                )
+              }
+            }
           },
-        rightAction = AppBarAction(actionType = AppBarActionType.MENU, actionFn = { showMenu = true }),
+          actions = {
+            IconButton(onClick = { showMenu = true }) {
+              Icon(
+                imageVector = Icons.Rounded.MoreVert,
+                contentDescription = stringResource(R.string.cd_menu),
+              )
+            }
+          },
+        )
+      },
+    ) { innerPadding ->
+      val combinedPadding = PaddingValues(
+        top = innerPadding.calculateTopPadding() + contentPadding.calculateTopPadding(),
+        bottom = contentPadding.calculateBottomPadding(),
+        start = contentPadding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+        end = contentPadding.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
       )
-      DropdownMenu(
-        expanded = showMenu,
-        onDismissRequest = { showMenu = false },
+
+      LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize().padding(combinedPadding),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        DropdownMenuItem(
-          text = { Text(stringResource(R.string.roles_menu_create)) },
-          onClick = {
-            showMenu = false
-            onCreateRole()
-          },
-        )
-        DropdownMenuItem(
-          text = { Text(stringResource(R.string.roles_menu_import)) },
-          onClick = {
-            showMenu = false
-            importLauncher.launch(arrayOf("application/json", "image/png"))
-          },
-        )
-      }
-    },
-  ) { innerPadding ->
-    val combinedPadding = PaddingValues(
-      top = innerPadding.calculateTopPadding() + contentPadding.calculateTopPadding(),
-      bottom = contentPadding.calculateBottomPadding(),
-      start = contentPadding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
-      end = contentPadding.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
-    )
+        uiState.errorMessage?.let { errorMessage ->
+          item {
+            Text(
+              errorMessage,
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.error,
+            )
+          }
+        }
+        uiState.statusMessage?.let { statusMessage ->
+          item {
+            Text(
+              statusMessage,
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.primary,
+            )
+          }
+        }
 
-    LazyColumn(
-      state = listState,
-      modifier = Modifier.fillMaxSize().padding(combinedPadding),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-      uiState.errorMessage?.let { errorMessage ->
-        item {
-          Text(
-            errorMessage,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
+        if (uiState.builtInRoles.isNotEmpty()) {
+          item {
+            Text(stringResource(R.string.roles_builtin_title), style = MaterialTheme.typography.titleMedium)
+          }
+        }
+        items(uiState.builtInRoles, key = { it.id }) { role ->
+          val preferredModelId =
+            when {
+              role.defaultModelId != null && role.defaultModelId in downloadedModelIds -> role.defaultModelId
+              else -> defaultModelId
+            }
+          RoleCardItem(
+            role = role,
+            activeModelId = preferredModelId,
+            canStart = defaultModelId != null,
+            onStart =
+              if (defaultModelId != null) {
+                {
+                  scope.launch {
+                    val sessionId =
+                      viewModel.createSession(
+                        roleId = role.id,
+                        modelId = checkNotNull(preferredModelId),
+                      )
+                    onOpenChat(sessionId)
+                  }
+                }
+              } else {
+                null
+              },
+          )
+        }
+        if (uiState.customRoles.isNotEmpty()) {
+          item {
+            Text(stringResource(R.string.roles_custom_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+          }
+        }
+        items(uiState.customRoles, key = { it.id }) { role ->
+          val preferredModelId =
+            when {
+              role.defaultModelId != null && role.defaultModelId in downloadedModelIds -> role.defaultModelId
+              else -> defaultModelId
+            }
+          RoleCardItem(
+            role = role,
+            activeModelId = preferredModelId,
+            canStart = defaultModelId != null,
+            onStart =
+              if (defaultModelId != null) {
+                {
+                  scope.launch {
+                    val sessionId =
+                      viewModel.createSession(
+                        roleId = role.id,
+                        modelId = checkNotNull(preferredModelId),
+                      )
+                    onOpenChat(sessionId)
+                  }
+                }
+              } else {
+                null
+              },
+            onEdit = { onEditRole(role.id) },
+            onDelete = { pendingDeleteRoleId = role.id },
           )
         }
       }
-      uiState.statusMessage?.let { statusMessage ->
-        item {
-          Text(
-            statusMessage,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-          )
-        }
-      }
 
-      if (uiState.builtInRoles.isNotEmpty()) {
-        item {
-          Text(stringResource(R.string.roles_builtin_title), style = MaterialTheme.typography.titleMedium)
-        }
-      }
-      items(uiState.builtInRoles, key = { it.id }) { role ->
-        val preferredModelId =
-          when {
-            role.defaultModelId != null && role.defaultModelId in downloadedModelIds -> role.defaultModelId
-            else -> defaultModelId
-          }
-        RoleCardItem(
-          role = role,
-          activeModelId = preferredModelId,
-          canStart = defaultModelId != null,
-          onStart =
-            if (defaultModelId != null) {
-              {
-                scope.launch {
-                  val sessionId =
-                    viewModel.createSession(
-                      roleId = role.id,
-                      modelId = checkNotNull(preferredModelId),
-                    )
-                  onOpenChat(sessionId)
-                }
+      val roleToDelete = uiState.customRoles.firstOrNull { it.id == pendingDeleteRoleId }
+      if (roleToDelete != null) {
+        AlertDialog(
+          onDismissRequest = { pendingDeleteRoleId = null },
+          title = { Text(stringResource(R.string.roles_delete_title)) },
+          text = {
+            Text(stringResource(R.string.roles_delete_content, roleToDelete.name))
+          },
+          confirmButton = {
+            FilledTonalButton(
+              onClick = {
+                viewModel.deleteRole(roleToDelete.id)
+                pendingDeleteRoleId = null
               }
-            } else {
-              null
-            },
-        )
-      }
-      if (uiState.customRoles.isNotEmpty()) {
-        item {
-          Text(stringResource(R.string.roles_custom_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
-        }
-      }
-      items(uiState.customRoles, key = { it.id }) { role ->
-        val preferredModelId =
-          when {
-            role.defaultModelId != null && role.defaultModelId in downloadedModelIds -> role.defaultModelId
-            else -> defaultModelId
-          }
-        RoleCardItem(
-          role = role,
-          activeModelId = preferredModelId,
-          canStart = defaultModelId != null,
-          onStart =
-            if (defaultModelId != null) {
-              {
-                scope.launch {
-                  val sessionId =
-                    viewModel.createSession(
-                      roleId = role.id,
-                      modelId = checkNotNull(preferredModelId),
-                    )
-                  onOpenChat(sessionId)
-                }
-              }
-            } else {
-              null
-            },
-          onEdit = { onEditRole(role.id) },
-          onDelete = { pendingDeleteRoleId = role.id },
+            ) {
+              Text(stringResource(R.string.delete))
+            }
+          },
+          dismissButton = {
+            OutlinedButton(onClick = { pendingDeleteRoleId = null }) {
+              Text(stringResource(R.string.cancel))
+            }
+          },
         )
       }
     }
 
-    val roleToDelete = uiState.customRoles.firstOrNull { it.id == pendingDeleteRoleId }
-    if (roleToDelete != null) {
-      AlertDialog(
-        onDismissRequest = { pendingDeleteRoleId = null },
-        title = { Text(stringResource(R.string.roles_delete_title)) },
-        text = {
-          Text(stringResource(R.string.roles_delete_content, roleToDelete.name))
+    // Dropdown menu positioned at top-right corner
+    DropdownMenu(
+      expanded = showMenu,
+      onDismissRequest = { showMenu = false },
+      modifier = Modifier.align(Alignment.TopEnd),
+    ) {
+      DropdownMenuItem(
+        text = { Text(stringResource(R.string.roles_menu_create)) },
+        onClick = {
+          showMenu = false
+          onCreateRole()
         },
-        confirmButton = {
-          FilledTonalButton(
-            onClick = {
-              viewModel.deleteRole(roleToDelete.id)
-              pendingDeleteRoleId = null
-            }
-          ) {
-            Text(stringResource(R.string.delete))
-          }
-        },
-        dismissButton = {
-          OutlinedButton(onClick = { pendingDeleteRoleId = null }) {
-            Text(stringResource(R.string.cancel))
-          }
+      )
+      DropdownMenuItem(
+        text = { Text(stringResource(R.string.roles_menu_import)) },
+        onClick = {
+          showMenu = false
+          importLauncher.launch(arrayOf("application/json", "image/png"))
         },
       )
     }
