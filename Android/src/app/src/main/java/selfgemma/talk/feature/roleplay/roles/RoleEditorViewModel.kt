@@ -27,9 +27,13 @@ import selfgemma.talk.domain.roleplay.model.RoleSpriteAsset
 import selfgemma.talk.domain.roleplay.model.StCharacterCardData
 import selfgemma.talk.domain.roleplay.model.coverImageUri
 import selfgemma.talk.domain.roleplay.model.primaryAvatarUri
-import selfgemma.talk.domain.roleplay.model.resolvedExampleDialogues
+import selfgemma.talk.domain.roleplay.model.resolvedDescription
+import selfgemma.talk.domain.roleplay.model.resolvedFirstMessage
+import selfgemma.talk.domain.roleplay.model.resolvedName
 import selfgemma.talk.domain.roleplay.model.resolvedOpeningLine
+import selfgemma.talk.domain.roleplay.model.resolvedPersonality
 import selfgemma.talk.domain.roleplay.model.resolvedPersonaDescription
+import selfgemma.talk.domain.roleplay.model.resolvedScenario
 import selfgemma.talk.domain.roleplay.model.resolvedSummary
 import selfgemma.talk.domain.roleplay.model.resolvedSystemPrompt
 import selfgemma.talk.domain.roleplay.model.resolvedTags
@@ -38,12 +42,14 @@ import selfgemma.talk.domain.roleplay.model.StCharacterCard
 import selfgemma.talk.domain.roleplay.usecase.ExportStRoleCardToUriUseCase
 import selfgemma.talk.domain.roleplay.usecase.ImportStRoleCardFromUriUseCase
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
+import selfgemma.talk.domain.roleplay.model.withUpdatedCoreFields
 
 data class RoleEditorUiState(
   val loading: Boolean = true,
   val roleId: String? = null,
   val isNewRole: Boolean = true,
   val builtIn: Boolean = false,
+  val stCard: StCharacterCard = emptyEditorStCard(),
   val name: String = "",
   val summary: String = "",
   val systemPrompt: String = "",
@@ -84,27 +90,39 @@ constructor(
   }
 
   fun updateName(value: String) {
-    _uiState.update { it.copy(name = value, errorMessage = null, statusMessage = null) }
+    updateCanonicalCard { card ->
+      card.withUpdatedCoreFields(name = value, systemPrompt = card.resolvedSystemPrompt())
+    }
   }
 
   fun updateSummary(value: String) {
-    _uiState.update { it.copy(summary = value, errorMessage = null, statusMessage = null) }
+    updateCanonicalCard { card ->
+      card.withUpdatedCoreFields(description = value, systemPrompt = card.resolvedSystemPrompt())
+    }
   }
 
   fun updateSystemPrompt(value: String) {
-    _uiState.update { it.copy(systemPrompt = value, errorMessage = null, statusMessage = null) }
+    updateCanonicalCard { card ->
+      card.withUpdatedCoreFields(systemPrompt = value)
+    }
   }
 
   fun updatePersonaDescription(value: String) {
-    _uiState.update { it.copy(personaDescription = value, errorMessage = null, statusMessage = null) }
+    updateCanonicalCard { card ->
+      card.withUpdatedCoreFields(personality = value, systemPrompt = card.resolvedSystemPrompt())
+    }
   }
 
   fun updateWorldSettings(value: String) {
-    _uiState.update { it.copy(worldSettings = value, errorMessage = null, statusMessage = null) }
+    updateCanonicalCard { card ->
+      card.withUpdatedCoreFields(scenario = value, systemPrompt = card.resolvedSystemPrompt())
+    }
   }
 
   fun updateOpeningLine(value: String) {
-    _uiState.update { it.copy(openingLine = value, errorMessage = null, statusMessage = null) }
+    updateCanonicalCard { card ->
+      card.withUpdatedCoreFields(firstMessage = value, systemPrompt = card.resolvedSystemPrompt())
+    }
   }
 
   fun updateSafetyPolicy(value: String) {
@@ -112,7 +130,16 @@ constructor(
   }
 
   fun updateTagsText(value: String) {
-    _uiState.update { it.copy(tagsText = value, errorMessage = null, statusMessage = null) }
+    val updatedTags = value.toTagList()
+    _uiState.update {
+      val nextCard = it.stCard.withUpdatedCoreFields(tags = updatedTags, systemPrompt = it.stCard.resolvedSystemPrompt())
+      it.copy(
+        stCard = nextCard,
+        tagsText = value,
+        errorMessage = null,
+        statusMessage = null,
+      )
+    }
   }
 
   fun updateDefaultModelId(value: String?) {
@@ -325,6 +352,7 @@ constructor(
               roleId = importedRole.id,
               isNewRole = editingRoleId == null,
               builtIn = false,
+              stCard = importedRole.stCard,
               name = importedRole.name,
               summary = importedRole.resolvedSummary(),
               systemPrompt = importedRole.resolvedSystemPrompt(),
@@ -414,81 +442,10 @@ constructor(
 
     val now = System.currentTimeMillis()
     val existingRole = loadedRole
-    val updatedTags = snapshot.tagsText.toTagList()
-    val updatedSystemPrompt = snapshot.systemPrompt.trim()
     val roleId = editingRoleId ?: UUID.randomUUID().toString()
-    val updatedStCard =
-      (existingRole?.stCard
-        ?: existingRole?.let { role ->
-          StCharacterCard(
-            spec = "chara_card_v2",
-            spec_version = "2.0",
-            name = role.name,
-            description = role.resolvedSummary(),
-            personality = role.resolvedPersonaDescription(),
-            scenario = role.resolvedWorldSettings(),
-            first_mes = role.resolvedOpeningLine(),
-            mes_example = role.resolvedExampleDialogues().joinToString("\n\n"),
-            tags = role.resolvedTags(),
-            data =
-              StCharacterCardData(
-                name = role.name,
-                description = role.resolvedSummary(),
-                personality = role.resolvedPersonaDescription(),
-                scenario = role.resolvedWorldSettings(),
-                first_mes = role.resolvedOpeningLine(),
-                mes_example = role.resolvedExampleDialogues().joinToString("\n\n"),
-                system_prompt = role.resolvedSystemPrompt(),
-                tags = role.resolvedTags(),
-              ),
-          )
-        }
-        ?: StCharacterCard(
-          spec = "chara_card_v2",
-          spec_version = "2.0",
-          name = roleName,
-          description = snapshot.summary.trim(),
-          personality = snapshot.personaDescription.trim(),
-          scenario = snapshot.worldSettings.trim(),
-          first_mes = snapshot.openingLine.trim(),
-          mes_example = "",
-          tags = updatedTags,
-          data =
-            StCharacterCardData(
-              name = roleName,
-              description = snapshot.summary.trim(),
-              personality = snapshot.personaDescription.trim(),
-              scenario = snapshot.worldSettings.trim(),
-              first_mes = snapshot.openingLine.trim(),
-              mes_example = "",
-              system_prompt = updatedSystemPrompt,
-              tags = updatedTags,
-            ),
-        ))
-        ?.let { card ->
-        val data = card.data ?: StCharacterCardData()
-        card.copy(
-          name = roleName,
-          description = snapshot.summary.trim(),
-          personality = snapshot.personaDescription.trim(),
-          scenario = snapshot.worldSettings.trim(),
-          first_mes = snapshot.openingLine.trim(),
-          tags = updatedTags,
-          data =
-            data.copy(
-              name = roleName,
-              description = snapshot.summary.trim(),
-              personality = snapshot.personaDescription.trim(),
-              scenario = snapshot.worldSettings.trim(),
-              first_mes = snapshot.openingLine.trim(),
-              system_prompt = updatedSystemPrompt,
-              tags = updatedTags,
-            ),
-        )
-      }
     return RoleCard(
       id = roleId,
-      stCard = checkNotNull(updatedStCard),
+      stCard = snapshot.stCard,
       safetyPolicy = snapshot.safetyPolicy.trim(),
       defaultModelId = snapshot.defaultModelId,
       builtIn = snapshot.builtIn,
@@ -551,6 +508,7 @@ constructor(
             loading = false,
             roleId = null,
             isNewRole = true,
+            stCard = emptyEditorStCard(appContext.getString(R.string.role_editor_default_system_prompt)),
             systemPrompt = appContext.getString(R.string.role_editor_default_system_prompt),
           )
         return@launch
@@ -563,6 +521,7 @@ constructor(
           roleId = role.id,
           isNewRole = false,
           builtIn = role.builtIn,
+          stCard = role.stCard,
           name = role.name,
           summary = role.resolvedSummary(),
           systemPrompt = role.resolvedSystemPrompt(),
@@ -598,6 +557,24 @@ constructor(
             }
           },
         errorMessage = null,
+      )
+    }
+  }
+
+  private fun updateCanonicalCard(transformer: (StCharacterCard) -> StCharacterCard) {
+    _uiState.update { current ->
+      val nextCard = transformer(current.stCard)
+      current.copy(
+        stCard = nextCard,
+        name = nextCard.resolvedName(),
+        summary = nextCard.resolvedDescription(),
+        systemPrompt = nextCard.resolvedSystemPrompt(),
+        personaDescription = nextCard.resolvedPersonality(),
+        worldSettings = nextCard.resolvedScenario(),
+        openingLine = nextCard.resolvedFirstMessage(),
+        tagsText = nextCard.resolvedTags().joinToString(", "),
+        errorMessage = null,
+        statusMessage = null,
       )
     }
   }
@@ -660,4 +637,12 @@ private fun String.toTagList(): List<String> {
     .map { it.trim() }
     .filter { it.isNotBlank() }
     .distinct()
+}
+
+private fun emptyEditorStCard(systemPrompt: String = ""): StCharacterCard {
+  return StCharacterCard(
+    spec = "chara_card_v2",
+    spec_version = "2.0",
+    data = StCharacterCardData(system_prompt = systemPrompt),
+  )
 }

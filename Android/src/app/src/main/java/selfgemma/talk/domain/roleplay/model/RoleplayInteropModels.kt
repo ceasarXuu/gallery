@@ -156,3 +156,38 @@ fun StCharacterCard.resolvedMessageExample(): String =
 fun StCharacterCard.resolvedSystemPrompt(): String = cardDataOrEmpty().system_prompt.orEmpty()
 
 fun StCharacterCard.resolvedTags(): List<String> = cardDataOrEmpty().tags ?: tags.orEmpty()
+
+fun StCharacterCard.withUpdatedCoreFields(
+  name: String = resolvedName(),
+  description: String = resolvedDescription(),
+  personality: String = resolvedPersonality(),
+  scenario: String = resolvedScenario(),
+  firstMessage: String = resolvedFirstMessage(),
+  messageExample: String = resolvedMessageExample(),
+  systemPrompt: String = resolvedSystemPrompt(),
+  tags: List<String> = resolvedTags(),
+): StCharacterCard {
+  val data = cardDataOrEmpty()
+  return copy(
+    spec = spec ?: "chara_card_v2",
+    spec_version = spec_version ?: "2.0",
+    name = name,
+    description = description,
+    personality = personality,
+    scenario = scenario,
+    first_mes = firstMessage,
+    mes_example = messageExample,
+    tags = tags,
+    data =
+      data.copy(
+        name = name,
+        description = description,
+        personality = personality,
+        scenario = scenario,
+        first_mes = firstMessage,
+        mes_example = messageExample,
+        system_prompt = systemPrompt,
+        tags = tags,
+      ),
+  )
+}
