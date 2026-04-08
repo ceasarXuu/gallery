@@ -79,7 +79,7 @@ fun RoleCatalogScreen(
   var showMenu by rememberSaveable { mutableStateOf(false) }
 
   val importLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+    rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
       uri?.let { viewModel.importStRoleCard(it.toString()) }
     }
 
@@ -142,7 +142,7 @@ fun RoleCatalogScreen(
                 text = { Text(stringResource(R.string.roles_menu_import)) },
                 onClick = {
                   showMenu = false
-                  importLauncher.launch(arrayOf("application/json", "image/png"))
+                  importLauncher.launch("*/*")
                 },
               )
             }

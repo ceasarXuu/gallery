@@ -414,3 +414,10 @@ Notes:
   - backfill `talkativeness/fav` into both legacy mirror and `data.extensions`
 - When replacing the schema, update regression tests to build real ST card objects. Do not preserve old `RoleCardCore`-style test fixtures through compatibility shims, or the test suite will stop proving the migration.
 - Real-device overwrite verification is still required after schema migrations, but if `adb devices` returns an empty list, capture that blocker explicitly rather than claiming install coverage.
+
+## 2026-04-09 SAF import contract note
+
+- One-shot import flows such as ST role-card import and chat-history import should use `ActivityResultContracts.GetContent`, not `OpenDocument`.
+- In this app those imports read the selected file immediately and persist the parsed content, not the source `Uri`. Using `OpenDocument` there adds unnecessary SAF result complexity and can surface device-specific return-path noise during `DocumentsUI -> app` handoff.
+- Keep `OpenDocument` / `OpenMultipleDocuments` only for flows that must retain long-lived read access to the picked `Uri`, such as avatar or gallery assets stored by reference.
+- For Xiaomi/HyperOS real-device regression, a non-fatal `ActivityThread: fail in deliverResultsIfNeeded` log showed up when returning from a role-card import driven by `OpenDocument`; after changing one-shot import entry points to `GetContent`, rerun the same picker path before treating the issue as fixed.

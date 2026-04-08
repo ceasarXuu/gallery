@@ -86,7 +86,7 @@ fun SessionsScreen(
   val context = LocalContext.current
   val listState = rememberLazyListState()
   val importLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+    rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
       val sessionId = pendingImportSessionId
       pendingImportSessionId = null
       if (sessionId != null && uri != null) {
@@ -186,7 +186,7 @@ fun SessionsScreen(
             onOpen={ onOpenSession(session.id) },
             onImportChat={
               pendingImportSessionId = session.id
-              importLauncher.launch(arrayOf("application/x-ndjson", "application/json", "text/plain"))
+              importLauncher.launch("*/*")
             },
             onExportChat={
               pendingExportSessionId = session.id

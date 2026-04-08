@@ -65,9 +65,8 @@ fun RoleEditorScreen(
   val context = androidx.compose.ui.platform.LocalContext.current
 
   val importLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+    rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
       uri?.let {
-        takeReadPermission(context = context, uri = it)
         viewModel.importStCardFromUri(it.toString())
       }
     }
@@ -313,7 +312,7 @@ fun RoleEditorScreen(
           item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
               OutlinedButton(
-                onClick = { importLauncher.launch(arrayOf("application/json", "image/png")) },
+                onClick = { importLauncher.launch("*/*") },
                 modifier = Modifier.fillMaxWidth().testTag("role_editor_import_st_json"),
               ) {
                 Text(stringResource(R.string.role_editor_import_st_card))
