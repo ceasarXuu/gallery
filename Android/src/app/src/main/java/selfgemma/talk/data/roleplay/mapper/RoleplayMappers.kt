@@ -12,9 +12,17 @@ import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.model.resolvedDescription
+import selfgemma.talk.domain.roleplay.model.resolvedFirstMessage
+import selfgemma.talk.domain.roleplay.model.resolvedMessageExample
+import selfgemma.talk.domain.roleplay.model.resolvedName
+import selfgemma.talk.domain.roleplay.model.resolvedPersonality
+import selfgemma.talk.domain.roleplay.model.resolvedScenario
+import selfgemma.talk.domain.roleplay.model.resolvedSystemPrompt
+import selfgemma.talk.domain.roleplay.model.resolvedTags
 
 fun RoleEntity.toDomain(): RoleCard {
-  val cardCore = toRoleCardCoreOrLegacy()
+  val stCard = toRoleCardCoreOrLegacy()
   val runtimeProfile = toRoleRuntimeProfileOrLegacy()
   val mediaProfile = toRoleMediaProfileOrLegacy()
   val interopState = toRoleInteropStateOrDefault()
@@ -22,15 +30,9 @@ fun RoleEntity.toDomain(): RoleCard {
   val resolvedCoverUri = mediaProfile.coverImage?.uri ?: coverUri
   return RoleCard(
     id = id,
-    name = name,
+    stCard = stCard,
     avatarUri = resolvedAvatarUri,
     coverUri = resolvedCoverUri,
-    summary = summary,
-    systemPrompt = systemPrompt,
-    personaDescription = personaDescription,
-    worldSettings = worldSettings,
-    openingLine = openingLine,
-    exampleDialogues = exampleDialogues,
     safetyPolicy = safetyPolicy,
     defaultModelId = defaultModelId,
     defaultTemperature = defaultTemperature,
@@ -40,8 +42,6 @@ fun RoleEntity.toDomain(): RoleCard {
     summaryTurnThreshold = summaryTurnThreshold,
     memoryEnabled = memoryEnabled,
     memoryMaxItems = memoryMaxItems,
-    tags = tags,
-    cardCore = cardCore,
     runtimeProfile = runtimeProfile,
     mediaProfile = mediaProfile,
     interopState = interopState,
@@ -53,21 +53,21 @@ fun RoleEntity.toDomain(): RoleCard {
 }
 
 fun RoleCard.toEntity(): RoleEntity {
-  val cardCore = toPersistedRoleCardCore()
+  val stCard = toPersistedRoleCardCore()
   val runtimeProfile = toPersistedRoleRuntimeProfile()
   val mediaProfile = toPersistedRoleMediaProfile()
   val interopState = toPersistedRoleInteropState()
   return RoleEntity(
     id = id,
-    name = name,
+    name = stCard.resolvedName(),
     avatarUri = mediaProfile?.primaryAvatar?.uri ?: avatarUri,
     coverUri = mediaProfile?.coverImage?.uri ?: coverUri,
-    summary = summary,
-    systemPrompt = systemPrompt,
-    personaDescription = personaDescription,
-    worldSettings = worldSettings,
-    openingLine = openingLine,
-    exampleDialogues = exampleDialogues,
+    summary = stCard.resolvedDescription(),
+    systemPrompt = stCard.resolvedSystemPrompt(),
+    personaDescription = stCard.resolvedPersonality(),
+    worldSettings = stCard.resolvedScenario(),
+    openingLine = stCard.resolvedFirstMessage(),
+    exampleDialogues = stCard.resolvedMessageExample().split("\n\n").map(String::trim).filter(String::isNotBlank),
     safetyPolicy = safetyPolicy,
     defaultModelId = defaultModelId,
     defaultTemperature = defaultTemperature,
@@ -77,8 +77,8 @@ fun RoleCard.toEntity(): RoleEntity {
     summaryTurnThreshold = summaryTurnThreshold,
     memoryEnabled = memoryEnabled,
     memoryMaxItems = memoryMaxItems,
-    tags = tags,
-    cardCoreJson = RoleplayInteropJsonCodec.encodeRoleCardCore(cardCore),
+    tags = stCard.resolvedTags(),
+    cardCoreJson = RoleplayInteropJsonCodec.encodeRoleCardCore(stCard),
     runtimeProfileJson = RoleplayInteropJsonCodec.encodeRoleRuntimeProfile(runtimeProfile),
     mediaProfileJson = RoleplayInteropJsonCodec.encodeRoleMediaProfile(mediaProfile),
     interopStateJson = RoleplayInteropJsonCodec.encodeRoleInteropState(interopState),

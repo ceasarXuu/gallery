@@ -27,6 +27,14 @@ import selfgemma.talk.domain.roleplay.model.RoleSpriteAsset
 import selfgemma.talk.domain.roleplay.model.StCharacterCardData
 import selfgemma.talk.domain.roleplay.model.coverImageUri
 import selfgemma.talk.domain.roleplay.model.primaryAvatarUri
+import selfgemma.talk.domain.roleplay.model.resolvedExampleDialogues
+import selfgemma.talk.domain.roleplay.model.resolvedOpeningLine
+import selfgemma.talk.domain.roleplay.model.resolvedPersonaDescription
+import selfgemma.talk.domain.roleplay.model.resolvedSummary
+import selfgemma.talk.domain.roleplay.model.resolvedSystemPrompt
+import selfgemma.talk.domain.roleplay.model.resolvedTags
+import selfgemma.talk.domain.roleplay.model.resolvedWorldSettings
+import selfgemma.talk.domain.roleplay.model.StCharacterCard
 import selfgemma.talk.domain.roleplay.usecase.ExportStRoleCardToUriUseCase
 import selfgemma.talk.domain.roleplay.usecase.ImportStRoleCardFromUriUseCase
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
@@ -318,13 +326,13 @@ constructor(
               isNewRole = editingRoleId == null,
               builtIn = false,
               name = importedRole.name,
-              summary = importedRole.summary,
-              systemPrompt = importedRole.systemPrompt,
-              personaDescription = importedRole.personaDescription,
-              worldSettings = importedRole.worldSettings,
-              openingLine = importedRole.openingLine,
+              summary = importedRole.resolvedSummary(),
+              systemPrompt = importedRole.resolvedSystemPrompt(),
+              personaDescription = importedRole.resolvedPersonaDescription(),
+              worldSettings = importedRole.resolvedWorldSettings(),
+              openingLine = importedRole.resolvedOpeningLine(),
               safetyPolicy = importedRole.safetyPolicy,
-              tagsText = importedRole.tags.joinToString(", "),
+              tagsText = importedRole.resolvedTags().joinToString(", "),
               defaultModelId = importedRole.defaultModelId,
               avatarUri = importedRole.primaryAvatarUri(),
               coverUri = importedRole.coverImageUri(),
@@ -397,7 +405,6 @@ constructor(
   private fun buildRoleSnapshot(): RoleCard? {
     val snapshot = _uiState.value
     val roleName = snapshot.name.trim()
-    val systemPrompt = snapshot.systemPrompt.trim()
     if (roleName.isBlank()) {
       _uiState.update {
         it.copy(errorMessage = appContext.getString(R.string.role_editor_error_required_fields))
@@ -408,8 +415,57 @@ constructor(
     val now = System.currentTimeMillis()
     val existingRole = loadedRole
     val updatedTags = snapshot.tagsText.toTagList()
-    val updatedCardCore =
-      existingRole?.cardCore?.let { card ->
+    val updatedSystemPrompt = snapshot.systemPrompt.trim()
+    val roleId = editingRoleId ?: UUID.randomUUID().toString()
+    val updatedStCard =
+      (existingRole?.stCard
+        ?: existingRole?.let { role ->
+          StCharacterCard(
+            spec = "chara_card_v2",
+            spec_version = "2.0",
+            name = role.name,
+            description = role.resolvedSummary(),
+            personality = role.resolvedPersonaDescription(),
+            scenario = role.resolvedWorldSettings(),
+            first_mes = role.resolvedOpeningLine(),
+            mes_example = role.resolvedExampleDialogues().joinToString("\n\n"),
+            tags = role.resolvedTags(),
+            data =
+              StCharacterCardData(
+                name = role.name,
+                description = role.resolvedSummary(),
+                personality = role.resolvedPersonaDescription(),
+                scenario = role.resolvedWorldSettings(),
+                first_mes = role.resolvedOpeningLine(),
+                mes_example = role.resolvedExampleDialogues().joinToString("\n\n"),
+                system_prompt = role.resolvedSystemPrompt(),
+                tags = role.resolvedTags(),
+              ),
+          )
+        }
+        ?: StCharacterCard(
+          spec = "chara_card_v2",
+          spec_version = "2.0",
+          name = roleName,
+          description = snapshot.summary.trim(),
+          personality = snapshot.personaDescription.trim(),
+          scenario = snapshot.worldSettings.trim(),
+          first_mes = snapshot.openingLine.trim(),
+          mes_example = "",
+          tags = updatedTags,
+          data =
+            StCharacterCardData(
+              name = roleName,
+              description = snapshot.summary.trim(),
+              personality = snapshot.personaDescription.trim(),
+              scenario = snapshot.worldSettings.trim(),
+              first_mes = snapshot.openingLine.trim(),
+              mes_example = "",
+              system_prompt = updatedSystemPrompt,
+              tags = updatedTags,
+            ),
+        ))
+        ?.let { card ->
         val data = card.data ?: StCharacterCardData()
         card.copy(
           name = roleName,
@@ -425,27 +481,19 @@ constructor(
               personality = snapshot.personaDescription.trim(),
               scenario = snapshot.worldSettings.trim(),
               first_mes = snapshot.openingLine.trim(),
-              system_prompt = systemPrompt,
+              system_prompt = updatedSystemPrompt,
               tags = updatedTags,
             ),
         )
       }
-
     return RoleCard(
-      id = editingRoleId ?: UUID.randomUUID().toString(),
-      name = roleName,
-      summary = snapshot.summary.trim(),
-      systemPrompt = systemPrompt,
-      personaDescription = snapshot.personaDescription.trim(),
-      worldSettings = snapshot.worldSettings.trim(),
-      openingLine = snapshot.openingLine.trim(),
+      id = roleId,
+      stCard = checkNotNull(updatedStCard),
       safetyPolicy = snapshot.safetyPolicy.trim(),
       defaultModelId = snapshot.defaultModelId,
-      tags = updatedTags,
       builtIn = snapshot.builtIn,
       createdAt = existingRole?.createdAt ?: now,
       updatedAt = now,
-      exampleDialogues = existingRole?.exampleDialogues.orEmpty(),
       defaultTemperature = existingRole?.defaultTemperature,
       defaultTopP = existingRole?.defaultTopP,
       defaultTopK = existingRole?.defaultTopK,
@@ -455,7 +503,6 @@ constructor(
       memoryMaxItems = existingRole?.memoryMaxItems ?: 32,
       avatarUri = snapshot.avatarUri ?: existingRole?.primaryAvatarUri(),
       coverUri = snapshot.coverUri ?: existingRole?.coverImageUri(),
-      cardCore = updatedCardCore,
       runtimeProfile = existingRole?.runtimeProfile,
       mediaProfile =
         RoleMediaProfile(
@@ -517,13 +564,13 @@ constructor(
           isNewRole = false,
           builtIn = role.builtIn,
           name = role.name,
-          summary = role.summary,
-          systemPrompt = role.systemPrompt,
-          personaDescription = role.personaDescription,
-          worldSettings = role.worldSettings,
-          openingLine = role.openingLine,
+          summary = role.resolvedSummary(),
+          systemPrompt = role.resolvedSystemPrompt(),
+          personaDescription = role.resolvedPersonaDescription(),
+          worldSettings = role.resolvedWorldSettings(),
+          openingLine = role.resolvedOpeningLine(),
           safetyPolicy = role.safetyPolicy,
-          tagsText = role.tags.joinToString(", "),
+          tagsText = role.resolvedTags().joinToString(", "),
           defaultModelId = role.defaultModelId,
           avatarUri = role.primaryAvatarUri(),
           coverUri = role.coverImageUri(),

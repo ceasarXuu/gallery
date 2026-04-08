@@ -97,6 +97,34 @@ class CreateRoleplaySessionUseCaseTest {
     assertEquals(1, conversationRepository.messages.size)
     assertEquals("Alt hello", conversationRepository.messages.single().content)
   }
+
+  @Test
+  fun createSession_prefersCanonicalOpeningWhenProjectionIsStale() = runBlocking {
+    val conversationRepository = SessionSeedConversationRepository()
+    val roleRepository =
+      SessionSeedRoleRepository(
+        RoleCard(
+          id = "role-4",
+          name = "Mira",
+          systemPrompt = "Legacy prompt",
+          openingLine = "Legacy opening",
+          cardCore =
+            StCharacterCard(
+              name = "Mira",
+              data = StCharacterCardData(first_mes = "Canonical opening"),
+            ),
+          createdAt = 1L,
+          updatedAt = 1L,
+        )
+      )
+
+    CreateRoleplaySessionUseCase(
+      conversationRepository = conversationRepository,
+      roleRepository = roleRepository,
+    ).invoke(roleId = "role-4", modelId = "gemma")
+
+    assertEquals("Canonical opening", conversationRepository.messages.single().content)
+  }
 }
 
 private class SessionSeedConversationRepository : ConversationRepository {

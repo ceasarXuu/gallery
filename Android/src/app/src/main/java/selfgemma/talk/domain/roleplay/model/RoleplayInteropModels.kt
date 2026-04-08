@@ -152,3 +152,7 @@ fun StCharacterCard.resolvedFirstMessage(): String =
 
 fun StCharacterCard.resolvedMessageExample(): String =
   cardDataOrEmpty().mes_example.orEmpty().ifBlank { mes_example.orEmpty() }
+
+fun StCharacterCard.resolvedSystemPrompt(): String = cardDataOrEmpty().system_prompt.orEmpty()
+
+fun StCharacterCard.resolvedTags(): List<String> = cardDataOrEmpty().tags ?: tags.orEmpty()

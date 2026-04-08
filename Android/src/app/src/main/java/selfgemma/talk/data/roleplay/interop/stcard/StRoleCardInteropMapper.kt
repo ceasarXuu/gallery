@@ -17,6 +17,13 @@ import selfgemma.talk.domain.roleplay.model.resolvedMessageExample
 import selfgemma.talk.domain.roleplay.model.resolvedName
 import selfgemma.talk.domain.roleplay.model.resolvedPersonality
 import selfgemma.talk.domain.roleplay.model.resolvedScenario
+import selfgemma.talk.domain.roleplay.model.resolvedExampleDialogues
+import selfgemma.talk.domain.roleplay.model.resolvedOpeningLine
+import selfgemma.talk.domain.roleplay.model.resolvedPersonaDescription
+import selfgemma.talk.domain.roleplay.model.resolvedSummary
+import selfgemma.talk.domain.roleplay.model.resolvedSystemPrompt
+import selfgemma.talk.domain.roleplay.model.resolvedTags
+import selfgemma.talk.domain.roleplay.model.resolvedWorldSettings
 
 internal object StRoleCardInteropMapper {
   fun importedV2ToRoleCard(
@@ -32,15 +39,9 @@ internal object StRoleCardInteropMapper {
 
     return RoleCard(
       id = roleId,
-      name = card.resolvedName(),
+      stCard = card,
       avatarUri = existingRole?.avatarUri,
       coverUri = existingRole?.coverUri,
-      summary = card.resolvedDescription(),
-      systemPrompt = data.system_prompt.orEmpty(),
-      personaDescription = card.resolvedPersonality(),
-      worldSettings = card.resolvedScenario(),
-      openingLine = card.resolvedFirstMessage(),
-      exampleDialogues = card.resolvedMessageExample().toExampleDialogues(),
       safetyPolicy = runtimeProfile?.safetyPolicy?.policyText.orEmpty(),
       defaultModelId = runtimeProfile?.modelParams?.preferredModelId,
       defaultTemperature = runtimeProfile?.modelParams?.temperature,
@@ -50,8 +51,6 @@ internal object StRoleCardInteropMapper {
       summaryTurnThreshold = runtimeProfile?.memoryPolicy?.summaryTurnThreshold ?: 6,
       memoryEnabled = runtimeProfile?.memoryPolicy?.enabled ?: true,
       memoryMaxItems = runtimeProfile?.memoryPolicy?.maxItems ?: 32,
-      tags = data.tags ?: card.tags.orEmpty(),
-      cardCore = card,
       runtimeProfile = runtimeProfile,
       mediaProfile = existingRole?.toPersistedRoleMediaProfile(),
       interopState = interopState,
@@ -63,9 +62,9 @@ internal object StRoleCardInteropMapper {
   }
 
   fun roleCardToExportCore(role: RoleCard): StCharacterCard {
-    val persistedCore = role.cardCore ?: buildFallbackCard(role)
+    val persistedCore = role.stCard
     val existingData = persistedCore.data ?: StCharacterCardData()
-    val roleTags = role.tags.ifEmpty { existingData.tags ?: persistedCore.tags.orEmpty() }
+    val roleTags = role.resolvedTags().ifEmpty { existingData.tags ?: persistedCore.tags.orEmpty() }
     val roleExtensions =
       existingData.extensions?.deepCopy() ?: JsonObject().apply {
         if (persistedCore.talkativeness != null) {
@@ -79,25 +78,25 @@ internal object StRoleCardInteropMapper {
     return persistedCore.copy(
       spec = persistedCore.spec ?: StV2CardParser.ST_V2_SPEC,
       spec_version = persistedCore.spec_version ?: StV2CardParser.ST_V2_SPEC_VERSION,
-      name = role.name.ifBlank { persistedCore.name.orEmpty() },
-      description = role.summary.ifBlank { persistedCore.description.orEmpty() },
-      personality = role.personaDescription.ifBlank { persistedCore.personality.orEmpty() },
-      scenario = role.worldSettings.ifBlank { persistedCore.scenario.orEmpty() },
-      first_mes = role.openingLine.ifBlank { persistedCore.first_mes.orEmpty() },
-      mes_example = role.exampleDialogues.toMessageExample().ifBlank { persistedCore.mes_example.orEmpty() },
+      name = role.resolvedName().ifBlank { persistedCore.name.orEmpty() },
+      description = role.resolvedSummary().ifBlank { persistedCore.description.orEmpty() },
+      personality = role.resolvedPersonaDescription().ifBlank { persistedCore.personality.orEmpty() },
+      scenario = role.resolvedWorldSettings().ifBlank { persistedCore.scenario.orEmpty() },
+      first_mes = role.resolvedOpeningLine().ifBlank { persistedCore.first_mes.orEmpty() },
+      mes_example = role.resolvedExampleDialogues().toMessageExample().ifBlank { persistedCore.mes_example.orEmpty() },
       tags = roleTags,
       data =
         existingData.copy(
-          name = role.name.ifBlank { existingData.name.orEmpty().ifBlank { persistedCore.name.orEmpty() } },
-          description = role.summary.ifBlank { existingData.description.orEmpty().ifBlank { persistedCore.description.orEmpty() } },
-          personality = role.personaDescription.ifBlank { existingData.personality.orEmpty().ifBlank { persistedCore.personality.orEmpty() } },
-          scenario = role.worldSettings.ifBlank { existingData.scenario.orEmpty().ifBlank { persistedCore.scenario.orEmpty() } },
-          first_mes = role.openingLine.ifBlank { existingData.first_mes.orEmpty().ifBlank { persistedCore.first_mes.orEmpty() } },
+          name = role.resolvedName().ifBlank { existingData.name.orEmpty().ifBlank { persistedCore.name.orEmpty() } },
+          description = role.resolvedSummary().ifBlank { existingData.description.orEmpty().ifBlank { persistedCore.description.orEmpty() } },
+          personality = role.resolvedPersonaDescription().ifBlank { existingData.personality.orEmpty().ifBlank { persistedCore.personality.orEmpty() } },
+          scenario = role.resolvedWorldSettings().ifBlank { existingData.scenario.orEmpty().ifBlank { persistedCore.scenario.orEmpty() } },
+          first_mes = role.resolvedOpeningLine().ifBlank { existingData.first_mes.orEmpty().ifBlank { persistedCore.first_mes.orEmpty() } },
           mes_example =
-            role.exampleDialogues
+            role.resolvedExampleDialogues()
               .toMessageExample()
               .ifBlank { existingData.mes_example.orEmpty().ifBlank { persistedCore.mes_example.orEmpty() } },
-          system_prompt = role.systemPrompt.ifBlank { existingData.system_prompt.orEmpty() },
+          system_prompt = role.resolvedSystemPrompt().ifBlank { existingData.system_prompt.orEmpty() },
           tags = roleTags,
           extensions = roleExtensions,
         ),
@@ -128,34 +127,30 @@ internal object StRoleCardInteropMapper {
   }
 
   private fun buildFallbackCard(role: RoleCard): StCharacterCard {
-    val tags = role.tags
+    val tags = role.resolvedTags()
     val data =
       StCharacterCardData(
-        name = role.name,
-        description = role.summary,
-        personality = role.personaDescription,
-        scenario = role.worldSettings,
-        first_mes = role.openingLine,
-        mes_example = role.exampleDialogues.toMessageExample(),
-        system_prompt = role.systemPrompt,
+        name = role.resolvedName(),
+        description = role.resolvedSummary(),
+        personality = role.resolvedPersonaDescription(),
+        scenario = role.resolvedWorldSettings(),
+        first_mes = role.resolvedOpeningLine(),
+        mes_example = role.resolvedExampleDialogues().toMessageExample(),
+        system_prompt = role.resolvedSystemPrompt(),
         tags = tags,
       )
     return StCharacterCard(
       spec = StV2CardParser.ST_V2_SPEC,
       spec_version = StV2CardParser.ST_V2_SPEC_VERSION,
-      name = role.name,
-      description = role.summary,
-      personality = role.personaDescription,
-      scenario = role.worldSettings,
-      first_mes = role.openingLine,
-      mes_example = role.exampleDialogues.toMessageExample(),
+      name = role.resolvedName(),
+      description = role.resolvedSummary(),
+      personality = role.resolvedPersonaDescription(),
+      scenario = role.resolvedWorldSettings(),
+      first_mes = role.resolvedOpeningLine(),
+      mes_example = role.resolvedExampleDialogues().toMessageExample(),
       tags = tags,
       data = data,
     )
-  }
-
-  private fun String.toExampleDialogues(): List<String> {
-    return split("\n\n").map(String::trim).filter(String::isNotBlank)
   }
 
   private fun List<String>.toMessageExample(): String {

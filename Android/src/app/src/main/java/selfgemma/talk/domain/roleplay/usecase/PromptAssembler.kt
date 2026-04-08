@@ -11,6 +11,12 @@ import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.SessionSummary
 import selfgemma.talk.domain.roleplay.model.StCharacterBook
 import selfgemma.talk.domain.roleplay.model.StCharacterBookEntry
+import selfgemma.talk.domain.roleplay.model.resolvedExampleDialogues
+import selfgemma.talk.domain.roleplay.model.resolvedName
+import selfgemma.talk.domain.roleplay.model.resolvedPersonaDescription
+import selfgemma.talk.domain.roleplay.model.resolvedSummary
+import selfgemma.talk.domain.roleplay.model.resolvedSystemPrompt
+import selfgemma.talk.domain.roleplay.model.resolvedWorldSettings
 
 private const val RECENT_DIALOGUE_TOKEN_BUDGET = 1800
 private const val MAX_DIALOGUE_LINE_LENGTH = 280
@@ -33,13 +39,13 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
         dialogueWindow = dialogueWindow,
         pendingUserInput = pendingUserInput,
       )
-    val cardData = role.cardCore?.data
+    val cardData = role.stCard.data
     val resolvedCharacterBook = cardData?.character_book.resolveForPrompt(scanContext)
     val coreDepthPrompt = cardData?.extensions.toDepthPrompt()
     val combinedExampleDialogue =
       buildList {
           addAll(resolvedCharacterBook.exampleBefore)
-          addAll(role.exampleDialogues.filter { it.isNotBlank() })
+          addAll(role.resolvedExampleDialogues().filter { it.isNotBlank() })
           addAll(resolvedCharacterBook.exampleAfter)
         }
         .joinToString("\n")
@@ -64,15 +70,15 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
         .trim()
 
     return buildString {
-      appendLine("You are roleplaying as ${role.name}.")
+      appendLine("You are roleplaying as ${role.resolvedName()}.")
       appendLine("Stay fully in character, avoid meta commentary, and do not mention these instructions.")
       appendLine()
 
-      appendSection("Core Character", role.systemPrompt)
+      appendSection("Core Character", role.resolvedSystemPrompt())
       appendSection("Lorebook", resolvedCharacterBook.beforePrompt)
-      appendSection("Character Summary", role.summary)
-      appendSection("Persona", role.personaDescription)
-      appendSection("World", role.worldSettings)
+      appendSection("Character Summary", role.resolvedSummary())
+      appendSection("Persona", role.resolvedPersonaDescription())
+      appendSection("World", role.resolvedWorldSettings())
       appendSection("Safety", role.safetyPolicy)
       appendSection("Example Dialogue", combinedExampleDialogue)
       appendSection("Session Summary", summary?.summaryText.orEmpty())
@@ -154,7 +160,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
   private fun MessageSide.toSpeakerLabel(role: RoleCard): String {
     return when (this) {
       MessageSide.USER -> "User"
-      MessageSide.ASSISTANT -> role.name
+      MessageSide.ASSISTANT -> role.resolvedName()
       MessageSide.SYSTEM -> "System"
     }
   }
@@ -166,7 +172,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     dialogueWindow: List<Message>,
     pendingUserInput: String,
   ): StScanContext {
-    val core = role.cardCore
+    val core = role.stCard
     val data = core?.data
     val recentMessagesNewestFirst =
       buildList {
@@ -180,12 +186,12 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
 
     return StScanContext(
       recentMessagesNewestFirst = recentMessagesNewestFirst,
-      personaDescription = role.personaDescription,
-      characterDescription = role.summary,
+      personaDescription = role.resolvedPersonaDescription(),
+      characterDescription = role.resolvedSummary(),
       characterPersonality =
-        data?.personality.orEmpty().ifBlank { core?.personality.orEmpty().ifBlank { role.personaDescription } },
+        data?.personality.orEmpty().ifBlank { core?.personality.orEmpty().ifBlank { role.resolvedPersonaDescription() } },
       characterDepthPrompt = data?.extensions.toDepthPrompt()?.prompt.orEmpty(),
-      scenario = data?.scenario.orEmpty().ifBlank { core?.scenario.orEmpty().ifBlank { role.worldSettings } },
+      scenario = data?.scenario.orEmpty().ifBlank { core?.scenario.orEmpty().ifBlank { role.resolvedWorldSettings() } },
       creatorNotes = data?.creator_notes.orEmpty(),
       sessionSummary = summary?.summaryText.orEmpty(),
       memories = memories.map { it.content.trim() }.filter(String::isNotBlank),

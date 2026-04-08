@@ -114,17 +114,7 @@ internal fun RoleEntity.toRoleMediaProfileOrLegacy(): RoleMediaProfile {
 }
 
 internal fun RoleCard.toPersistedRoleCardCore(): StCharacterCard {
-  return cardCore
-    ?: buildLegacyStCard(
-      name = name,
-      description = summary,
-      personality = personaDescription,
-      scenario = worldSettings,
-      firstMessage = openingLine,
-      messageExample = exampleDialogues.joinToString("\n\n"),
-      systemPrompt = systemPrompt,
-      tags = tags,
-    )
+  return stCard
 }
 
 internal fun RoleCard.toPersistedRoleRuntimeProfile(): RoleRuntimeProfile {

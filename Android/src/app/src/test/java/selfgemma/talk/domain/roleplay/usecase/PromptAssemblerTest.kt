@@ -226,4 +226,50 @@ class PromptAssemblerTest {
     assertTrue(prompt.contains("Case-sensitive match should trigger."))
     assertFalse(prompt.contains("Whole-word match should not trigger for scatter."))
   }
+
+  @Test
+  fun assemble_prefersCanonicalStCardProjectionOverLegacyFields() {
+    val now = System.currentTimeMillis()
+    val prompt =
+      assembler.assemble(
+        role =
+          RoleCard(
+            id = "role-3",
+            name = "Legacy Name",
+            summary = "Legacy summary",
+            systemPrompt = "Legacy prompt",
+            personaDescription = "Legacy persona",
+            worldSettings = "Legacy world",
+            exampleDialogues = listOf("Legacy example"),
+            cardCore =
+              StCharacterCard(
+                name = "Canonical Name",
+                data =
+                  StCharacterCardData(
+                    name = "Canonical Name",
+                    description = "Canonical summary",
+                    personality = "Canonical persona",
+                    scenario = "Canonical world",
+                    mes_example = "Canonical example",
+                    system_prompt = "Canonical prompt",
+                  ),
+              ),
+            createdAt = now,
+            updatedAt = now,
+          ),
+        summary = null,
+        memories = emptyList(),
+        recentMessages = emptyList(),
+        pendingUserInput = "",
+      )
+
+    assertTrue(prompt.contains("You are roleplaying as Canonical Name."))
+    assertTrue(prompt.contains("[Core Character]\nCanonical prompt"))
+    assertTrue(prompt.contains("[Character Summary]\nCanonical summary"))
+    assertTrue(prompt.contains("[Persona]\nCanonical persona"))
+    assertTrue(prompt.contains("[World]\nCanonical world"))
+    assertTrue(prompt.contains("[Example Dialogue]\nCanonical example"))
+    assertFalse(prompt.contains("Legacy summary"))
+    assertFalse(prompt.contains("Legacy prompt"))
+  }
 }

@@ -41,15 +41,9 @@ enum class SessionEventType {
 
 data class RoleCard(
   val id: String,
-  val name: String,
+  val stCard: StCharacterCard,
   val avatarUri: String? = null,
   val coverUri: String? = null,
-  val summary: String = "",
-  val systemPrompt: String,
-  val personaDescription: String = "",
-  val worldSettings: String = "",
-  val openingLine: String = "",
-  val exampleDialogues: List<String> = emptyList(),
   val safetyPolicy: String = "",
   val defaultModelId: String? = null,
   val defaultTemperature: Float? = null,
@@ -59,8 +53,6 @@ data class RoleCard(
   val summaryTurnThreshold: Int = 6,
   val memoryEnabled: Boolean = true,
   val memoryMaxItems: Int = 32,
-  val tags: List<String> = emptyList(),
-  val cardCore: StCharacterCard? = null,
   val runtimeProfile: RoleRuntimeProfile? = null,
   val mediaProfile: RoleMediaProfile? = null,
   val interopState: RoleInteropState? = null,
@@ -68,7 +60,96 @@ data class RoleCard(
   val archived: Boolean = false,
   val createdAt: Long,
   val updatedAt: Long,
-)
+) {
+  constructor(
+    id: String,
+    name: String,
+    avatarUri: String? = null,
+    coverUri: String? = null,
+    summary: String = "",
+    systemPrompt: String,
+    personaDescription: String = "",
+    worldSettings: String = "",
+    openingLine: String = "",
+    exampleDialogues: List<String> = emptyList(),
+    safetyPolicy: String = "",
+    defaultModelId: String? = null,
+    defaultTemperature: Float? = null,
+    defaultTopP: Float? = null,
+    defaultTopK: Int? = null,
+    enableThinking: Boolean = false,
+    summaryTurnThreshold: Int = 6,
+    memoryEnabled: Boolean = true,
+    memoryMaxItems: Int = 32,
+    tags: List<String> = emptyList(),
+    cardCore: StCharacterCard? = null,
+    runtimeProfile: RoleRuntimeProfile? = null,
+    mediaProfile: RoleMediaProfile? = null,
+    interopState: RoleInteropState? = null,
+    builtIn: Boolean = false,
+    archived: Boolean = false,
+    createdAt: Long,
+    updatedAt: Long,
+  ) : this(
+    id = id,
+    stCard =
+      cardCore ?: legacyFieldsToStCard(
+        name = name,
+        summary = summary,
+        systemPrompt = systemPrompt,
+        personaDescription = personaDescription,
+        worldSettings = worldSettings,
+        openingLine = openingLine,
+        exampleDialogues = exampleDialogues,
+        tags = tags,
+      ),
+    avatarUri = avatarUri,
+    coverUri = coverUri,
+    safetyPolicy = safetyPolicy,
+    defaultModelId = defaultModelId,
+    defaultTemperature = defaultTemperature,
+    defaultTopP = defaultTopP,
+    defaultTopK = defaultTopK,
+    enableThinking = enableThinking,
+    summaryTurnThreshold = summaryTurnThreshold,
+    memoryEnabled = memoryEnabled,
+    memoryMaxItems = memoryMaxItems,
+    runtimeProfile = runtimeProfile,
+    mediaProfile = mediaProfile,
+    interopState = interopState,
+    builtIn = builtIn,
+    archived = archived,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+  )
+
+  val name: String
+    get() = stCard.resolvedName()
+
+  val summary: String
+    get() = stCard.resolvedDescription()
+
+  val systemPrompt: String
+    get() = stCard.cardDataOrEmpty().system_prompt.orEmpty()
+
+  val personaDescription: String
+    get() = stCard.resolvedPersonality()
+
+  val worldSettings: String
+    get() = stCard.resolvedScenario()
+
+  val openingLine: String
+    get() = stCard.resolvedFirstMessage()
+
+  val exampleDialogues: List<String>
+    get() = stCard.resolvedMessageExample().toExampleDialogues()
+
+  val tags: List<String>
+    get() = stCard.cardDataOrEmpty().tags ?: stCard.tags.orEmpty()
+
+  val cardCore: StCharacterCard
+    get() = stCard
+}
 
 data class Session(
   val id: String,
@@ -140,3 +221,59 @@ data class SessionEvent(
   val payloadJson: String = "{}",
   val createdAt: Long,
 )
+
+private fun legacyFieldsToStCard(
+  name: String,
+  summary: String,
+  systemPrompt: String,
+  personaDescription: String,
+  worldSettings: String,
+  openingLine: String,
+  exampleDialogues: List<String>,
+  tags: List<String>,
+): StCharacterCard {
+  val mesExample = exampleDialogues.map(String::trim).filter(String::isNotBlank).joinToString("\n\n")
+  val data =
+    StCharacterCardData(
+      name = name,
+      description = summary,
+      personality = personaDescription,
+      scenario = worldSettings,
+      first_mes = openingLine,
+      mes_example = mesExample,
+      system_prompt = systemPrompt,
+      tags = tags,
+    )
+  return StCharacterCard(
+    spec = "chara_card_v2",
+    spec_version = "2.0",
+    name = name,
+    description = summary,
+    personality = personaDescription,
+    scenario = worldSettings,
+    first_mes = openingLine,
+    mes_example = mesExample,
+    tags = tags,
+    data = data,
+  )
+}
+
+private fun String.toExampleDialogues(): List<String> {
+  return split("\n\n").map(String::trim).filter(String::isNotBlank)
+}
+
+fun RoleCard.resolvedName(): String = stCard.resolvedName()
+
+fun RoleCard.resolvedSummary(): String = stCard.resolvedDescription()
+
+fun RoleCard.resolvedSystemPrompt(): String = stCard.resolvedSystemPrompt()
+
+fun RoleCard.resolvedPersonaDescription(): String = stCard.resolvedPersonality()
+
+fun RoleCard.resolvedWorldSettings(): String = stCard.resolvedScenario()
+
+fun RoleCard.resolvedOpeningLine(): String = stCard.resolvedFirstMessage()
+
+fun RoleCard.resolvedExampleDialogues(): List<String> = exampleDialogues
+
+fun RoleCard.resolvedTags(): List<String> = stCard.resolvedTags()
