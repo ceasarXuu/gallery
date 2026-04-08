@@ -1,0 +1,139 @@
+package selfgemma.talk.domain.roleplay.usecase
+
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import selfgemma.talk.domain.roleplay.model.Message
+import selfgemma.talk.domain.roleplay.model.MessageSide
+import selfgemma.talk.domain.roleplay.model.MessageStatus
+import selfgemma.talk.domain.roleplay.model.RoleCard
+import selfgemma.talk.domain.roleplay.model.RoleCardCore
+import selfgemma.talk.domain.roleplay.model.Session
+import selfgemma.talk.domain.roleplay.model.SessionEvent
+import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.repository.ConversationRepository
+import selfgemma.talk.domain.roleplay.repository.RoleRepository
+
+class CreateRoleplaySessionUseCaseTest {
+  @Test
+  fun createSession_seedsAssistantOpeningMessage() = runBlocking {
+    val conversationRepository = SessionSeedConversationRepository()
+    val roleRepository =
+      SessionSeedRoleRepository(
+        RoleCard(
+          id = "role-1",
+          name = "Iris",
+          systemPrompt = "Stay in character.",
+          openingLine = "Wrong fallback",
+          cardCore = RoleCardCore(name = "Iris", firstMessage = "<div>Hello</div>"),
+          createdAt = 1L,
+          updatedAt = 1L,
+        )
+      )
+
+    val session =
+      CreateRoleplaySessionUseCase(
+        conversationRepository = conversationRepository,
+        roleRepository = roleRepository,
+      ).invoke(roleId = "role-1", modelId = "gemma")
+
+    assertEquals("role-1", session.roleId)
+    assertEquals(1, conversationRepository.messages.size)
+    assertEquals(MessageSide.ASSISTANT, conversationRepository.messages.single().side)
+    assertEquals("<div>Hello</div>", conversationRepository.messages.single().content)
+    assertEquals(MessageStatus.COMPLETED, conversationRepository.messages.single().status)
+  }
+
+  @Test
+  fun createSession_skipsSeedWhenOpeningMessageBlank() = runBlocking {
+    val conversationRepository = SessionSeedConversationRepository()
+    val roleRepository =
+      SessionSeedRoleRepository(
+        RoleCard(
+          id = "role-2",
+          name = "Nova",
+          systemPrompt = "Stay in character.",
+          createdAt = 1L,
+          updatedAt = 1L,
+        )
+      )
+
+    CreateRoleplaySessionUseCase(
+      conversationRepository = conversationRepository,
+      roleRepository = roleRepository,
+    ).invoke(roleId = "role-2", modelId = "gemma")
+
+    assertTrue(conversationRepository.messages.isEmpty())
+  }
+}
+
+private class SessionSeedConversationRepository : ConversationRepository {
+  private val sessions = linkedMapOf<String, Session>()
+  val messages = mutableListOf<Message>()
+
+  override fun observeSessions(): Flow<List<Session>> = MutableStateFlow(emptyList())
+
+  override fun observeMessages(sessionId: String): Flow<List<Message>> = MutableStateFlow(emptyList())
+
+  override suspend fun listMessages(sessionId: String): List<Message> = messages.filter { it.sessionId == sessionId }
+
+  override suspend fun getSession(sessionId: String): Session? = sessions[sessionId]
+
+  override suspend fun createSession(roleId: String, modelId: String): Session {
+    val session =
+      Session(
+        id = "session-1",
+        roleId = roleId,
+        title = "New Session",
+        activeModelId = modelId,
+        createdAt = 10L,
+        updatedAt = 10L,
+        lastMessageAt = 10L,
+      )
+    sessions[session.id] = session
+    return session
+  }
+
+  override suspend fun updateSession(session: Session) {
+    sessions[session.id] = session
+  }
+
+  override suspend fun archiveSession(sessionId: String) = Unit
+
+  override suspend fun deleteSession(sessionId: String) = Unit
+
+  override suspend fun appendMessage(message: Message) {
+    messages += message
+    val session = sessions[message.sessionId]
+    if (session != null) {
+      sessions[message.sessionId] = session.copy(updatedAt = message.updatedAt, lastMessageAt = message.updatedAt)
+    }
+  }
+
+  override suspend fun updateMessage(message: Message) = Unit
+
+  override suspend fun replaceMessages(sessionId: String, messages: List<Message>) = Unit
+
+  override suspend fun nextMessageSeq(sessionId: String): Int = messages.count { it.sessionId == sessionId } + 1
+
+  override suspend fun getSummary(sessionId: String): SessionSummary? = null
+
+  override suspend fun upsertSummary(summary: SessionSummary) = Unit
+
+  override suspend fun listEvents(sessionId: String): List<SessionEvent> = emptyList()
+
+  override suspend fun appendEvent(event: SessionEvent) = Unit
+}
+
+private class SessionSeedRoleRepository(private val role: RoleCard) : RoleRepository {
+  override fun observeRoles(): Flow<List<RoleCard>> = MutableStateFlow(listOf(role))
+
+  override suspend fun getRole(roleId: String): RoleCard? = role.takeIf { it.id == roleId }
+
+  override suspend fun saveRole(role: RoleCard) = Unit
+
+  override suspend fun deleteRole(roleId: String) = Unit
+}

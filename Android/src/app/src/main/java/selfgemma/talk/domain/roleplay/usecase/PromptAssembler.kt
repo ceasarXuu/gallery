@@ -36,10 +36,6 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
         appendSection("Example Dialogue", role.exampleDialogues.joinToString("\n"))
       }
 
-      if (role.openingLine.isNotBlank() && dialogueWindow.isEmpty()) {
-        appendSection("Suggested Opening Tone", role.openingLine)
-      }
-
       appendSection("Session Summary", summary?.summaryText.orEmpty())
 
       if (memories.isNotEmpty()) {

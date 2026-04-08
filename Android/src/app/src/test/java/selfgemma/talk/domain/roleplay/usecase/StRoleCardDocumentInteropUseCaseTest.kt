@@ -1,5 +1,6 @@
 package selfgemma.talk.domain.roleplay.usecase
 
+import java.util.Base64
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -52,6 +53,41 @@ class StRoleCardDocumentInteropUseCaseTest {
   }
 
   @Test
+  fun importFromUri_normalizesLegacyCardLikeSillyTavern() = runBlocking {
+    val repository = FakeRoleCardDocumentRepository().apply {
+      metadata["content://cards/legacy.json"] =
+        RoleplayInteropDocumentMetadata(displayName = "legacy.json", mimeType = "application/json")
+      documents["content://cards/legacy.json"] =
+        """
+        {
+          "name": "Catty",
+          "description": "Street cat turned catboy.",
+          "personality": "Feral and skittish.",
+          "scenario": "Taken in from a shelter.",
+          "first_mes": "<div>Hello</div>",
+          "mes_example": "<START>\n{{user}}: Hi",
+          "creator_notes": "legacy notes",
+          "tags": ["NSFW", "Catboy"],
+          "character_book": {"entries":[{"id":1}]}
+        }
+        """.trimIndent()
+    }
+
+    val imported =
+      ImportStRoleCardFromUriUseCase(
+        documentRepository = repository,
+        importStV2RoleCardUseCase = ImportStV2RoleCardUseCase(),
+      ).importFromUri("content://cards/legacy.json", now = 9L)
+
+    assertEquals("Catty", imported.name)
+    assertEquals("Street cat turned catboy.", imported.summary)
+    assertEquals("<div>Hello</div>", imported.openingLine)
+    assertEquals(listOf("NSFW", "Catboy"), imported.tags)
+    assertEquals("legacy notes", imported.cardCore?.creatorNotes)
+    assertEquals(null, imported.cardCore?.characterBook)
+  }
+
+  @Test
   fun exportToUri_writesPngWhenTargetIsPng() = runBlocking {
     val repository = FakeRoleCardDocumentRepository().apply {
       metadata["content://cards/astra.png"] =
@@ -85,7 +121,10 @@ class StRoleCardDocumentInteropUseCaseTest {
       FakeRoleCardDocumentRepository().apply {
         metadata["content://cards/export.png"] =
           RoleplayInteropDocumentMetadata(displayName = "export.png", mimeType = "image/png")
-        byteDocuments["content://images/avatar.png"] = byteArrayOf(1, 2, 3, 4)
+        byteDocuments["content://images/avatar.png"] =
+          Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8BzZQAAAAASUVORK5CYII="
+          )
       }
     val useCase =
       ExportStRoleCardToUriUseCase(

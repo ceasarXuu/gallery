@@ -17,8 +17,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import selfgemma.talk.R
 import selfgemma.talk.domain.roleplay.model.RoleCard
-import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
+import selfgemma.talk.domain.roleplay.usecase.CreateRoleplaySessionUseCase
 import selfgemma.talk.domain.roleplay.usecase.ImportStRoleCardFromUriUseCase
 
 data class RoleCatalogUiState(
@@ -35,7 +35,7 @@ class RoleCatalogViewModel
 constructor(
   @ApplicationContext private val appContext: Context,
   private val roleRepository: RoleRepository,
-  private val conversationRepository: ConversationRepository,
+  private val createRoleplaySessionUseCase: CreateRoleplaySessionUseCase,
   private val importStRoleCardFromUriUseCase: ImportStRoleCardFromUriUseCase,
 ) : ViewModel() {
   private val feedbackState = MutableStateFlow(RoleCatalogUiState(loading = false))
@@ -57,7 +57,7 @@ constructor(
       )
 
   suspend fun createSession(roleId: String, modelId: String): String {
-    return conversationRepository.createSession(roleId = roleId, modelId = modelId).id
+    return createRoleplaySessionUseCase(roleId = roleId, modelId = modelId).id
   }
 
   fun deleteRole(roleId: String) {

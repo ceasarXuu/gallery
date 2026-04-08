@@ -84,5 +84,6 @@ class PromptAssemblerTest {
     assertTrue(prompt.contains("User: We should check the lower station next."))
     assertTrue(prompt.contains("Iris Vale: Agreed. The forged pass narrows the route."))
     assertFalse(prompt.contains("[Suggested Opening Tone]"))
+    assertFalse(prompt.contains("The case file is already open."))
   }
 }

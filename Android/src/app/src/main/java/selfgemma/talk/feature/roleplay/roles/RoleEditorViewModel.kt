@@ -404,6 +404,17 @@ constructor(
 
     val now = System.currentTimeMillis()
     val existingRole = loadedRole
+    val updatedTags = snapshot.tagsText.toTagList()
+    val updatedCardCore =
+      existingRole?.cardCore?.copy(
+        name = roleName,
+        description = snapshot.summary.trim(),
+        personality = snapshot.personaDescription.trim(),
+        scenario = snapshot.worldSettings.trim(),
+        firstMessage = snapshot.openingLine.trim(),
+        systemPrompt = systemPrompt,
+        tags = updatedTags,
+      )
 
     return RoleCard(
       id = editingRoleId ?: UUID.randomUUID().toString(),
@@ -415,7 +426,7 @@ constructor(
       openingLine = snapshot.openingLine.trim(),
       safetyPolicy = snapshot.safetyPolicy.trim(),
       defaultModelId = snapshot.defaultModelId,
-      tags = snapshot.tagsText.toTagList(),
+      tags = updatedTags,
       builtIn = snapshot.builtIn,
       createdAt = existingRole?.createdAt ?: now,
       updatedAt = now,
@@ -429,7 +440,7 @@ constructor(
       memoryMaxItems = existingRole?.memoryMaxItems ?: 32,
       avatarUri = snapshot.avatarUri,
       coverUri = snapshot.coverUri,
-      cardCore = existingRole?.cardCore,
+      cardCore = updatedCardCore,
       runtimeProfile = existingRole?.runtimeProfile,
       mediaProfile =
         RoleMediaProfile(

@@ -1,5 +1,7 @@
 package selfgemma.talk.domain.roleplay.usecase
 
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import java.util.UUID
 import selfgemma.talk.data.roleplay.interop.stcardpng.StPngRoleCardCodec
@@ -77,14 +79,116 @@ constructor(
   private fun normalizeSupportedSpec(rawJson: String): String {
     return runCatching {
       val jsonObject = JsonParser.parseString(rawJson).asJsonObject
-      val spec = jsonObject.get("spec")?.asString
-      if (spec == "chara_card_v3") {
-        jsonObject.addProperty("spec", "chara_card_v2")
-        jsonObject.addProperty("spec_version", "2.0")
-        jsonObject.toString()
-      } else {
-        rawJson
+      when (jsonObject.get("spec")?.asString) {
+        "chara_card_v3" -> {
+          jsonObject.addProperty("spec", "chara_card_v2")
+          jsonObject.addProperty("spec_version", "2.0")
+          jsonObject.toString()
+        }
+        "chara_card_v2" -> rawJson
+        else -> normalizeLegacyCard(jsonObject)?.toString() ?: rawJson
       }
     }.getOrDefault(rawJson)
+  }
+
+  private fun normalizeLegacyCard(jsonObject: JsonObject): JsonObject? {
+    val requiredLegacyFields = listOf("name", "description", "personality", "scenario", "first_mes", "mes_example")
+    if (requiredLegacyFields.any { field -> !jsonObject.has(field) }) {
+      return null
+    }
+
+    return JsonObject().apply {
+      addProperty("spec", "chara_card_v2")
+      addProperty("spec_version", "2.0")
+      addProperty("name", jsonObject.stringValue("name"))
+      addProperty("description", jsonObject.stringValue("description"))
+      addProperty("personality", jsonObject.stringValue("personality"))
+      addProperty("scenario", jsonObject.stringValue("scenario"))
+      addProperty("first_mes", jsonObject.stringValue("first_mes"))
+      addProperty("mes_example", jsonObject.stringValue("mes_example"))
+      add(
+        "data",
+        JsonObject().apply {
+          addProperty("name", jsonObject.stringValue("name"))
+          addProperty("description", jsonObject.stringValue("description"))
+          addProperty("personality", jsonObject.stringValue("personality"))
+          addProperty("scenario", jsonObject.stringValue("scenario"))
+          addProperty("first_mes", jsonObject.stringValue("first_mes"))
+          addProperty("mes_example", jsonObject.stringValue("mes_example"))
+          addProperty(
+            "creator_notes",
+            jsonObject.firstStringValue("creatorcomment", "creator_notes"),
+          )
+          addProperty("system_prompt", "")
+          addProperty("post_history_instructions", "")
+          add("alternate_greetings", JsonArray())
+          add("tags", jsonObject.toTagArray())
+          addProperty("creator", jsonObject.stringValue("creator"))
+          addProperty("character_version", jsonObject.stringValue("character_version"))
+          add(
+            "extensions",
+            JsonObject().apply {
+              addProperty("talkativeness", jsonObject.doubleValue("talkativeness") ?: 0.5)
+              addProperty("fav", jsonObject.booleanValue("fav") ?: false)
+              addProperty("world", jsonObject.stringValue("world"))
+            },
+          )
+        },
+      )
+    }
+  }
+
+  private fun JsonObject.stringValue(key: String): String {
+    val value = get(key) ?: return ""
+    return if (value.isJsonNull) "" else value.asString
+  }
+
+  private fun JsonObject.firstStringValue(vararg keys: String): String {
+    return keys.firstNotNullOfOrNull { key ->
+      get(key)?.takeUnless { it.isJsonNull }?.asString
+    }.orEmpty()
+  }
+
+  private fun JsonObject.doubleValue(key: String): Double? {
+    val value = get(key) ?: return null
+    if (value.isJsonNull) {
+      return null
+    }
+    return value.asString.toDoubleOrNull()
+  }
+
+  private fun JsonObject.booleanValue(key: String): Boolean? {
+    val value = get(key) ?: return null
+    if (value.isJsonNull) {
+      return null
+    }
+    return when {
+      value.isJsonPrimitive && value.asJsonPrimitive.isBoolean -> value.asBoolean
+      value.isJsonPrimitive && value.asJsonPrimitive.isString -> {
+        when (value.asString.lowercase()) {
+          "true" -> true
+          "false" -> false
+          else -> null
+        }
+      }
+      else -> null
+    }
+  }
+
+  private fun JsonObject.toTagArray(): JsonArray {
+    val tags = get("tags") ?: return JsonArray()
+    return when {
+      tags.isJsonArray -> tags.asJsonArray.deepCopy()
+      tags.isJsonPrimitive && tags.asJsonPrimitive.isString -> {
+        JsonArray().apply {
+          tags.asString
+            .split(",")
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .forEach(::add)
+        }
+      }
+      else -> JsonArray()
+    }
   }
 }

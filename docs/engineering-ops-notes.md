@@ -319,3 +319,20 @@ Verification notes:
 - When trimming role editor media UI, prefer deleting only screen-level modules first and leaving the underlying `RoleMediaProfile` schema untouched. This keeps ST import/export compatibility stable while simplifying the editing experience.
 
 - 2026-04-08 Role editor UI verification: startup success does not prove the editor page changed. For navigation-sensitive Compose screens, verify the real target page with db shell uiautomator dump after each tap, and confirm distinctive texts such as the role editor tab titles before calling the change installed.
+
+## 2026-04-08 ST role card import alignment notes
+
+- Goal: align card import behavior with SillyTavern's actual import path, not only with the nominal v2 validator.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.StRoleCardDocumentInteropUseCaseTest" --tests "selfgemma.talk.domain.roleplay.usecase.CreateRoleplaySessionUseCaseTest" --tests "selfgemma.talk.domain.roleplay.usecase.PromptAssemblerTest"
+```
+
+Notes:
+
+- Some cards in the wild are legacy/v1-shaped but also include a partial `data` object. To match ST import behavior, normalize those cards from the top-level v1 fields and ignore partial `data` payloads during legacy import.
+- Do not place `first_mes` into the system prompt. ST treats it as the opening assistant message; prompt injection changes the role behavior and makes embedded HTML/formatting blocks show up in the wrong place.
+- In the current app architecture, the closest ST-equivalent behavior is: preserve `first_mes` on the role card, seed it as the first assistant message when a new session is created, and keep it out of prompt assembly.
