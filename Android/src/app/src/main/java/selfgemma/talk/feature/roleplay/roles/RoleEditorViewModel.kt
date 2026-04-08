@@ -24,6 +24,8 @@ import selfgemma.talk.domain.roleplay.model.RoleMediaProfile
 import selfgemma.talk.domain.roleplay.model.RoleMediaSource
 import selfgemma.talk.domain.roleplay.model.RoleMediaUsage
 import selfgemma.talk.domain.roleplay.model.RoleSpriteAsset
+import selfgemma.talk.domain.roleplay.model.coverImageUri
+import selfgemma.talk.domain.roleplay.model.primaryAvatarUri
 import selfgemma.talk.domain.roleplay.usecase.ExportStRoleCardToUriUseCase
 import selfgemma.talk.domain.roleplay.usecase.ImportStRoleCardFromUriUseCase
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
@@ -323,8 +325,8 @@ constructor(
               safetyPolicy = importedRole.safetyPolicy,
               tagsText = importedRole.tags.joinToString(", "),
               defaultModelId = importedRole.defaultModelId,
-              avatarUri = importedRole.avatarUri,
-              coverUri = importedRole.coverUri,
+              avatarUri = importedRole.primaryAvatarUri(),
+              coverUri = importedRole.coverImageUri(),
               avatarSource = importedRole.mediaProfile?.primaryAvatar?.source,
               coverSource = importedRole.mediaProfile?.coverImage?.source,
               galleryAssets = importedRole.mediaProfile?.galleryAssets.orEmpty(),
@@ -438,8 +440,8 @@ constructor(
       summaryTurnThreshold = existingRole?.summaryTurnThreshold ?: 6,
       memoryEnabled = existingRole?.memoryEnabled ?: true,
       memoryMaxItems = existingRole?.memoryMaxItems ?: 32,
-      avatarUri = snapshot.avatarUri,
-      coverUri = snapshot.coverUri,
+      avatarUri = snapshot.avatarUri ?: existingRole?.primaryAvatarUri(),
+      coverUri = snapshot.coverUri ?: existingRole?.coverImageUri(),
       cardCore = updatedCardCore,
       runtimeProfile = existingRole?.runtimeProfile,
       mediaProfile =
@@ -510,8 +512,8 @@ constructor(
           safetyPolicy = role.safetyPolicy,
           tagsText = role.tags.joinToString(", "),
           defaultModelId = role.defaultModelId,
-          avatarUri = role.avatarUri,
-          coverUri = role.coverUri,
+          avatarUri = role.primaryAvatarUri(),
+          coverUri = role.coverImageUri(),
           avatarSource = role.mediaProfile?.primaryAvatar?.source,
           coverSource = role.mediaProfile?.coverImage?.source,
           galleryAssets = role.mediaProfile?.galleryAssets.orEmpty(),

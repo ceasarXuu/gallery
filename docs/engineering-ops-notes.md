@@ -267,6 +267,25 @@ Notes:
 - For ST runtime regressions, unit tests are necessary but not sufficient; always do one overwrite install and one fresh in-app send after prompt assembly changes.
 - `SendRoleplayMessage` now logs one `assembled prompt ...` line per generation. Use it to confirm prompt construction happened and to spot abnormal prompt growth after lorebook changes.
 - When checking imported cards that contain HTML-heavy greetings, verify both the first seeded assistant bubble and the next generated assistant reply. The opener and the runtime prompt path are different codepaths.
+
+## 2026-04-08 Role editor imported avatar persistence note
+
+- Symptom: after importing an ST PNG card, saving, and reopening the role editor, the avatar preview can disappear even though the imported media profile is still present.
+- Root cause: editor loading was reading top-level `avatarUri` / `coverUri` directly instead of resolving through `mediaProfile.primaryAvatar` / `mediaProfile.coverImage`. If legacy columns and media profile drift apart, the editor can render an empty preview while the catalog still has the image.
+
+Fix:
+
+- Prefer `mediaProfile.primaryAvatar?.uri` and `mediaProfile.coverImage?.uri` when mapping `RoleEntity -> RoleCard`.
+- In the editor, always load and resave avatar/cover from the resolved primary media URI, not just the legacy top-level columns.
+
+Verification:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.data.roleplay.mapper.RoleplayMappersTest"
+adb install -r .\app\build\outputs\apk\debug\app-debug.apk
+```
 - Keep image-picking launchers separate from ST card import launchers; once media UX exists, sharing a single picker creates confusing state coupling.
 ## 2026-04-07 Roleplay chat overflow menu positioning
 

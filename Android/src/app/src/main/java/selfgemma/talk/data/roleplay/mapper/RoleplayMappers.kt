@@ -18,11 +18,13 @@ fun RoleEntity.toDomain(): RoleCard {
   val runtimeProfile = toRoleRuntimeProfileOrLegacy()
   val mediaProfile = toRoleMediaProfileOrLegacy()
   val interopState = toRoleInteropStateOrDefault()
+  val resolvedAvatarUri = mediaProfile.primaryAvatar?.uri ?: avatarUri
+  val resolvedCoverUri = mediaProfile.coverImage?.uri ?: coverUri
   return RoleCard(
     id = id,
     name = name,
-    avatarUri = avatarUri,
-    coverUri = coverUri,
+    avatarUri = resolvedAvatarUri,
+    coverUri = resolvedCoverUri,
     summary = summary,
     systemPrompt = systemPrompt,
     personaDescription = personaDescription,
