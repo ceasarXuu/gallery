@@ -285,7 +285,7 @@ fun RoleEditorScreen(
             onClick = { importLauncher.launch(arrayOf("application/json", "image/png")) },
             modifier = Modifier.fillMaxWidth().testTag("role_editor_import_st_json"),
           ) {
-            Text("Import ST Role Card")
+            Text(stringResource(R.string.role_editor_import_st_card))
           }
           OutlinedButton(
             onClick = {
@@ -294,7 +294,7 @@ fun RoleEditorScreen(
             },
             modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_json"),
           ) {
-            Text("Export ST Role Card JSON")
+            Text(stringResource(R.string.role_editor_export_st_json))
           }
           OutlinedButton(
             onClick = {
@@ -307,7 +307,7 @@ fun RoleEditorScreen(
             },
             modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_png"),
           ) {
-            Text("Export ST Role Card PNG")
+            Text(stringResource(R.string.role_editor_export_st_png))
           }
         }
       }

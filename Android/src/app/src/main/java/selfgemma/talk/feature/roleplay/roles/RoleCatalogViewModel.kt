@@ -1,8 +1,11 @@
 package selfgemma.talk.feature.roleplay.roles
 
+import android.content.Context
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -12,6 +15,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import selfgemma.talk.R
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
@@ -29,6 +33,7 @@ data class RoleCatalogUiState(
 class RoleCatalogViewModel
 @Inject
 constructor(
+  @ApplicationContext private val appContext: Context,
   private val roleRepository: RoleRepository,
   private val conversationRepository: ConversationRepository,
   private val importStRoleCardFromUriUseCase: ImportStRoleCardFromUriUseCase,
@@ -70,7 +75,7 @@ constructor(
           roleRepository.saveRole(importedRole)
           feedbackState.update {
             it.copy(
-              statusMessage = "Imported ST role card into your custom roles.",
+              statusMessage = appString(R.string.role_catalog_status_st_imported),
               errorMessage = null,
             )
           }
@@ -79,10 +84,14 @@ constructor(
           feedbackState.update {
             it.copy(
               statusMessage = null,
-              errorMessage = error.message ?: "Failed to import ST role card.",
+              errorMessage = error.message ?: appString(R.string.role_catalog_error_st_import_failed),
             )
           }
         }
     }
+  }
+
+  private fun appString(@StringRes resId: Int, vararg args: Any): String {
+    return appContext.getString(resId, *args)
   }
 }

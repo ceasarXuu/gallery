@@ -1,9 +1,11 @@
 package selfgemma.talk.feature.roleplay.roles
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import selfgemma.talk.R
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.RoleCardSourceFormat
 import selfgemma.talk.domain.roleplay.model.RoleMediaAsset
@@ -55,6 +58,7 @@ class RoleEditorViewModel
 @Inject
 constructor(
   savedStateHandle: SavedStateHandle,
+  @ApplicationContext private val appContext: Context,
   private val roleRepository: RoleRepository,
   private val importStRoleCardFromUriUseCase: ImportStRoleCardFromUriUseCase,
   private val exportStRoleCardToUriUseCase: ExportStRoleCardToUriUseCase,
@@ -113,9 +117,9 @@ constructor(
         errorMessage = null,
         statusMessage =
           if (value.isNullOrBlank()) {
-            "Cleared primary avatar."
+            appContext.getString(R.string.role_editor_status_avatar_cleared)
           } else {
-            "Updated primary avatar."
+            appContext.getString(R.string.role_editor_status_avatar_updated)
           },
         importedFromStPng = false,
       )
@@ -132,9 +136,9 @@ constructor(
         errorMessage = null,
         statusMessage =
           if (value.isNullOrBlank()) {
-            "Cleared cover image."
+            appContext.getString(R.string.role_editor_status_cover_cleared)
           } else {
-            "Updated cover image."
+            appContext.getString(R.string.role_editor_status_cover_updated)
           },
       )
     }
@@ -161,7 +165,7 @@ constructor(
     _uiState.update {
       it.copy(
         galleryAssets = it.galleryAssets + newAssets,
-        statusMessage = "Added ${newAssets.size} gallery image(s).",
+        statusMessage = appContext.getString(R.string.role_editor_status_gallery_added, newAssets.size),
         errorMessage = null,
       )
     }
@@ -177,7 +181,7 @@ constructor(
         coverUri = if (removedAsset?.uri == it.coverUri) null else it.coverUri,
         coverSource = if (removedAsset?.uri == it.coverUri) null else it.coverSource,
         importedFromStPng = if (removedAsset?.uri == it.avatarUri) false else it.importedFromStPng,
-        statusMessage = "Removed gallery image.",
+        statusMessage = appContext.getString(R.string.role_editor_status_gallery_removed),
         errorMessage = null,
       )
     }
@@ -202,7 +206,7 @@ constructor(
       it.copy(
         avatarUri = asset.uri,
         avatarSource = asset.source,
-        statusMessage = "Selected gallery image as primary avatar.",
+        statusMessage = appContext.getString(R.string.role_editor_status_gallery_avatar),
         errorMessage = null,
         importedFromStPng = asset.source == RoleMediaSource.ST_PNG_IMPORT,
       )
@@ -217,7 +221,7 @@ constructor(
       it.copy(
         coverUri = asset.uri,
         coverSource = asset.source,
-        statusMessage = "Selected gallery image as cover image.",
+        statusMessage = appContext.getString(R.string.role_editor_status_gallery_cover),
         errorMessage = null,
       )
     }
@@ -245,7 +249,7 @@ constructor(
     _uiState.update {
       it.copy(
         spriteAssets = it.spriteAssets + newAssets,
-        statusMessage = "Added ${newAssets.size} sprite image(s).",
+        statusMessage = appContext.getString(R.string.role_editor_status_sprite_added, newAssets.size),
         errorMessage = null,
       )
     }
@@ -255,7 +259,7 @@ constructor(
     _uiState.update {
       it.copy(
         spriteAssets = it.spriteAssets.filterNot { asset -> asset.id == assetId },
-        statusMessage = "Removed sprite image.",
+        statusMessage = appContext.getString(R.string.role_editor_status_sprite_removed),
         errorMessage = null,
       )
     }
@@ -328,13 +332,13 @@ constructor(
               importedFromStPng =
                 importedRole.mediaProfile?.importState?.importedFromStPng
                   ?: (importedRole.interopState?.sourceFormat == RoleCardSourceFormat.ST_PNG),
-              statusMessage = "Imported ST role card. Review and save to persist changes.",
+              statusMessage = appContext.getString(R.string.role_editor_status_st_imported),
             )
         }
         .onFailure { error ->
           _uiState.update {
             it.copy(
-              errorMessage = error.message ?: "Failed to import ST role card.",
+              errorMessage = error.message ?: appContext.getString(R.string.role_editor_error_st_import_failed),
               statusMessage = null,
             )
           }
@@ -354,7 +358,7 @@ constructor(
         .onSuccess {
           _uiState.update {
             it.copy(
-              statusMessage = "Exported ST role card to the selected location.",
+              statusMessage = appContext.getString(R.string.role_editor_status_st_exported),
               errorMessage = null,
             )
           }
@@ -362,7 +366,7 @@ constructor(
         .onFailure { error ->
           _uiState.update {
             it.copy(
-              errorMessage = error.message ?: "Failed to export ST role card.",
+              errorMessage = error.message ?: appContext.getString(R.string.role_editor_error_st_export_failed),
               statusMessage = null,
             )
           }
@@ -393,7 +397,7 @@ constructor(
     val systemPrompt = snapshot.systemPrompt.trim()
     if (roleName.isBlank() || systemPrompt.isBlank()) {
       _uiState.update {
-        it.copy(errorMessage = "Role name and system prompt are required.")
+        it.copy(errorMessage = appContext.getString(R.string.role_editor_error_required_fields))
       }
       return null
     }
@@ -474,7 +478,7 @@ constructor(
             loading = false,
             roleId = null,
             isNewRole = true,
-            systemPrompt = "Stay in character, answer naturally, and maintain continuity with the user's previous turns.",
+            systemPrompt = appContext.getString(R.string.role_editor_default_system_prompt),
           )
         return@launch
       }

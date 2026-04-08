@@ -308,3 +308,9 @@ Verification notes:
     - `compileDebugKotlin` can report daemon-state corruption such as `Expected compiler error, but got exitCode=OK`
     - downstream `hiltAggregateDepsDebug` / `compileDebugJavaWithJavac` can then fail on missing generated classes unrelated to the roleplay media changes
   - Conclusion: for this repo, `compileDebugKotlin` is currently a reliable signal for local code correctness, but `assembleDebug` is not yet stable enough to serve as a regression gate until the build pipeline itself is repaired.
+
+## 2026-04-08 Roleplay localization notes
+
+- Adding feature text only to `values/strings.xml` is not enough in this app. Existing locale folders `values-en`, `values-ja`, `values-ko`, and `values-zh-rCN` must be updated in the same change, otherwise the UI silently falls back to base strings and ships a mixed-language experience.
+- For roleplay screens, audit both XML resources and Compose/Kotlin hardcoded text. New import/export status toasts and editor button labels can easily hide in `ViewModel` string construction, not just in `Screen` composables.
+- This workspace contains historical mojibake in some locale files and one duplicated menu block in `RoleplayChatScreen.kt`; when `apply_patch` cannot match those lines reliably, replace the exact block and immediately re-run `:app:compileDebugKotlin` to catch any brace drift before moving on.

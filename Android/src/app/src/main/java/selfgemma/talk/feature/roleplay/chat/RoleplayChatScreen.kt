@@ -1,4 +1,4 @@
-package selfgemma.talk.feature.roleplay.chat
+﻿package selfgemma.talk.feature.roleplay.chat
 
 import android.os.SystemClock
 import android.util.Log
@@ -379,7 +379,7 @@ fun RoleplayChatScreen(
       offset = DpOffset(x = (-10).dp, y = (-80).dp),
     ) {
       DropdownMenuItem(
-        text = { Text("切换模型") },
+        text = { Text(stringResource(R.string.chat_switch_model)) },
         onClick = {
           showMenu = false
           showModelPicker = true
@@ -389,7 +389,7 @@ fun RoleplayChatScreen(
         }
       )
       DropdownMenuItem(
-        text = { Text("打开模型库") },
+        text = { Text(stringResource(R.string.chat_open_model_library_menu)) },
         onClick = {
           showMenu = false
           onOpenModelLibrary()
@@ -403,7 +403,7 @@ fun RoleplayChatScreen(
     if (showModelPicker && downloadedModels.isNotEmpty()) {
       AlertDialog(
         onDismissRequest = { showModelPicker = false },
-        title = { Text("选择模型") },
+        title = { Text(stringResource(R.string.chat_select_model_title)) },
         text = {
           Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             downloadedModels.forEach { model ->
@@ -430,7 +430,11 @@ fun RoleplayChatScreen(
                     modifier = Modifier.weight(1f)
                   )
                   if (model.name == activeModel?.name) {
-                    Icon(Icons.Rounded.Check, contentDescription = "当前使用", tint = MaterialTheme.colorScheme.primary)
+                    Icon(
+                      Icons.Rounded.Check,
+                      contentDescription = stringResource(R.string.chat_current_model),
+                      tint = MaterialTheme.colorScheme.primary,
+                    )
                   }
                 }
               }
@@ -670,6 +674,7 @@ private fun ChatComposer(
   }
 }
 
+@Composable
 private fun Message.displayText(): String {
   if (content.isNotBlank()) {
     return content
@@ -677,19 +682,20 @@ private fun Message.displayText(): String {
 
   return when (status) {
     MessageStatus.STREAMING -> "..."
-    MessageStatus.INTERRUPTED -> "Response stopped."
-    MessageStatus.FAILED -> errorMessage ?: "Response failed."
-    else -> "Empty message"
+    MessageStatus.INTERRUPTED -> stringResource(R.string.chat_response_stopped)
+    MessageStatus.FAILED -> errorMessage ?: stringResource(R.string.chat_response_failed)
+    else -> stringResource(R.string.chat_empty_message)
   }
 }
 
+@Composable
 private fun MessageStatus.toDisplayLabel(): String {
   return when (this) {
-    MessageStatus.PENDING -> "Pending"
-    MessageStatus.STREAMING -> "Streaming"
-    MessageStatus.COMPLETED -> "Completed"
-    MessageStatus.FAILED -> "Failed"
-    MessageStatus.INTERRUPTED -> "Stopped"
+    MessageStatus.PENDING -> stringResource(R.string.chat_status_pending)
+    MessageStatus.STREAMING -> stringResource(R.string.chat_status_streaming)
+    MessageStatus.COMPLETED -> stringResource(R.string.chat_status_completed)
+    MessageStatus.FAILED -> stringResource(R.string.chat_status_failed)
+    MessageStatus.INTERRUPTED -> stringResource(R.string.chat_status_stopped)
   }
 }
 

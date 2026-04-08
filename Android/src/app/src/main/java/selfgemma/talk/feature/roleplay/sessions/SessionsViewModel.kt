@@ -1,8 +1,11 @@
 package selfgemma.talk.feature.roleplay.sessions
 
+import android.content.Context
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -11,6 +14,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import selfgemma.talk.R
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
 import selfgemma.talk.domain.roleplay.usecase.EnsureRoleplaySeedDataUseCase
@@ -39,6 +43,7 @@ data class SessionsUiState(
 class SessionsViewModel
 @Inject
 constructor(
+  @ApplicationContext private val appContext: Context,
   private val conversationRepository: ConversationRepository,
   roleRepository: RoleRepository,
   ensureRoleplaySeedData: EnsureRoleplaySeedDataUseCase,
@@ -62,7 +67,7 @@ constructor(
             SessionListItemUiState(
               id = session.id,
               title = session.title,
-              roleName = role?.name ?: "Unknown role",
+              roleName = role?.name ?: appString(R.string.sessions_unknown_role),
               avatarUri = role?.primaryAvatarUri(),
               pinned = session.pinned,
               updatedAt = session.updatedAt,
@@ -70,7 +75,7 @@ constructor(
                 session.lastAssistantMessageExcerpt
                   ?: session.lastUserMessageExcerpt
                   ?: session.lastSummary
-                  ?: "No messages yet",
+                  ?: appString(R.string.sessions_no_messages),
             )
           },
         statusMessage = feedback.statusMessage,
@@ -119,7 +124,7 @@ constructor(
         .onSuccess {
           feedbackState.update {
             it.copy(
-              statusMessage = "Imported ST chat JSONL into the selected session.",
+              statusMessage = appString(R.string.sessions_status_imported),
               errorMessage = null,
             )
           }
@@ -128,7 +133,7 @@ constructor(
           feedbackState.update {
             it.copy(
               statusMessage = null,
-              errorMessage = error.message ?: "Failed to import ST chat JSONL.",
+              errorMessage = error.message ?: appString(R.string.sessions_error_import_failed),
             )
           }
         }
@@ -143,7 +148,7 @@ constructor(
         .onSuccess {
           feedbackState.update {
             it.copy(
-              statusMessage = "Exported ST chat JSONL to the selected location.",
+              statusMessage = appString(R.string.sessions_status_exported),
               errorMessage = null,
             )
           }
@@ -152,10 +157,14 @@ constructor(
           feedbackState.update {
             it.copy(
               statusMessage = null,
-              errorMessage = error.message ?: "Failed to export ST chat JSONL.",
+              errorMessage = error.message ?: appString(R.string.sessions_error_export_failed),
             )
           }
         }
     }
+  }
+
+  private fun appString(@StringRes resId: Int, vararg args: Any): String {
+    return appContext.getString(resId, *args)
   }
 }
