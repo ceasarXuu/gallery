@@ -1,7 +1,9 @@
 ﻿package selfgemma.talk.feature.roleplay.chat
 
 import android.os.SystemClock
+import android.text.method.LinkMovementMethod
 import android.util.Log
+import android.widget.TextView
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -72,8 +74,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.text.HtmlCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import selfgemma.talk.AppTopBar
 import selfgemma.talk.data.AppBarAction
@@ -90,6 +95,7 @@ import androidx.compose.ui.res.stringResource
 import selfgemma.talk.R
 import selfgemma.talk.domain.roleplay.model.primaryAvatarUri
 import selfgemma.talk.feature.roleplay.common.RoleAvatar
+import selfgemma.talk.ui.common.MarkdownText
 
 private const val TAG = "RoleplayChatScreen"
 
@@ -506,10 +512,14 @@ private fun ChatMessageBubble(
             if (message.status == MessageStatus.STREAMING) {
               TypingIndicator()
             } else {
-              Text(
+              RenderChatMessageText(
                 text = message.displayText(),
-                style = MaterialTheme.typography.bodyLarge,
-                lineHeight = 22.sp,
+                textColor =
+                  if (isUser) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                  } else {
+                    MaterialTheme.colorScheme.onSurface
+                  },
               )
             }
           }
@@ -546,6 +556,48 @@ private fun ChatMessageBubble(
   } else {
     content()
   }
+}
+
+@Composable
+private fun RenderChatMessageText(
+  text: String,
+  textColor: Color,
+) {
+  when {
+    text.looksLikeHtml() -> HtmlText(text = text, textColor = textColor)
+    text.looksLikeMarkdown() -> MarkdownText(text = text, textColor = textColor, linkColor = textColor)
+    else ->
+      Text(
+        text = text,
+        style = MaterialTheme.typography.bodyLarge,
+        lineHeight = 22.sp,
+        color = textColor,
+      )
+  }
+}
+
+@Composable
+private fun HtmlText(
+  text: String,
+  textColor: Color,
+) {
+  val context = LocalContext.current
+  val textSize = MaterialTheme.typography.bodyLarge.fontSize.value
+  AndroidView(
+    factory = {
+      TextView(context).apply {
+        setTextColor(textColor.toArgb())
+        setTextSize(textSize)
+        movementMethod = LinkMovementMethod.getInstance()
+        linksClickable = true
+        setLineSpacing(0f, 1.2f)
+      }
+    },
+    update = { textView ->
+      textView.setTextColor(textColor.toArgb())
+      textView.text = HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_LEGACY)
+    },
+  )
 }
 
 @Composable
@@ -751,4 +803,13 @@ private fun calculateLatestListItemIndex(
   }
 
   return messageCount - 1
+}
+
+private fun String.looksLikeHtml(): Boolean {
+  return Regex("""<([a-zA-Z][a-zA-Z0-9]*)(\s[^>]*)?>|</[a-zA-Z][a-zA-Z0-9]*>""").containsMatchIn(this)
+}
+
+private fun String.looksLikeMarkdown(): Boolean {
+  return Regex("""(?m)^\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```|~~~)|(\[[^]]+]\([^)]+\)|`[^`]+`|\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|_[^_\n]+_)""")
+    .containsMatchIn(this)
 }

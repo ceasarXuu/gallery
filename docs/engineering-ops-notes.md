@@ -339,3 +339,5 @@ Notes:
 - `character_book` cannot stay as a dead preserved blob if the goal is ST-aligned import behavior. Even a simplified runtime pass should at least respect enabled entries, entry position (`before_char` / `after_char`), and key matching against the live conversation context.
 - `post_history_instructions` belongs after recent conversation context, not in the core character section. Putting it earlier weakens its intended effect and diverges from how ST uses it as a post-history instruction block.
 - `alternate_greetings` should be preserved even if the UI does not expose greeting switching yet. Use the first alternate greeting as the fallback opening message only when `first_mes` itself is blank.
+- Imported ST cards can legally have an empty `system_prompt`. Do not block save on that field in the editor; requiring it forces users to patch cards that ST itself accepts.
+- If an ST card ships HTML-heavy greetings, chat rendering must not dump raw tags back to the user. In this app, detect HTML/Markdown in message bubbles and render it as rich text instead of plain `Text`.

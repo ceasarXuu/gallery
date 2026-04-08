@@ -395,7 +395,7 @@ constructor(
     val snapshot = _uiState.value
     val roleName = snapshot.name.trim()
     val systemPrompt = snapshot.systemPrompt.trim()
-    if (roleName.isBlank() || systemPrompt.isBlank()) {
+    if (roleName.isBlank()) {
       _uiState.update {
         it.copy(errorMessage = appContext.getString(R.string.role_editor_error_required_fields))
       }
