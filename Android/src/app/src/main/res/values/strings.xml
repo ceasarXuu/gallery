@@ -107,6 +107,10 @@
   <string name="role_editor_create_title">Create Role</string>
   <string name="role_editor_edit_title">Edit Role</string>
   <string name="role_editor_loading">Loading role...</string>
+  <string name="role_editor_tab_basic">Basic</string>
+  <string name="role_editor_tab_persona">Persona</string>
+  <string name="role_editor_tab_world">World</string>
+  <string name="role_editor_tab_other">Other</string>
   <string name="role_editor_name_label">Role name</string>
   <string name="role_editor_name_placeholder">Enter a character name</string>
   <string name="role_editor_summary_label">Summary</string>

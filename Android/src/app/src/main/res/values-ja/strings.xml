@@ -493,6 +493,10 @@
   <string name="role_editor_error_st_export_failed">STロールカードの書き出しに失敗しました</string>
   <string name="role_editor_error_required_fields">名前、概要、システムプロンプトを入力してください。</string>
   <string name="role_editor_default_system_prompt">あなたは没入型のロールプレイアシスタントです。役柄の一貫性を保ち、設定に沿って自然に応答してください。</string>
+  <string name="role_editor_tab_basic">基本</string>
+  <string name="role_editor_tab_persona">人格</string>
+  <string name="role_editor_tab_world">世界</string>
+  <string name="role_editor_tab_other">その他</string>
   <string name="role_catalog_status_st_imported">STロールカードをインポートしました</string>
   <string name="role_catalog_error_st_import_failed">STロールカードのインポートに失敗しました</string>
   <string name="sessions_unknown_role">不明なロール</string>

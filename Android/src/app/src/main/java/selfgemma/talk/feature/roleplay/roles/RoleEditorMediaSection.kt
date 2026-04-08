@@ -50,6 +50,8 @@ fun RoleEditorMediaSection(
   avatarSource: RoleMediaSource?,
   galleryAssets: List<RoleMediaAsset>,
   importedFromStPng: Boolean,
+  showAvatarSection: Boolean = true,
+  showGallerySection: Boolean = true,
   onPickAvatar: () -> Unit,
   onClearAvatar: () -> Unit,
   onAddGallery: () -> Unit,
@@ -60,38 +62,46 @@ fun RoleEditorMediaSection(
   modifier: Modifier = Modifier,
 ) {
   Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-    Text(
-      text = stringResource(R.string.role_editor_media_title),
-      style = MaterialTheme.typography.titleMedium,
-    )
-    Text(
-      text = stringResource(R.string.role_editor_media_summary),
-      style = MaterialTheme.typography.bodyMedium,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    RoleMediaCard(
-      title = stringResource(R.string.role_editor_avatar_title),
-      subtitle = stringResource(R.string.role_editor_avatar_summary),
-      uri = avatarUri,
-      emptyLabel = stringResource(R.string.role_editor_avatar_empty),
-      statusLabel =
-        when {
-          avatarUri.isNullOrBlank() -> stringResource(R.string.role_editor_media_status_missing)
-          avatarSource == RoleMediaSource.ST_PNG_IMPORT || importedFromStPng -> stringResource(R.string.role_editor_media_status_st_png)
-          else -> stringResource(R.string.role_editor_media_status_local)
-        },
-      onPick = onPickAvatar,
-      onClear = onClearAvatar,
-      previewAspectRatio = 1f,
-    )
-    GalleryAssetsCard(
-      assets = galleryAssets,
-      onAddGallery = onAddGallery,
-      onUpdateName = onRenameGalleryAsset,
-      onUpdateUsage = onUpdateGalleryUsage,
-      onSetAsAvatar = onSetGalleryAsAvatar,
-      onRemove = onRemoveGalleryAsset,
-    )
+    if (showAvatarSection || showGallerySection) {
+      Text(
+        text = stringResource(R.string.role_editor_media_title),
+        style = MaterialTheme.typography.titleMedium,
+      )
+    }
+    if (showAvatarSection && showGallerySection) {
+      Text(
+        text = stringResource(R.string.role_editor_media_summary),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+    }
+    if (showAvatarSection) {
+      RoleMediaCard(
+        title = stringResource(R.string.role_editor_avatar_title),
+        subtitle = stringResource(R.string.role_editor_avatar_summary),
+        uri = avatarUri,
+        emptyLabel = stringResource(R.string.role_editor_avatar_empty),
+        statusLabel =
+          when {
+            avatarUri.isNullOrBlank() -> stringResource(R.string.role_editor_media_status_missing)
+            avatarSource == RoleMediaSource.ST_PNG_IMPORT || importedFromStPng -> stringResource(R.string.role_editor_media_status_st_png)
+            else -> stringResource(R.string.role_editor_media_status_local)
+          },
+        onPick = onPickAvatar,
+        onClear = onClearAvatar,
+        previewAspectRatio = 1f,
+      )
+    }
+    if (showGallerySection) {
+      GalleryAssetsCard(
+        assets = galleryAssets,
+        onAddGallery = onAddGallery,
+        onUpdateName = onRenameGalleryAsset,
+        onUpdateUsage = onUpdateGalleryUsage,
+        onSetAsAvatar = onSetGalleryAsAvatar,
+        onRemove = onRemoveGalleryAsset,
+      )
+    }
   }
 }
 

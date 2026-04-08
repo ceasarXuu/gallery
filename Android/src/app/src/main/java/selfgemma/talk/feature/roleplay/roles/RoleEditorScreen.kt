@@ -22,6 +22,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -59,6 +61,7 @@ fun RoleEditorScreen(
   var modelMenuExpanded by remember { mutableStateOf(false) }
   var showMissingAvatarExportDialog by remember { mutableStateOf(false) }
   var exportPngAfterAvatarPick by remember { mutableStateOf(false) }
+  var selectedTabIndex by remember { mutableStateOf(0) }
   val context = androidx.compose.ui.platform.LocalContext.current
   val importLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -137,153 +140,200 @@ fun RoleEditorScreen(
       verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
       item {
-        RoleEditorMediaSection(
-          avatarUri = uiState.avatarUri,
-          avatarSource = uiState.avatarSource,
-          galleryAssets = uiState.galleryAssets,
-          importedFromStPng = uiState.importedFromStPng,
-          onPickAvatar = { avatarLauncher.launch(arrayOf("image/*")) },
-          onClearAvatar = { viewModel.updateAvatarUri(null) },
-          onAddGallery = { galleryLauncher.launch(arrayOf("image/*")) },
-          onRenameGalleryAsset = viewModel::updateGalleryAssetName,
-          onUpdateGalleryUsage = viewModel::updateGalleryAssetUsage,
-          onSetGalleryAsAvatar = viewModel::setGalleryAssetAsAvatar,
-          onRemoveGalleryAsset = viewModel::removeGalleryAsset,
-        )
-      }
-      item {
-        TextField(
-          modifier = Modifier.fillMaxWidth().testTag("role_editor_name"),
-          value = uiState.name,
-          onValueChange = viewModel::updateName,
-          label = { Text(stringResource(R.string.role_editor_name_label)) },
-          placeholder = { Text(stringResource(R.string.role_editor_name_placeholder)) },
-        )
-      }
-      item {
-        TextField(
-          modifier = Modifier.fillMaxWidth().testTag("role_editor_summary"),
-          value = uiState.summary,
-          onValueChange = viewModel::updateSummary,
-          minLines = 2,
-          label = { Text(stringResource(R.string.role_editor_summary_label)) },
-          placeholder = { Text(stringResource(R.string.role_editor_summary_placeholder)) },
-        )
-      }
-      item {
-        TextField(
-          modifier = Modifier.fillMaxWidth().testTag("role_editor_system_prompt"),
-          value = uiState.systemPrompt,
-          onValueChange = viewModel::updateSystemPrompt,
-          minLines = 5,
-          label = { Text(stringResource(R.string.role_editor_system_prompt_label)) },
-          placeholder = { Text(stringResource(R.string.role_editor_system_prompt_placeholder)) },
-        )
-      }
-      item {
-        TextField(
-          modifier = Modifier.fillMaxWidth().testTag("role_editor_persona"),
-          value = uiState.personaDescription,
-          onValueChange = viewModel::updatePersonaDescription,
-          minLines = 3,
-          label = { Text(stringResource(R.string.role_editor_persona_label)) },
-        )
-      }
-      item {
-        TextField(
-          modifier = Modifier.fillMaxWidth().testTag("role_editor_world_settings"),
-          value = uiState.worldSettings,
-          onValueChange = viewModel::updateWorldSettings,
-          minLines = 3,
-          label = { Text(stringResource(R.string.role_editor_world_settings_label)) },
-        )
-      }
-      item {
-        TextField(
-          modifier = Modifier.fillMaxWidth().testTag("role_editor_opening_line"),
-          value = uiState.openingLine,
-          onValueChange = viewModel::updateOpeningLine,
-          minLines = 2,
-          label = { Text(stringResource(R.string.role_editor_opening_line_label)) },
-        )
-      }
-      item {
-        TextField(
-          modifier = Modifier.fillMaxWidth().testTag("role_editor_safety_policy"),
-          value = uiState.safetyPolicy,
-          onValueChange = viewModel::updateSafetyPolicy,
-          minLines = 2,
-          label = { Text(stringResource(R.string.role_editor_safety_policy_label)) },
-        )
-      }
-      item {
-        TextField(
-          modifier = Modifier.fillMaxWidth().testTag("role_editor_tags"),
-          value = uiState.tagsText,
-          onValueChange = viewModel::updateTagsText,
-          label = { Text(stringResource(R.string.role_editor_tags_label)) },
-          placeholder = { Text(stringResource(R.string.role_editor_tags_placeholder)) },
-        )
-      }
-      item {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          Text(stringResource(R.string.role_editor_default_model_label), style = MaterialTheme.typography.labelLarge)
-          Box {
-            OutlinedButton(onClick = { modelMenuExpanded = true }) {
-              Text(uiState.defaultModelId ?: stringResource(R.string.role_editor_no_default_model))
-            }
-            DropdownMenu(
-              expanded = modelMenuExpanded,
-              onDismissRequest = { modelMenuExpanded = false },
-            ) {
-              DropdownMenuItem(
-                text = { Text(stringResource(R.string.role_editor_no_default_model)) },
-                onClick = {
-                  modelMenuExpanded = false
-                  viewModel.updateDefaultModelId(null)
-                },
-              )
-              downloadedModels.forEach { model ->DropdownMenuItem(
-                  text = { Text(model.displayName.ifEmpty { model.name }) },
-                  onClick = {
-                    modelMenuExpanded = false
-                    viewModel.updateDefaultModelId(model.name)
-                  },
-                )
-              }
-            }
+        val tabTitles =
+          listOf(
+            stringResource(R.string.role_editor_tab_basic),
+            stringResource(R.string.role_editor_tab_persona),
+            stringResource(R.string.role_editor_tab_world),
+            stringResource(R.string.role_editor_tab_other),
+          )
+        TabRow(selectedTabIndex = selectedTabIndex) {
+          tabTitles.forEachIndexed { index, title ->
+            Tab(
+              selected = selectedTabIndex == index,
+              onClick = { selectedTabIndex = index },
+              text = { Text(title) },
+            )
           }
         }
       }
-      item {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-          OutlinedButton(
-            onClick = { importLauncher.launch(arrayOf("application/json", "image/png")) },
-            modifier = Modifier.fillMaxWidth().testTag("role_editor_import_st_json"),
-          ) {
-            Text(stringResource(R.string.role_editor_import_st_card))
+      when (selectedTabIndex) {
+        0 -> {
+          item {
+            RoleEditorMediaSection(
+              avatarUri = uiState.avatarUri,
+              avatarSource = uiState.avatarSource,
+              galleryAssets = emptyList(),
+              importedFromStPng = uiState.importedFromStPng,
+              showAvatarSection = true,
+              showGallerySection = false,
+              onPickAvatar = { avatarLauncher.launch(arrayOf("image/*")) },
+              onClearAvatar = { viewModel.updateAvatarUri(null) },
+              onAddGallery = {},
+              onRenameGalleryAsset = { _, _ -> },
+              onUpdateGalleryUsage = { _, _ -> },
+              onSetGalleryAsAvatar = { },
+              onRemoveGalleryAsset = { },
+            )
           }
-          OutlinedButton(
-            onClick = {
-              val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-              exportJsonLauncher.launch("${fileName}.json")
-            },
-            modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_json"),
-          ) {
-            Text(stringResource(R.string.role_editor_export_st_json))
+          item {
+            TextField(
+              modifier = Modifier.fillMaxWidth().testTag("role_editor_name"),
+              value = uiState.name,
+              onValueChange = viewModel::updateName,
+              label = { Text(stringResource(R.string.role_editor_name_label)) },
+              placeholder = { Text(stringResource(R.string.role_editor_name_placeholder)) },
+            )
           }
-          OutlinedButton(
-            onClick = {
-              if (uiState.avatarUri.isNullOrBlank()) {
-                showMissingAvatarExportDialog = true
-              } else {
-                val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-                exportPngLauncher.launch("${fileName}.png")
+          item {
+            TextField(
+              modifier = Modifier.fillMaxWidth().testTag("role_editor_summary"),
+              value = uiState.summary,
+              onValueChange = viewModel::updateSummary,
+              minLines = 2,
+              label = { Text(stringResource(R.string.role_editor_summary_label)) },
+              placeholder = { Text(stringResource(R.string.role_editor_summary_placeholder)) },
+            )
+          }
+          item {
+            TextField(
+              modifier = Modifier.fillMaxWidth().testTag("role_editor_system_prompt"),
+              value = uiState.systemPrompt,
+              onValueChange = viewModel::updateSystemPrompt,
+              minLines = 5,
+              label = { Text(stringResource(R.string.role_editor_system_prompt_label)) },
+              placeholder = { Text(stringResource(R.string.role_editor_system_prompt_placeholder)) },
+            )
+          }
+        }
+        1 -> {
+          item {
+            TextField(
+              modifier = Modifier.fillMaxWidth().testTag("role_editor_persona"),
+              value = uiState.personaDescription,
+              onValueChange = viewModel::updatePersonaDescription,
+              minLines = 3,
+              label = { Text(stringResource(R.string.role_editor_persona_label)) },
+            )
+          }
+          item {
+            TextField(
+              modifier = Modifier.fillMaxWidth().testTag("role_editor_opening_line"),
+              value = uiState.openingLine,
+              onValueChange = viewModel::updateOpeningLine,
+              minLines = 2,
+              label = { Text(stringResource(R.string.role_editor_opening_line_label)) },
+            )
+          }
+        }
+        2 -> {
+          item {
+            TextField(
+              modifier = Modifier.fillMaxWidth().testTag("role_editor_world_settings"),
+              value = uiState.worldSettings,
+              onValueChange = viewModel::updateWorldSettings,
+              minLines = 6,
+              label = { Text(stringResource(R.string.role_editor_world_settings_label)) },
+            )
+          }
+        }
+        3 -> {
+          item {
+            TextField(
+              modifier = Modifier.fillMaxWidth().testTag("role_editor_safety_policy"),
+              value = uiState.safetyPolicy,
+              onValueChange = viewModel::updateSafetyPolicy,
+              minLines = 2,
+              label = { Text(stringResource(R.string.role_editor_safety_policy_label)) },
+            )
+          }
+          item {
+            TextField(
+              modifier = Modifier.fillMaxWidth().testTag("role_editor_tags"),
+              value = uiState.tagsText,
+              onValueChange = viewModel::updateTagsText,
+              label = { Text(stringResource(R.string.role_editor_tags_label)) },
+              placeholder = { Text(stringResource(R.string.role_editor_tags_placeholder)) },
+            )
+          }
+          item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+              Text(stringResource(R.string.role_editor_default_model_label), style = MaterialTheme.typography.labelLarge)
+              Box {
+                OutlinedButton(onClick = { modelMenuExpanded = true }) {
+                  Text(uiState.defaultModelId ?: stringResource(R.string.role_editor_no_default_model))
+                }
+                DropdownMenu(
+                  expanded = modelMenuExpanded,
+                  onDismissRequest = { modelMenuExpanded = false },
+                ) {
+                  DropdownMenuItem(
+                    text = { Text(stringResource(R.string.role_editor_no_default_model)) },
+                    onClick = {
+                      modelMenuExpanded = false
+                      viewModel.updateDefaultModelId(null)
+                    },
+                  )
+                  downloadedModels.forEach { model ->DropdownMenuItem(
+                      text = { Text(model.displayName.ifEmpty { model.name }) },
+                      onClick = {
+                        modelMenuExpanded = false
+                        viewModel.updateDefaultModelId(model.name)
+                      },
+                    )
+                  }
+                }
               }
-            },
-            modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_png"),
-          ) {
-            Text(stringResource(R.string.role_editor_export_st_png))
+            }
+          }
+          item {
+            RoleEditorMediaSection(
+              avatarUri = null,
+              avatarSource = uiState.avatarSource,
+              galleryAssets = uiState.galleryAssets,
+              importedFromStPng = uiState.importedFromStPng,
+              showAvatarSection = false,
+              showGallerySection = true,
+              onPickAvatar = {},
+              onClearAvatar = {},
+              onAddGallery = { galleryLauncher.launch(arrayOf("image/*")) },
+              onRenameGalleryAsset = viewModel::updateGalleryAssetName,
+              onUpdateGalleryUsage = viewModel::updateGalleryAssetUsage,
+              onSetGalleryAsAvatar = viewModel::setGalleryAssetAsAvatar,
+              onRemoveGalleryAsset = viewModel::removeGalleryAsset,
+            )
+          }
+          item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+              OutlinedButton(
+                onClick = { importLauncher.launch(arrayOf("application/json", "image/png")) },
+                modifier = Modifier.fillMaxWidth().testTag("role_editor_import_st_json"),
+              ) {
+                Text(stringResource(R.string.role_editor_import_st_card))
+              }
+              OutlinedButton(
+                onClick = {
+                  val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                  exportJsonLauncher.launch("${fileName}.json")
+                },
+                modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_json"),
+              ) {
+                Text(stringResource(R.string.role_editor_export_st_json))
+              }
+              OutlinedButton(
+                onClick = {
+                  if (uiState.avatarUri.isNullOrBlank()) {
+                    showMissingAvatarExportDialog = true
+                  } else {
+                    val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                    exportPngLauncher.launch("${fileName}.png")
+                  }
+                },
+                modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_png"),
+              ) {
+                Text(stringResource(R.string.role_editor_export_st_png))
+              }
+            }
           }
         }
       }

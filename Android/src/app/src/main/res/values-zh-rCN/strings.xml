@@ -497,6 +497,10 @@
   <string name="role_editor_error_st_export_failed">导出 ST 角色卡失败</string>
   <string name="role_editor_error_required_fields">请填写名称、简介和系统提示词。</string>
   <string name="role_editor_default_system_prompt">你是一名沉浸式角色扮演助手。保持角色一致性，并以符合设定的方式自然回复。</string>
+  <string name="role_editor_tab_basic">基础资料</string>
+  <string name="role_editor_tab_persona">人格设定</string>
+  <string name="role_editor_tab_world">世界设定</string>
+  <string name="role_editor_tab_other">其他配置</string>
   <string name="role_catalog_status_st_imported">已导入 ST 角色卡</string>
   <string name="role_catalog_error_st_import_failed">导入 ST 角色卡失败</string>
   <string name="sessions_unknown_role">未知角色</string>

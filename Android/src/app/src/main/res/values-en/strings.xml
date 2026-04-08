@@ -499,6 +499,10 @@
   <string name="role_editor_error_st_export_failed">Failed to export ST role card</string>
   <string name="role_editor_error_required_fields">Name, summary, and system prompt are required.</string>
   <string name="role_editor_default_system_prompt">You are an immersive roleplay assistant. Stay consistent with the role and reply naturally in character.</string>
+  <string name="role_editor_tab_basic">Basic</string>
+  <string name="role_editor_tab_persona">Persona</string>
+  <string name="role_editor_tab_world">World</string>
+  <string name="role_editor_tab_other">Other</string>
   <string name="role_catalog_status_st_imported">ST role card imported</string>
   <string name="role_catalog_error_st_import_failed">Failed to import ST role card</string>
   <string name="sessions_unknown_role">Unknown role</string>
