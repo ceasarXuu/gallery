@@ -123,11 +123,16 @@ constructor(
     val firstMes = jsonObject.stringValue("first_mes")
     val mesExample = jsonObject.stringValue("mes_example")
     val creatorNotes = jsonObject.firstStringValue("creatorcomment", "creator_notes")
+    val systemPrompt = jsonObject.firstStringValue("system_prompt")
+    val postHistoryInstructions = jsonObject.firstStringValue("post_history_instructions")
     val talkativeness = jsonObject.doubleValue("talkativeness") ?: 0.5
     val fav = jsonObject.booleanValue("fav") ?: false
     val tags = jsonObject.toTagArray()
+    val alternateGreetings = jsonObject.toJsonStringArray("alternate_greetings")
     val creator = jsonObject.stringValue("creator")
     val characterVersion = jsonObject.stringValue("character_version")
+    val characterBook = jsonObject.objectValue("character_book")
+    val topLevelExtensions = jsonObject.objectValue("extensions")
 
     return JsonObject().apply {
       addProperty("spec", "chara_card_v2")
@@ -156,18 +161,21 @@ constructor(
           addProperty("first_mes", firstMes)
           addProperty("mes_example", mesExample)
           addProperty("creator_notes", creatorNotes)
-          addProperty("system_prompt", "")
-          addProperty("post_history_instructions", "")
-          add("alternate_greetings", JsonArray())
+          addProperty("system_prompt", systemPrompt)
+          addProperty("post_history_instructions", postHistoryInstructions)
+          add("alternate_greetings", alternateGreetings.deepCopy())
           add("tags", tags.deepCopy())
           addProperty("creator", creator)
           addProperty("character_version", characterVersion)
+          characterBook?.let { add("character_book", it.deepCopy()) }
           add(
             "extensions",
-            JsonObject().apply {
+            (topLevelExtensions?.deepCopy() ?: JsonObject()).apply {
               addProperty("talkativeness", talkativeness)
               addProperty("fav", fav)
-              addProperty("world", jsonObject.stringValue("world"))
+              if (!has("world")) {
+                addProperty("world", jsonObject.stringValue("world"))
+              }
             },
           )
         },
@@ -227,6 +235,37 @@ constructor(
       }
       else -> JsonArray()
     }
+  }
+
+  private fun JsonObject.toJsonStringArray(key: String): JsonArray {
+    val value = get(key) ?: return JsonArray()
+    return when {
+      value.isJsonArray ->
+        JsonArray().apply {
+          value.asJsonArray.forEach { element ->
+            if (!element.isJsonNull) {
+              add(element.asString)
+            }
+          }
+        }
+      value.isJsonPrimitive && value.asJsonPrimitive.isString ->
+        JsonArray().apply {
+          value.asString
+            .split("\n")
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .forEach(::add)
+        }
+      else -> JsonArray()
+    }
+  }
+
+  private fun JsonObject.objectValue(key: String): JsonObject? {
+    val value = get(key) ?: return null
+    if (value.isJsonNull || !value.isJsonObject) {
+      return null
+    }
+    return value.asJsonObject
   }
 
   private fun humanizedDateTime(timestamp: Long = System.currentTimeMillis()): String {

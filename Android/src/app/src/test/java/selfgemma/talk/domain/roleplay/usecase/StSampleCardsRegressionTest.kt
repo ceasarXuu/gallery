@@ -19,6 +19,7 @@ import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.usecase.toStMacroContext
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
 import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentMetadata
@@ -45,10 +46,13 @@ class StSampleCardsRegressionTest {
     sampleFiles.forEach { file ->
       val imported = importUseCase.importFromUri(file.toString(), now = 100L)
       val cardData = imported.cardCore?.data
+      val macroContext = imported.toStMacroContext()
       val expectedSeed =
-        cardData?.first_mes
-          ?.takeIf(String::isNotBlank)
-          ?: cardData?.alternate_greetings?.firstOrNull().orEmpty()
+        macroContext.substitute(
+          cardData?.first_mes
+            ?.takeIf(String::isNotBlank)
+            ?: cardData?.alternate_greetings?.firstOrNull().orEmpty()
+        )
       val prompt =
         promptAssembler.assemble(
           role = imported,
@@ -89,6 +93,9 @@ class StSampleCardsRegressionTest {
       } else {
         assertEquals("${file.fileName} should seed exactly one assistant opener", 1, seededMessages.size)
         assertEquals(expectedSeed.trim(), seededMessages.single().content.trim())
+        assertFalse("${file.fileName} seeded opener should not keep {{char}}", seededMessages.single().content.contains("{{char}}"))
+        assertFalse("${file.fileName} seeded opener should not keep {{user}}", seededMessages.single().content.contains("{{user}}"))
+        assertFalse("${file.fileName} seeded opener should not keep <USER>", seededMessages.single().content.contains("<USER>"))
       }
 
       if (expectedSeed.contains("<div", ignoreCase = true) || expectedSeed.contains("<img", ignoreCase = true)) {
@@ -106,6 +113,9 @@ class StSampleCardsRegressionTest {
         ?.let { postHistory ->
           assertTrue("${file.fileName} should preserve post-history instructions", prompt.contains(postHistory))
         }
+
+      assertFalse("${file.fileName} prompt should not keep {{char}}", prompt.contains("{{char}}"))
+      assertFalse("${file.fileName} prompt should not keep {{user}}", prompt.contains("{{user}}"))
     }
 
     Files.createDirectories(testArtifactsDir(cardsDir))

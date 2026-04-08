@@ -20,11 +20,14 @@ constructor(
     val session = conversationRepository.createSession(roleId = roleId, modelId = modelId)
     val role = roleRepository.getRole(roleId) ?: return session
     val cardData = role.stCard.data
+    val macroContext = role.toStMacroContext()
     val openingMessage =
-      cardData?.first_mes
-        ?.ifBlank { cardData.alternate_greetings.orEmpty().firstOrNull().orEmpty() }
-        ?.ifBlank { role.resolvedOpeningLine() }
-        ?: role.resolvedOpeningLine()
+      macroContext.substitute(
+        cardData?.first_mes
+          ?.ifBlank { cardData.alternate_greetings.orEmpty().firstOrNull().orEmpty() }
+          ?.ifBlank { role.resolvedOpeningLine() }
+          ?: role.resolvedOpeningLine()
+      )
     if (openingMessage.isBlank()) {
       return session
     }

@@ -74,8 +74,12 @@ class StRoleCardDocumentInteropUseCaseTest {
           "first_mes": "<div>Hello</div>",
           "mes_example": "<START>\n{{user}}: Hi",
           "creator_notes": "legacy notes",
+          "system_prompt": "Protect {{user}}.",
+          "post_history_instructions": "Stay close to {{char}}.",
+          "alternate_greetings": ["Hi {{user}}", "Hey there"],
           "tags": ["NSFW", "Catboy"],
-          "character_book": {"entries":[{"id":1}]}
+          "character_book": {"entries":[{"id":1}]},
+          "extensions": {"depth_prompt":{"prompt":"Help {{user}}.","depth":2,"role":"system"}}
         }
         """.trimIndent()
     }
@@ -92,7 +96,11 @@ class StRoleCardDocumentInteropUseCaseTest {
     assertEquals("<div>Hello</div>", imported.openingLine)
     assertEquals(listOf("NSFW", "Catboy"), imported.tags)
     assertEquals("legacy notes", imported.cardCore?.data?.creator_notes)
-    assertEquals(null, imported.cardCore?.data?.character_book)
+    assertEquals("Protect {{user}}.", imported.cardCore?.data?.system_prompt)
+    assertEquals("Stay close to {{char}}.", imported.cardCore?.data?.post_history_instructions)
+    assertEquals(listOf("Hi {{user}}", "Hey there"), imported.cardCore?.data?.alternate_greetings)
+    assertTrue(imported.cardCore?.data?.character_book != null)
+    assertTrue(imported.cardCore?.data?.extensions?.has("depth_prompt") == true)
   }
 
   @Test

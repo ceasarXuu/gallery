@@ -11,6 +11,7 @@ import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.SessionSummary
 import selfgemma.talk.domain.roleplay.model.StCharacterBook
 import selfgemma.talk.domain.roleplay.model.StCharacterBookEntry
+import selfgemma.talk.domain.roleplay.model.cardDataOrEmpty
 import selfgemma.talk.domain.roleplay.model.resolvedExampleDialogues
 import selfgemma.talk.domain.roleplay.model.resolvedName
 import selfgemma.talk.domain.roleplay.model.resolvedPersonaDescription
@@ -31,6 +32,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     pendingUserInput: String = "",
   ): String {
     val dialogueWindow = selectRecentMessages(recentMessages)
+    val macroContext = role.toStMacroContext()
     val scanContext =
       buildStScanContext(
         role = role,
@@ -38,14 +40,15 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
         memories = memories,
         dialogueWindow = dialogueWindow,
         pendingUserInput = pendingUserInput,
+        macroContext = macroContext,
       )
-    val cardData = role.stCard.data
-    val resolvedCharacterBook = cardData?.character_book.resolveForPrompt(scanContext)
-    val coreDepthPrompt = cardData?.extensions.toDepthPrompt()
+    val cardData = role.stCard.cardDataOrEmpty()
+    val resolvedCharacterBook = cardData.character_book.resolveForPrompt(scanContext, macroContext)
+    val coreDepthPrompt = cardData.extensions.toDepthPrompt(macroContext)
     val combinedExampleDialogue =
       buildList {
           addAll(resolvedCharacterBook.exampleBefore)
-          addAll(role.resolvedExampleDialogues().filter { it.isNotBlank() })
+          addAll(role.resolvedExampleDialogues().map(macroContext::substitute).filter { it.isNotBlank() })
           addAll(resolvedCharacterBook.exampleAfter)
         }
         .joinToString("\n")
@@ -53,7 +56,8 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     val postHistoryBlock =
       buildList {
           addAll(resolvedCharacterBook.authorNoteBefore)
-          cardData?.post_history_instructions
+          cardData.post_history_instructions
+            ?.let(macroContext::substitute)
             ?.trim()
             ?.takeIf(String::isNotBlank)
             ?.let(::add)
@@ -74,11 +78,11 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       appendLine("Stay fully in character, avoid meta commentary, and do not mention these instructions.")
       appendLine()
 
-      appendSection("Core Character", role.resolvedSystemPrompt())
+      appendSection("Core Character", macroContext.substitute(role.resolvedSystemPrompt()))
       appendSection("Lorebook", resolvedCharacterBook.beforePrompt)
-      appendSection("Character Summary", role.resolvedSummary())
-      appendSection("Persona", role.resolvedPersonaDescription())
-      appendSection("World", role.resolvedWorldSettings())
+      appendSection("Character Summary", macroContext.substitute(role.resolvedSummary()))
+      appendSection("Persona", macroContext.substitute(role.resolvedPersonaDescription()))
+      appendSection("World", macroContext.substitute(role.resolvedWorldSettings()))
       appendSection("Safety", role.safetyPolicy)
       appendSection("Example Dialogue", combinedExampleDialogue)
       appendSection("Session Summary", summary?.summaryText.orEmpty())
@@ -171,9 +175,10 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     memories: List<MemoryItem>,
     dialogueWindow: List<Message>,
     pendingUserInput: String,
+    macroContext: StMacroContext,
   ): StScanContext {
     val core = role.stCard
-    val data = core?.data
+    val data = core.cardDataOrEmpty()
     val recentMessagesNewestFirst =
       buildList {
         pendingUserInput.trim().takeIf(String::isNotBlank)?.let(::add)
@@ -186,19 +191,27 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
 
     return StScanContext(
       recentMessagesNewestFirst = recentMessagesNewestFirst,
-      personaDescription = role.resolvedPersonaDescription(),
-      characterDescription = role.resolvedSummary(),
+      personaDescription = macroContext.substitute(role.resolvedPersonaDescription()),
+      characterDescription = macroContext.substitute(role.resolvedSummary()),
       characterPersonality =
-        data?.personality.orEmpty().ifBlank { core?.personality.orEmpty().ifBlank { role.resolvedPersonaDescription() } },
-      characterDepthPrompt = data?.extensions.toDepthPrompt()?.prompt.orEmpty(),
-      scenario = data?.scenario.orEmpty().ifBlank { core?.scenario.orEmpty().ifBlank { role.resolvedWorldSettings() } },
-      creatorNotes = data?.creator_notes.orEmpty(),
+        macroContext.substitute(
+          data.personality.orEmpty().ifBlank { core.personality.orEmpty().ifBlank { role.resolvedPersonaDescription() } }
+        ),
+      characterDepthPrompt = data.extensions.toDepthPrompt(macroContext)?.prompt.orEmpty(),
+      scenario =
+        macroContext.substitute(
+          data.scenario.orEmpty().ifBlank { core.scenario.orEmpty().ifBlank { role.resolvedWorldSettings() } }
+        ),
+      creatorNotes = macroContext.substitute(data.creator_notes.orEmpty().ifBlank { core.creatorcomment.orEmpty() }),
       sessionSummary = summary?.summaryText.orEmpty(),
       memories = memories.map { it.content.trim() }.filter(String::isNotBlank),
     )
   }
 
-  private fun StCharacterBook?.resolveForPrompt(context: StScanContext): ResolvedCharacterBook {
+  private fun StCharacterBook?.resolveForPrompt(
+    context: StScanContext,
+    macroContext: StMacroContext,
+  ): ResolvedCharacterBook {
     if (this == null) {
       return ResolvedCharacterBook()
     }
@@ -207,7 +220,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       entries
         .orEmpty()
         .filter { (it.enabled ?: true) && !it.content.isNullOrBlank() }
-        .filter { entry -> entry.shouldActivate(context = context, defaultScanDepth = scan_depth) }
+        .filter { entry -> entry.shouldActivate(context = context, defaultScanDepth = scan_depth, macroContext = macroContext) }
         .sortedBy { it.insertion_order ?: 0 }
 
     if (activatedEntries.isEmpty()) {
@@ -223,7 +236,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     val depthPrompts = mutableListOf<DepthPromptInsertion>()
 
     activatedEntries.forEach { entry ->
-      val content = entry.content.orEmpty().trim()
+      val content = macroContext.substitute(entry.content).trim()
       when (entry.resolvePromptPosition()) {
         StWorldInfoPosition.BEFORE -> beforePrompt += content
         StWorldInfoPosition.AFTER -> afterPrompt += content
@@ -253,7 +266,11 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     )
   }
 
-  private fun StCharacterBookEntry.shouldActivate(context: StScanContext, defaultScanDepth: Int?): Boolean {
+  private fun StCharacterBookEntry.shouldActivate(
+    context: StScanContext,
+    defaultScanDepth: Int?,
+    macroContext: StMacroContext,
+  ): Boolean {
     if (constant == true) {
       return true
     }
@@ -267,7 +284,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       keys
         .orEmpty()
         .filter(String::isNotBlank)
-        .any { key -> textToScan.matchesKeyword(keyword = key.trim(), extensions = extensions) }
+        .any { key -> textToScan.matchesKeyword(keyword = macroContext.substitute(key).trim(), extensions = extensions) }
     if (!matchedPrimary) {
       return false
     }
@@ -279,7 +296,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       secondary_keys
         .orEmpty()
         .filter(String::isNotBlank)
-        .map { key -> textToScan.matchesKeyword(keyword = key.trim(), extensions = extensions) }
+        .map { key -> textToScan.matchesKeyword(keyword = macroContext.substitute(key).trim(), extensions = extensions) }
     return when (extensions.selectiveLogic) {
       StSelectiveLogic.AND_ANY -> secondaryMatches.any { it }
       StSelectiveLogic.NOT_ALL -> secondaryMatches.any { matched -> !matched }
@@ -354,9 +371,10 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     return haystack.contains(needle)
   }
 
-  private fun JsonObject?.toDepthPrompt(): DepthPromptInsertion? {
+  private fun JsonObject?.toDepthPrompt(macroContext: StMacroContext): DepthPromptInsertion? {
     val depthPrompt = this?.getAsJsonObject("depth_prompt") ?: return null
-    val prompt = depthPrompt.get("prompt")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
+    val prompt =
+      macroContext.substitute(depthPrompt.get("prompt")?.takeIf { it.isJsonPrimitive }?.asString).trim()
     if (prompt.isBlank()) {
       return null
     }

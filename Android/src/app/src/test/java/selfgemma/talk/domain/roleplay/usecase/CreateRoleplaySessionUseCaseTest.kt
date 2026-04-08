@@ -125,6 +125,33 @@ class CreateRoleplaySessionUseCaseTest {
 
     assertEquals("Canonical opening", conversationRepository.messages.single().content)
   }
+
+  @Test
+  fun createSession_substitutesStNameMacrosInOpeningMessage() = runBlocking {
+    val conversationRepository = SessionSeedConversationRepository()
+    val roleRepository =
+      SessionSeedRoleRepository(
+        RoleCard(
+          id = "role-5",
+          name = "Catty",
+          systemPrompt = "Stay in character.",
+          cardCore =
+            StCharacterCard(
+              name = "Catty",
+              data = StCharacterCardData(first_mes = "<USER> looks at {{char}} and {{user}} smiles back."),
+            ),
+          createdAt = 1L,
+          updatedAt = 1L,
+        )
+      )
+
+    CreateRoleplaySessionUseCase(
+      conversationRepository = conversationRepository,
+      roleRepository = roleRepository,
+    ).invoke(roleId = "role-5", modelId = "gemma")
+
+    assertEquals("User looks at Catty and User smiles back.", conversationRepository.messages.single().content)
+  }
 }
 
 private class SessionSeedConversationRepository : ConversationRepository {

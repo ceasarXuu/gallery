@@ -1,0 +1,81 @@
+package selfgemma.talk.domain.roleplay.usecase
+
+import com.google.gson.JsonObject
+import selfgemma.talk.domain.roleplay.model.RoleCard
+import selfgemma.talk.domain.roleplay.model.cardDataOrEmpty
+import selfgemma.talk.domain.roleplay.model.resolvedMessageExample
+import selfgemma.talk.domain.roleplay.model.resolvedName
+import selfgemma.talk.domain.roleplay.model.resolvedPersonaDescription
+import selfgemma.talk.domain.roleplay.model.resolvedSummary
+import selfgemma.talk.domain.roleplay.model.resolvedSystemPrompt
+import selfgemma.talk.domain.roleplay.model.resolvedWorldSettings
+
+private const val DEFAULT_ST_USER_NAME = "User"
+private const val ST_MACRO_MAX_PASSES = 4
+private val LEGACY_ST_NAME_MACROS =
+  linkedMapOf(
+    "<USER>" to "{{user}}",
+    "<BOT>" to "{{char}}",
+    "<CHAR>" to "{{char}}",
+  )
+private val ST_MACRO_REGEX = Regex("""\{\{\s*([a-zA-Z0-9_]+)\s*}}""")
+
+data class StMacroContext(
+  val values: Map<String, String>,
+) {
+  fun substitute(content: String?): String {
+    if (content.isNullOrEmpty()) {
+      return content.orEmpty()
+    }
+
+    var current = normalizeLegacyMacros(content)
+    repeat(ST_MACRO_MAX_PASSES) {
+      val replaced =
+        ST_MACRO_REGEX.replace(current) { match ->
+          values[match.groupValues[1]] ?: match.value
+        }
+      if (replaced == current) {
+        return replaced
+      }
+      current = replaced
+    }
+    return current
+  }
+
+  private fun normalizeLegacyMacros(content: String): String {
+    var normalized = content
+    LEGACY_ST_NAME_MACROS.forEach { (legacyToken, macroToken) ->
+      normalized = normalized.replace(legacyToken, macroToken, ignoreCase = true)
+    }
+    return normalized
+  }
+}
+
+fun RoleCard.toStMacroContext(userName: String = DEFAULT_ST_USER_NAME): StMacroContext {
+  val cardData = stCard.cardDataOrEmpty()
+  val creatorNotes = cardData.creator_notes.orEmpty().ifBlank { stCard.creatorcomment.orEmpty() }
+  val mesExamplesRaw = stCard.resolvedMessageExample()
+  return StMacroContext(
+    values =
+      mapOf(
+        "user" to userName,
+        "char" to resolvedName(),
+        "description" to resolvedSummary(),
+        "personality" to resolvedPersonaDescription(),
+        "scenario" to resolvedWorldSettings(),
+        "persona" to resolvedPersonaDescription(),
+        "mesExamples" to mesExamplesRaw,
+        "mesExamplesRaw" to mesExamplesRaw,
+        "creatorNotes" to creatorNotes,
+        "charPrompt" to resolvedSystemPrompt(),
+        "charVersion" to cardData.character_version.orEmpty(),
+        "char_version" to cardData.character_version.orEmpty(),
+        "charDepthPrompt" to cardData.extensions.toDepthPromptPrompt().orEmpty(),
+      ),
+  )
+}
+
+private fun JsonObject?.toDepthPromptPrompt(): String? {
+  val depthPrompt = this?.getAsJsonObject("depth_prompt") ?: return null
+  return depthPrompt.get("prompt")?.takeIf { it.isJsonPrimitive }?.asString?.trim()?.ifBlank { null }
+}

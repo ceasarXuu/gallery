@@ -424,3 +424,10 @@ Notes:
 - ST PNG imports with embedded avatars must not persist the original picker `content://` as the role avatar source of truth. After import/save/reopen, that transient grant can disappear and the editor will show a missing avatar. Persist the imported PNG into app-private storage and point `primaryAvatar` at that internal file instead.
 - If the long-term goal is “app model is a superset of ST”, move `RoleCard` to `stCard + app extras` and demote `summary/persona/world/openingLine/tags` to projections. Keeping both as peer source-of-truth fields guarantees drift during import, editing, and export.
 - The next drift point after moving `RoleCard` to `stCard + app extras` is the editor state. If the editor only edits projected fields and rebuilds `stCard` on save, it reintroduces schema drift immediately. Keep `RoleEditorUiState` holding the canonical `stCard` and update that object on each field edit.
+## 2026-04-09 ST legacy and macro alignment note
+
+- Legacy/v1 ST normalization must carry more than the six classic top-level fields. Cards in the wild also depend on top-level `system_prompt`, `post_history_instructions`, `alternate_greetings`, `character_book`, and `extensions`; dropping those makes import look successful while runtime semantics drift from ST.
+- ST placeholder handling is runtime substitution, not import-time rewriting. Apply `{{user}}`, `{{char}}`, and related card-field macros when seeding `first_mes`, assembling prompt sections, and evaluating world info keys/content.
+- Legacy placeholders `<USER>`, `<BOT>`, and `<CHAR>` should flow through the same substitution path. Converting them only at render time keeps stored card JSON intact while matching old-card ST behavior.
+- After touching ST normalization or macro substitution, rerun:
+  - `.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.CreateRoleplaySessionUseCaseTest" --tests "selfgemma.talk.domain.roleplay.usecase.PromptAssemblerTest" --tests "selfgemma.talk.domain.roleplay.usecase.StRoleCardDocumentInteropUseCaseTest" --tests "selfgemma.talk.domain.roleplay.usecase.StSampleCardsRegressionTest" --no-daemon`

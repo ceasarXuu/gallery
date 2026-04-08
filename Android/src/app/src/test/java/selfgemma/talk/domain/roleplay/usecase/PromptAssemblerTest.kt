@@ -272,4 +272,72 @@ class PromptAssemblerTest {
     assertFalse(prompt.contains("Legacy summary"))
     assertFalse(prompt.contains("Legacy prompt"))
   }
+
+  @Test
+  fun assemble_substitutesStMacrosAcrossPromptAndLorebook() {
+    val now = System.currentTimeMillis()
+    val prompt =
+      assembler.assemble(
+        role =
+          RoleCard(
+            id = "role-4",
+            name = "Catty",
+            summary = "{{user}} adopted {{char}}.",
+            systemPrompt = "Protect {{user}} and remember {{creatorNotes}}.",
+            personaDescription = "{{char}} is playful.",
+            worldSettings = "{{scenario}}",
+            cardCore =
+              StCharacterCard(
+                name = "Catty",
+                scenario = "legacy world",
+                data =
+                  StCharacterCardData(
+                    scenario = "{{user}} and {{char}} share an apartment.",
+                    creator_notes = "{{user}} rescued {{char}} from a shelter.",
+                    mes_example = "{{user}}: Hi\n{{char}}: Hey.",
+                    character_book =
+                      StCharacterBook(
+                        entries =
+                          listOf(
+                            StCharacterBookEntry(
+                              id = 1,
+                              keys = listOf("Catty"),
+                              content = "{{char}} trusts {{user}}.",
+                              position = "before_char",
+                            )
+                          ),
+                      ),
+                  ),
+              ),
+            createdAt = now,
+            updatedAt = now,
+          ),
+        summary = null,
+        memories = emptyList(),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-4",
+              sessionId = "session-4",
+              seq = 1,
+              side = MessageSide.USER,
+              content = "Catty is here.",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            )
+          ),
+        pendingUserInput = "",
+      )
+
+    assertTrue(prompt.contains("Protect User and remember User rescued Catty from a shelter.."))
+    assertTrue(prompt.contains("[Character Summary]\nUser adopted Catty."))
+    assertTrue(prompt.contains("[Persona]\nCatty is playful."))
+    assertTrue(prompt.contains("[World]\nUser and Catty share an apartment."))
+    assertTrue(prompt.contains("[Example Dialogue]\nUser: Hi\nCatty: Hey."))
+    assertTrue(prompt.contains("Catty trusts User."))
+    assertFalse(prompt.contains("{{char}}"))
+    assertFalse(prompt.contains("{{user}}"))
+    assertFalse(prompt.contains("<USER>"))
+  }
 }
