@@ -2,107 +2,54 @@ package selfgemma.talk.feature.roleplay.chat
 
 import android.content.Context
 import android.media.AudioAttributes
-import android.media.AudioManager
-import android.media.SoundPool
+import android.media.MediaPlayer
 import android.util.Log
 import selfgemma.talk.R
 
 private const val TAG = "RoleplaySoundEffects"
 
 object RoleplaySoundEffectPlayer {
-  private val lock = Any()
-  private var soundPool: SoundPool? = null
-  private var sendSoundId = 0
-  private var receiveSoundId = 0
-  private var sendLoaded = false
-  private var receiveLoaded = false
-  private var pendingSendPlay = false
-  private var pendingReceivePlay = false
+  private val playbackAttributes =
+    AudioAttributes.Builder()
+      .setUsage(AudioAttributes.USAGE_MEDIA)
+      .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+      .build()
 
   fun prepare(context: Context) {
-    synchronized(lock) {
-      if (soundPool != null) {
-        return
-      }
-
-      val pool =
-        SoundPool.Builder()
-          .setMaxStreams(2)
-          .setAudioAttributes(
-            AudioAttributes.Builder()
-              .setUsage(AudioAttributes.USAGE_MEDIA)
-              .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-              .setLegacyStreamType(AudioManager.STREAM_MUSIC)
-              .build()
-          )
-          .build()
-
-      pool.setOnLoadCompleteListener { readyPool, sampleId, status ->
-        synchronized(lock) {
-          if (status != 0) {
-            Log.d(TAG, "sound load failed sampleId=$sampleId status=$status")
-            return@setOnLoadCompleteListener
-          }
-
-          when (sampleId) {
-            sendSoundId -> {
-              sendLoaded = true
-              Log.d(TAG, "send sound loaded")
-              if (pendingSendPlay) {
-                pendingSendPlay = false
-                playLoaded(readyPool, sendSoundId)
-              }
-            }
-            receiveSoundId -> {
-              receiveLoaded = true
-              Log.d(TAG, "receive sound loaded")
-              if (pendingReceivePlay) {
-                pendingReceivePlay = false
-                playLoaded(readyPool, receiveSoundId)
-              }
-            }
-          }
-        }
-      }
-
-      sendSoundId = pool.load(context.applicationContext, R.raw.iphone_send, 1)
-      receiveSoundId = pool.load(context.applicationContext, R.raw.iphone_back, 1)
-      soundPool = pool
-      Log.d(
-        TAG,
-        "sound pool prepared sendSoundId=$sendSoundId receiveSoundId=$receiveSoundId usage=media legacyStream=music",
-      )
-    }
+    // MediaPlayer has no preload contract comparable to SoundPool. Keep this as a no-op
+    // so callers can retain the same lifecycle without special branching.
+    Log.d(TAG, "player prepared mode=mediaplayer usage=media")
   }
 
   fun playSend(context: Context) {
-    synchronized(lock) {
-      prepare(context)
-      val pool = soundPool ?: return
-      if (!sendLoaded) {
-        pendingSendPlay = true
-        Log.d(TAG, "send sound queued until load completes")
-        return
-      }
-      playLoaded(pool, sendSoundId)
-    }
+    play(context = context, resId = R.raw.iphone_send, label = "send")
   }
 
   fun playReceive(context: Context) {
-    synchronized(lock) {
-      prepare(context)
-      val pool = soundPool ?: return
-      if (!receiveLoaded) {
-        pendingReceivePlay = true
-        Log.d(TAG, "receive sound queued until load completes")
-        return
-      }
-      playLoaded(pool, receiveSoundId)
-    }
+    play(context = context, resId = R.raw.iphone_back, label = "receive")
   }
 
-  private fun playLoaded(pool: SoundPool, soundId: Int) {
-    val streamId = pool.play(soundId, 1f, 1f, 1, 0, 1f)
-    Log.d(TAG, "play sound soundId=$soundId streamId=$streamId")
+  private fun play(context: Context, resId: Int, label: String) {
+    runCatching {
+      val player = checkNotNull(MediaPlayer.create(context.applicationContext, resId)) {
+        "MediaPlayer.create returned null for $label sound."
+      }
+      player.setAudioAttributes(playbackAttributes)
+      player.setVolume(1f, 1f)
+      player.setOnCompletionListener { completedPlayer ->
+        completedPlayer.release()
+        Log.d(TAG, "playback completed label=$label")
+      }
+      player.setOnErrorListener { erroredPlayer, what, extra ->
+        Log.e(TAG, "playback error label=$label what=$what extra=$extra")
+        erroredPlayer.release()
+        true
+      }
+      player.start()
+      Log.d(TAG, "playback started label=$label")
+    }
+      .onFailure { error ->
+        Log.e(TAG, "playback failed label=$label", error)
+      }
   }
 }

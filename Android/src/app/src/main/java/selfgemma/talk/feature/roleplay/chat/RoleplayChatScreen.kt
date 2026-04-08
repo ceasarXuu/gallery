@@ -459,33 +459,41 @@ private fun ChatMessageBubble(
         fontWeight = FontWeight.Medium,
       )
 
-      Surface(
-        modifier = Modifier.widthIn(max = 340.dp),
-        shape = RoundedCornerShape(18.dp),
-        tonalElevation = if (isUser) 1.dp else 0.5.dp,
-        shadowElevation = if (isUser) 1.dp else 0.5.dp,
-        color = if (isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom,
       ) {
-        Column(
-          modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-          verticalArrangement = Arrangement.spacedBy(6.dp),
+        if (isUser) {
+          Text(
+            text = stringResource(R.string.chat_message_read),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(end = 8.dp, bottom = 10.dp),
+          )
+        }
+
+        Surface(
+          modifier = Modifier.widthIn(max = 340.dp),
+          shape = RoundedCornerShape(18.dp),
+          tonalElevation = if (isUser) 1.dp else 0.5.dp,
+          shadowElevation = if (isUser) 1.dp else 0.5.dp,
+          color = if (isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
         ) {
-          if (isUser) {
-            Text(
-              text = stringResource(R.string.chat_message_read),
-              style = MaterialTheme.typography.labelSmall,
-              color = MaterialTheme.colorScheme.primary,
-              fontWeight = FontWeight.SemiBold,
-            )
-          }
-          if (message.status == MessageStatus.STREAMING) {
-            TypingIndicator()
-          } else {
-            Text(
-              text = message.displayText(),
-              style = MaterialTheme.typography.bodyLarge,
-              lineHeight = 22.sp,
-            )
+          Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+          ) {
+            if (message.status == MessageStatus.STREAMING) {
+              TypingIndicator()
+            } else {
+              Text(
+                text = message.displayText(),
+                style = MaterialTheme.typography.bodyLarge,
+                lineHeight = 22.sp,
+              )
+            }
           }
         }
       }
