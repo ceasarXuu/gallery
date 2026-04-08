@@ -4,10 +4,8 @@ import java.util.UUID
 import selfgemma.talk.data.roleplay.db.entity.RoleEntity
 import selfgemma.talk.domain.roleplay.model.MemoryPolicy
 import selfgemma.talk.domain.roleplay.model.RoleCard
-import selfgemma.talk.domain.roleplay.model.RoleCardCore
 import selfgemma.talk.domain.roleplay.model.RoleCardExportTarget
 import selfgemma.talk.domain.roleplay.model.RoleCardSourceFormat
-import selfgemma.talk.domain.roleplay.model.RoleCardSpecVersion
 import selfgemma.talk.domain.roleplay.model.RoleInteropState
 import selfgemma.talk.domain.roleplay.model.RoleMediaAsset
 import selfgemma.talk.domain.roleplay.model.RoleMediaImportState
@@ -17,13 +15,14 @@ import selfgemma.talk.domain.roleplay.model.RoleMediaSource
 import selfgemma.talk.domain.roleplay.model.RoleRuntimeProfile
 import selfgemma.talk.domain.roleplay.model.RuntimeModelParams
 import selfgemma.talk.domain.roleplay.model.RuntimeSafetyPolicy
+import selfgemma.talk.domain.roleplay.model.StCharacterCard
+import selfgemma.talk.domain.roleplay.model.StCharacterCardData
 
-internal fun RoleEntity.toRoleCardCoreOrLegacy(): RoleCardCore {
+internal fun RoleEntity.toRoleCardCoreOrLegacy(): StCharacterCard {
   return cardCoreJson
     ?.takeIf { it.isNotBlank() }
     ?.let(RoleplayInteropJsonCodec::decodeRoleCardCore)
-    ?: RoleCardCore(
-      spec = RoleCardSpecVersion.LEGACY,
+    ?: buildLegacyStCard(
       name = name,
       description = summary,
       personality = personaDescription,
@@ -114,10 +113,9 @@ internal fun RoleEntity.toRoleMediaProfileOrLegacy(): RoleMediaProfile {
     )
 }
 
-internal fun RoleCard.toPersistedRoleCardCore(): RoleCardCore {
+internal fun RoleCard.toPersistedRoleCardCore(): StCharacterCard {
   return cardCore
-    ?: RoleCardCore(
-      spec = RoleCardSpecVersion.LEGACY,
+    ?: buildLegacyStCard(
       name = name,
       description = summary,
       personality = personaDescription,
@@ -199,4 +197,39 @@ internal fun RoleCard.toPersistedRoleInteropState(): RoleInteropState {
       exportTargetDefault = RoleCardExportTarget.ST_V2_JSON,
       migrationNotes = listOf("Role created before ST interop fields were introduced."),
     )
+}
+
+private fun buildLegacyStCard(
+  name: String,
+  description: String,
+  personality: String,
+  scenario: String,
+  firstMessage: String,
+  messageExample: String,
+  systemPrompt: String,
+  tags: List<String>,
+): StCharacterCard {
+  val data =
+    StCharacterCardData(
+      name = name,
+      description = description,
+      personality = personality,
+      scenario = scenario,
+      first_mes = firstMessage,
+      mes_example = messageExample,
+      system_prompt = systemPrompt,
+      tags = tags,
+    )
+  return StCharacterCard(
+    spec = "chara_card_v2",
+    spec_version = "2.0",
+    name = name,
+    description = description,
+    personality = personality,
+    scenario = scenario,
+    first_mes = firstMessage,
+    mes_example = messageExample,
+    tags = tags,
+    data = data,
+  )
 }

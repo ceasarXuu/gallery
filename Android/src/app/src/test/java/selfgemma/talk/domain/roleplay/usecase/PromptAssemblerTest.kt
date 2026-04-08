@@ -1,10 +1,9 @@
 package selfgemma.talk.domain.roleplay.usecase
 
+import com.google.gson.JsonObject
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import selfgemma.talk.domain.roleplay.model.CharacterBook
-import selfgemma.talk.domain.roleplay.model.CharacterBookEntry
 import selfgemma.talk.domain.roleplay.model.MemoryCategory
 import selfgemma.talk.domain.roleplay.model.MemoryItem
 import selfgemma.talk.domain.roleplay.model.Message
@@ -12,6 +11,10 @@ import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.model.StCharacterBook
+import selfgemma.talk.domain.roleplay.model.StCharacterBookEntry
+import selfgemma.talk.domain.roleplay.model.StCharacterCard
+import selfgemma.talk.domain.roleplay.model.StCharacterCardData
 
 class PromptAssemblerTest {
   private val assembler = PromptAssembler(TokenEstimator())
@@ -29,42 +32,66 @@ class PromptAssemblerTest {
             systemPrompt = "Always stay in character.",
             openingLine = "The case file is already open.",
             cardCore =
-              selfgemma.talk.domain.roleplay.model.RoleCardCore(
+              StCharacterCard(
                 name = "Iris Vale",
-                postHistoryInstructions = "Keep responses terse after the history block.",
-                creatorNotes = "The creator note mentions a sealed dossier.",
-                extensionsJson = """{"depth_prompt":{"prompt":"Reveal the hidden motive only after enough pressure.","depth":3,"role":"system"}}""",
-                characterBook =
-                  CharacterBook(
-                    entries =
-                      listOf(
-                        CharacterBookEntry(
-                          id = 1,
-                          keys = listOf("lower station"),
-                          content = "The lower station smells like coolant and wet rust.",
-                          position = "before_char",
-                        ),
-                        CharacterBookEntry(
-                          id = 2,
-                          keys = listOf("forged pass"),
-                          content = "If the forged pass comes up, Iris should suspect internal sabotage.",
-                          position = "after_char",
-                        ),
-                        CharacterBookEntry(
-                          id = 3,
-                          keys = listOf("sealed dossier"),
-                          content = "Treat the sealed dossier as evidence that someone inside the precinct is compromised.",
-                          extensionsJson = """{"match_creator_notes":true,"position":2}""",
-                        ),
-                        CharacterBookEntry(
-                          id = 4,
-                          keys = listOf("lower"),
-                          secondaryKeys = listOf("station"),
-                          content = "Ask precise follow-up questions when the lower station is discussed.",
-                          selective = true,
-                          extensionsJson = """{"selectiveLogic":3,"position":4,"depth":2,"role":2}""",
-                        ),
-                      )
+                data =
+                  StCharacterCardData(
+                    name = "Iris Vale",
+                    creator_notes = "The creator note mentions a sealed dossier.",
+                    post_history_instructions = "Keep responses terse after the history block.",
+                    extensions =
+                      JsonObject().apply {
+                        add(
+                          "depth_prompt",
+                          JsonObject().apply {
+                            addProperty("prompt", "Reveal the hidden motive only after enough pressure.")
+                            addProperty("depth", 3)
+                            addProperty("role", "system")
+                          },
+                        )
+                      },
+                    character_book =
+                      StCharacterBook(
+                        entries =
+                          listOf(
+                            StCharacterBookEntry(
+                              id = 1,
+                              keys = listOf("lower station"),
+                              content = "The lower station smells like coolant and wet rust.",
+                              position = "before_char",
+                            ),
+                            StCharacterBookEntry(
+                              id = 2,
+                              keys = listOf("forged pass"),
+                              content = "If the forged pass comes up, Iris should suspect internal sabotage.",
+                              position = "after_char",
+                            ),
+                            StCharacterBookEntry(
+                              id = 3,
+                              keys = listOf("sealed dossier"),
+                              content = "Treat the sealed dossier as evidence that someone inside the precinct is compromised.",
+                              extensions =
+                                JsonObject().apply {
+                                  addProperty("match_creator_notes", true)
+                                  addProperty("position", 2)
+                                },
+                            ),
+                            StCharacterBookEntry(
+                              id = 4,
+                              keys = listOf("lower"),
+                              secondary_keys = listOf("station"),
+                              content = "Ask precise follow-up questions when the lower station is discussed.",
+                              selective = true,
+                              extensions =
+                                JsonObject().apply {
+                                  addProperty("selectiveLogic", 3)
+                                  addProperty("position", 4)
+                                  addProperty("depth", 2)
+                                  addProperty("role", 2)
+                                },
+                            ),
+                          )
+                      ),
                   ),
               ),
             createdAt = now,
@@ -151,25 +178,28 @@ class PromptAssemblerTest {
             summary = "A test role.",
             systemPrompt = "",
             cardCore =
-              selfgemma.talk.domain.roleplay.model.RoleCardCore(
+              StCharacterCard(
                 name = "Casey",
-                characterBook =
-                  CharacterBook(
-                    entries =
-                      listOf(
-                        CharacterBookEntry(
-                          id = 1,
-                          keys = listOf("Key"),
-                          content = "Case-sensitive match should trigger.",
-                          extensionsJson = """{"case_sensitive":true}""",
-                        ),
-                        CharacterBookEntry(
-                          id = 2,
-                          keys = listOf("cat"),
-                          content = "Whole-word match should not trigger for scatter.",
-                          extensionsJson = """{"match_whole_words":true}""",
-                        ),
-                      )
+                data =
+                  StCharacterCardData(
+                    character_book =
+                      StCharacterBook(
+                        entries =
+                          listOf(
+                            StCharacterBookEntry(
+                              id = 1,
+                              keys = listOf("Key"),
+                              content = "Case-sensitive match should trigger.",
+                              extensions = JsonObject().apply { addProperty("case_sensitive", true) },
+                            ),
+                            StCharacterBookEntry(
+                              id = 2,
+                              keys = listOf("cat"),
+                              content = "Whole-word match should not trigger for scatter.",
+                              extensions = JsonObject().apply { addProperty("match_whole_words", true) },
+                            ),
+                          )
+                      ),
                   ),
               ),
             createdAt = now,

@@ -10,10 +10,11 @@ import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.RoleCard
-import selfgemma.talk.domain.roleplay.model.RoleCardCore
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.model.StCharacterCard
+import selfgemma.talk.domain.roleplay.model.StCharacterCardData
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
 
@@ -28,7 +29,7 @@ class CreateRoleplaySessionUseCaseTest {
           name = "Iris",
           systemPrompt = "Stay in character.",
           openingLine = "Wrong fallback",
-          cardCore = RoleCardCore(name = "Iris", firstMessage = "<div>Hello</div>"),
+          cardCore = StCharacterCard(name = "Iris", data = StCharacterCardData(first_mes = "<div>Hello</div>")),
           createdAt = 1L,
           updatedAt = 1L,
         )
@@ -79,10 +80,9 @@ class CreateRoleplaySessionUseCaseTest {
           name = "Mira",
           systemPrompt = "Stay in character.",
           cardCore =
-            RoleCardCore(
+            StCharacterCard(
               name = "Mira",
-              firstMessage = "",
-              alternateGreetings = listOf("Alt hello", "Alt two"),
+              data = StCharacterCardData(first_mes = "", alternate_greetings = listOf("Alt hello", "Alt two")),
             ),
           createdAt = 1L,
           updatedAt = 1L,

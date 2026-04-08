@@ -41,10 +41,11 @@ class StSampleCardsRegressionTest {
 
     sampleFiles.forEach { file ->
       val imported = importUseCase.importFromUri(file.toString(), now = 100L)
+      val cardData = imported.cardCore?.data
       val expectedSeed =
-        imported.cardCore?.firstMessage
+        cardData?.first_mes
           ?.takeIf(String::isNotBlank)
-          ?: imported.cardCore?.alternateGreetings?.firstOrNull().orEmpty()
+          ?: cardData?.alternate_greetings?.firstOrNull().orEmpty()
       val prompt =
         promptAssembler.assemble(
           role = imported,
@@ -69,7 +70,7 @@ class StSampleCardsRegressionTest {
           append(" | seedChars=")
           append(expectedSeed.length)
           append(" | loreEntries=")
-          append(imported.cardCore?.characterBook?.entries?.size ?: 0)
+          append(cardData?.character_book?.entries?.size ?: 0)
           append(" | htmlSeed=")
           append(expectedSeed.contains('<'))
           append(" | promptChars=")
@@ -96,7 +97,7 @@ class StSampleCardsRegressionTest {
         )
       }
 
-      imported.cardCore?.postHistoryInstructions
+      cardData?.post_history_instructions
         ?.trim()
         ?.takeIf(String::isNotBlank)
         ?.let { postHistory ->

@@ -24,6 +24,7 @@ import selfgemma.talk.domain.roleplay.model.RoleMediaProfile
 import selfgemma.talk.domain.roleplay.model.RoleMediaSource
 import selfgemma.talk.domain.roleplay.model.RoleMediaUsage
 import selfgemma.talk.domain.roleplay.model.RoleSpriteAsset
+import selfgemma.talk.domain.roleplay.model.StCharacterCardData
 import selfgemma.talk.domain.roleplay.model.coverImageUri
 import selfgemma.talk.domain.roleplay.model.primaryAvatarUri
 import selfgemma.talk.domain.roleplay.usecase.ExportStRoleCardToUriUseCase
@@ -408,15 +409,27 @@ constructor(
     val existingRole = loadedRole
     val updatedTags = snapshot.tagsText.toTagList()
     val updatedCardCore =
-      existingRole?.cardCore?.copy(
-        name = roleName,
-        description = snapshot.summary.trim(),
-        personality = snapshot.personaDescription.trim(),
-        scenario = snapshot.worldSettings.trim(),
-        firstMessage = snapshot.openingLine.trim(),
-        systemPrompt = systemPrompt,
-        tags = updatedTags,
-      )
+      existingRole?.cardCore?.let { card ->
+        val data = card.data ?: StCharacterCardData()
+        card.copy(
+          name = roleName,
+          description = snapshot.summary.trim(),
+          personality = snapshot.personaDescription.trim(),
+          scenario = snapshot.worldSettings.trim(),
+          first_mes = snapshot.openingLine.trim(),
+          tags = updatedTags,
+          data =
+            data.copy(
+              name = roleName,
+              description = snapshot.summary.trim(),
+              personality = snapshot.personaDescription.trim(),
+              scenario = snapshot.worldSettings.trim(),
+              first_mes = snapshot.openingLine.trim(),
+              system_prompt = systemPrompt,
+              tags = updatedTags,
+            ),
+        )
+      }
 
     return RoleCard(
       id = editingRoleId ?: UUID.randomUUID().toString(),

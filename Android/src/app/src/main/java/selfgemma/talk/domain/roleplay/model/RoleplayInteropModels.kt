@@ -1,11 +1,6 @@
 package selfgemma.talk.domain.roleplay.model
 
-enum class RoleCardSpecVersion {
-  LEGACY,
-  ST_V1,
-  ST_V2,
-  ST_V3,
-}
+import com.google.gson.JsonObject
 
 enum class RoleCardSourceFormat {
   INTERNAL,
@@ -19,47 +14,67 @@ enum class RoleCardExportTarget {
   ST_PNG,
 }
 
-data class CharacterBook(
+data class StCharacterCard(
+  val spec: String? = null,
+  val spec_version: String? = null,
   val name: String? = null,
   val description: String? = null,
-  val scanDepth: Int? = null,
-  val tokenBudget: Int? = null,
-  val recursiveScanning: Boolean? = null,
-  val extensionsJson: String = "{}",
-  val entries: List<CharacterBookEntry> = emptyList(),
+  val personality: String? = null,
+  val scenario: String? = null,
+  val first_mes: String? = null,
+  val mes_example: String? = null,
+  val creatorcomment: String? = null,
+  val avatar: String? = null,
+  val chat: String? = null,
+  val talkativeness: Double? = null,
+  val fav: Boolean? = null,
+  val creator: String? = null,
+  val tags: List<String>? = null,
+  val create_date: String? = null,
+  val data: StCharacterCardData? = null,
 )
 
-data class CharacterBookEntry(
-  val id: Int,
-  val keys: List<String>,
-  val secondaryKeys: List<String> = emptyList(),
-  val comment: String = "",
-  val content: String = "",
-  val constant: Boolean = false,
-  val selective: Boolean = false,
-  val insertionOrder: Int = 0,
-  val enabled: Boolean = true,
-  val position: String = "before_char",
-  val extensionsJson: String = "{}",
+data class StCharacterCardData(
+  val name: String? = null,
+  val description: String? = null,
+  val personality: String? = null,
+  val scenario: String? = null,
+  val first_mes: String? = null,
+  val mes_example: String? = null,
+  val creator_notes: String? = null,
+  val system_prompt: String? = null,
+  val post_history_instructions: String? = null,
+  val alternate_greetings: List<String>? = null,
+  val tags: List<String>? = null,
+  val creator: String? = null,
+  val character_version: String? = null,
+  val character_book: StCharacterBook? = null,
+  val extensions: JsonObject? = null,
 )
 
-data class RoleCardCore(
-  val spec: RoleCardSpecVersion = RoleCardSpecVersion.LEGACY,
-  val name: String = "",
-  val description: String = "",
-  val personality: String = "",
-  val scenario: String = "",
-  val firstMessage: String = "",
-  val messageExample: String = "",
-  val creatorNotes: String = "",
-  val systemPrompt: String = "",
-  val postHistoryInstructions: String = "",
-  val alternateGreetings: List<String> = emptyList(),
-  val tags: List<String> = emptyList(),
-  val creator: String = "",
-  val characterVersion: String = "",
-  val characterBook: CharacterBook? = null,
-  val extensionsJson: String = "{}",
+data class StCharacterBook(
+  val name: String? = null,
+  val description: String? = null,
+  val scan_depth: Int? = null,
+  val token_budget: Int? = null,
+  val recursive_scanning: Boolean? = null,
+  val extensions: JsonObject? = null,
+  val entries: List<StCharacterBookEntry>? = null,
+)
+
+data class StCharacterBookEntry(
+  val id: Int? = null,
+  val keys: List<String>? = null,
+  val secondary_keys: List<String>? = null,
+  val comment: String? = null,
+  val content: String? = null,
+  val constant: Boolean? = null,
+  val selective: Boolean? = null,
+  val insertion_order: Int? = null,
+  val enabled: Boolean? = null,
+  val position: String? = null,
+  val use_regex: Boolean? = null,
+  val extensions: JsonObject? = null,
 )
 
 data class RuntimeModelParams(
@@ -118,3 +133,22 @@ data class RoleInteropState(
   val compatibilityWarnings: List<String> = emptyList(),
   val migrationNotes: List<String> = emptyList(),
 )
+
+fun StCharacterCard.cardDataOrEmpty(): StCharacterCardData = data ?: StCharacterCardData()
+
+fun StCharacterCard.resolvedName(): String = cardDataOrEmpty().name.orEmpty().ifBlank { name.orEmpty() }
+
+fun StCharacterCard.resolvedDescription(): String =
+  cardDataOrEmpty().description.orEmpty().ifBlank { description.orEmpty() }
+
+fun StCharacterCard.resolvedPersonality(): String =
+  cardDataOrEmpty().personality.orEmpty().ifBlank { personality.orEmpty() }
+
+fun StCharacterCard.resolvedScenario(): String =
+  cardDataOrEmpty().scenario.orEmpty().ifBlank { scenario.orEmpty() }
+
+fun StCharacterCard.resolvedFirstMessage(): String =
+  cardDataOrEmpty().first_mes.orEmpty().ifBlank { first_mes.orEmpty() }
+
+fun StCharacterCard.resolvedMessageExample(): String =
+  cardDataOrEmpty().mes_example.orEmpty().ifBlank { mes_example.orEmpty() }

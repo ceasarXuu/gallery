@@ -18,9 +18,10 @@ constructor(
   suspend operator fun invoke(roleId: String, modelId: String): Session {
     val session = conversationRepository.createSession(roleId = roleId, modelId = modelId)
     val role = roleRepository.getRole(roleId) ?: return session
+    val cardData = role.cardCore?.data
     val openingMessage =
-      role.cardCore?.firstMessage
-        ?.ifBlank { role.cardCore.alternateGreetings.firstOrNull().orEmpty() }
+      cardData?.first_mes
+        ?.ifBlank { cardData.alternate_greetings.orEmpty().firstOrNull().orEmpty() }
         ?.ifBlank { role.openingLine }
         ?: role.openingLine
     if (openingMessage.isBlank()) {

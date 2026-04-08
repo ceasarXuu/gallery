@@ -389,3 +389,28 @@ Notes:
 - `alternate_greetings` should be preserved even if the UI does not expose greeting switching yet. Use the first alternate greeting as the fallback opening message only when `first_mes` itself is blank.
 - Imported ST cards can legally have an empty `system_prompt`. Do not block save on that field in the editor; requiring it forces users to patch cards that ST itself accepts.
 - If an ST card ships HTML-heavy greetings, chat rendering must not dump raw tags back to the user. In this app, detect HTML/Markdown in message bubbles and render it as rich text instead of plain `Text`.
+
+## 2026-04-08 ST canonical schema migration notes
+
+- Goal: stop treating SillyTavern cards as an app-private compatibility projection and persist the canonical ST card object as the source of truth.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.data.roleplay.interop.stcard.StV2CardParserTest" --tests "selfgemma.talk.domain.roleplay.usecase.StV2RoleCardInteropUseCaseTest" --tests "selfgemma.talk.domain.roleplay.usecase.PromptAssemblerTest" --tests "selfgemma.talk.domain.roleplay.usecase.StSampleCardsRegressionTest"
+adb devices
+adb install -r .\app\build\outputs\apk\debug\app-debug.apk
+```
+
+Notes:
+
+- `cardCoreJson` should store the ST card object itself, not a flattened app-specific mirror. Keep app-level `summary/persona/world/openingLine` only as projections derived from the canonical ST structure.
+- Runtime logic should read from `cardCore.data.*` first and only fall back to top-level mirrored fields where ST itself does so.
+- Legacy/v1 import normalization should follow ST `convertToV2` semantics closely:
+  - fill both top-level legacy mirrors and `data.*`
+  - create `chat` with ST-style humanized timestamp
+  - backfill `talkativeness/fav` into both legacy mirror and `data.extensions`
+- When replacing the schema, update regression tests to build real ST card objects. Do not preserve old `RoleCardCore`-style test fixtures through compatibility shims, or the test suite will stop proving the migration.
+- Real-device overwrite verification is still required after schema migrations, but if `adb devices` returns an empty list, capture that blocker explicitly rather than claiming install coverage.

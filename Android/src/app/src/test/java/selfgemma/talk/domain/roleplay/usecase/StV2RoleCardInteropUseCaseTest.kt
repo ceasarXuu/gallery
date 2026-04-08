@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.RoleCardSourceFormat
-import selfgemma.talk.domain.roleplay.model.RoleCardSpecVersion
 
 class StV2RoleCardInteropUseCaseTest {
   private val importUseCase = ImportStV2RoleCardUseCase()
@@ -43,7 +42,7 @@ class StV2RoleCardInteropUseCaseTest {
 
     assertEquals("Iris Vale", imported.name)
     assertEquals("Noir archivist", imported.summary)
-    assertEquals(RoleCardSpecVersion.ST_V2, imported.cardCore?.spec)
+    assertEquals("chara_card_v2", imported.cardCore?.spec)
     assertEquals(RoleCardSourceFormat.ST_JSON, imported.interopState?.sourceFormat)
     assertEquals(1234L, imported.createdAt)
     assertTrue(imported.exampleDialogues.isNotEmpty())

@@ -1,9 +1,7 @@
 package selfgemma.talk.domain.roleplay.usecase
 
 import com.google.gson.JsonObject
-import com.google.gson.JsonParser
 import javax.inject.Inject
-import selfgemma.talk.domain.roleplay.model.CharacterBookEntry
 import selfgemma.talk.domain.roleplay.model.MemoryItem
 import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageKind
@@ -11,6 +9,8 @@ import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.model.StCharacterBook
+import selfgemma.talk.domain.roleplay.model.StCharacterBookEntry
 
 private const val RECENT_DIALOGUE_TOKEN_BUDGET = 1800
 private const val MAX_DIALOGUE_LINE_LENGTH = 280
@@ -33,8 +33,9 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
         dialogueWindow = dialogueWindow,
         pendingUserInput = pendingUserInput,
       )
-    val resolvedCharacterBook = role.cardCore?.characterBook.resolveForPrompt(scanContext)
-    val coreDepthPrompt = role.cardCore?.extensionsJson.toDepthPrompt()
+    val cardData = role.cardCore?.data
+    val resolvedCharacterBook = cardData?.character_book.resolveForPrompt(scanContext)
+    val coreDepthPrompt = cardData?.extensions.toDepthPrompt()
     val combinedExampleDialogue =
       buildList {
           addAll(resolvedCharacterBook.exampleBefore)
@@ -46,7 +47,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     val postHistoryBlock =
       buildList {
           addAll(resolvedCharacterBook.authorNoteBefore)
-          role.cardCore?.postHistoryInstructions
+          cardData?.post_history_instructions
             ?.trim()
             ?.takeIf(String::isNotBlank)
             ?.let(::add)
@@ -73,9 +74,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       appendSection("Persona", role.personaDescription)
       appendSection("World", role.worldSettings)
       appendSection("Safety", role.safetyPolicy)
-
       appendSection("Example Dialogue", combinedExampleDialogue)
-
       appendSection("Session Summary", summary?.summaryText.orEmpty())
 
       if (memories.isNotEmpty()) {
@@ -160,10 +159,6 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     }
   }
 
-  private fun messageContentForLore(message: Message): String {
-    return "${message.side.name}:${message.content}"
-  }
-
   private fun buildStScanContext(
     role: RoleCard,
     summary: SessionSummary?,
@@ -172,6 +167,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     pendingUserInput: String,
   ): StScanContext {
     val core = role.cardCore
+    val data = core?.data
     val recentMessagesNewestFirst =
       buildList {
         pendingUserInput.trim().takeIf(String::isNotBlank)?.let(::add)
@@ -186,27 +182,27 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       recentMessagesNewestFirst = recentMessagesNewestFirst,
       personaDescription = role.personaDescription,
       characterDescription = role.summary,
-      characterPersonality = core?.personality.orEmpty().ifBlank { role.personaDescription },
-      characterDepthPrompt = core?.extensionsJson.toDepthPrompt()?.prompt.orEmpty(),
-      scenario = core?.scenario.orEmpty().ifBlank { role.worldSettings },
-      creatorNotes = core?.creatorNotes.orEmpty(),
+      characterPersonality =
+        data?.personality.orEmpty().ifBlank { core?.personality.orEmpty().ifBlank { role.personaDescription } },
+      characterDepthPrompt = data?.extensions.toDepthPrompt()?.prompt.orEmpty(),
+      scenario = data?.scenario.orEmpty().ifBlank { core?.scenario.orEmpty().ifBlank { role.worldSettings } },
+      creatorNotes = data?.creator_notes.orEmpty(),
       sessionSummary = summary?.summaryText.orEmpty(),
       memories = memories.map { it.content.trim() }.filter(String::isNotBlank),
     )
   }
 
-  private fun selfgemma.talk.domain.roleplay.model.CharacterBook?.resolveForPrompt(
-    context: StScanContext
-  ): ResolvedCharacterBook {
+  private fun StCharacterBook?.resolveForPrompt(context: StScanContext): ResolvedCharacterBook {
     if (this == null) {
       return ResolvedCharacterBook()
     }
 
     val activatedEntries =
       entries
-        .filter { it.enabled && it.content.isNotBlank() }
-        .filter { entry -> entry.shouldActivate(context = context, defaultScanDepth = scanDepth) }
-        .sortedBy { it.insertionOrder }
+        .orEmpty()
+        .filter { (it.enabled ?: true) && !it.content.isNullOrBlank() }
+        .filter { entry -> entry.shouldActivate(context = context, defaultScanDepth = scan_depth) }
+        .sortedBy { it.insertion_order ?: 0 }
 
     if (activatedEntries.isEmpty()) {
       return ResolvedCharacterBook()
@@ -221,7 +217,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     val depthPrompts = mutableListOf<DepthPromptInsertion>()
 
     activatedEntries.forEach { entry ->
-      val content = entry.content.trim()
+      val content = entry.content.orEmpty().trim()
       when (entry.resolvePromptPosition()) {
         StWorldInfoPosition.BEFORE -> beforePrompt += content
         StWorldInfoPosition.AFTER -> afterPrompt += content
@@ -251,11 +247,11 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     )
   }
 
-  private fun CharacterBookEntry.shouldActivate(context: StScanContext, defaultScanDepth: Int?): Boolean {
-    if (constant) {
+  private fun StCharacterBookEntry.shouldActivate(context: StScanContext, defaultScanDepth: Int?): Boolean {
+    if (constant == true) {
       return true
     }
-    if (keys.isEmpty()) {
+    if (keys.isNullOrEmpty()) {
       return false
     }
 
@@ -263,17 +259,19 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     val textToScan = context.toScanText(extensions = extensions, defaultScanDepth = defaultScanDepth)
     val matchedPrimary =
       keys
+        .orEmpty()
         .filter(String::isNotBlank)
         .any { key -> textToScan.matchesKeyword(keyword = key.trim(), extensions = extensions) }
     if (!matchedPrimary) {
       return false
     }
-    if (!selective || secondaryKeys.none(String::isNotBlank)) {
+    if (selective != true || secondary_keys.orEmpty().none(String::isNotBlank)) {
       return true
     }
 
     val secondaryMatches =
-      secondaryKeys
+      secondary_keys
+        .orEmpty()
         .filter(String::isNotBlank)
         .map { key -> textToScan.matchesKeyword(keyword = key.trim(), extensions = extensions) }
     return when (extensions.selectiveLogic) {
@@ -284,7 +282,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     }
   }
 
-  private fun CharacterBookEntry.resolvePromptPosition(): StWorldInfoPosition {
+  private fun StCharacterBookEntry.resolvePromptPosition(): StWorldInfoPosition {
     return extensions().position?.toWorldInfoPosition()
       ?: if (position.equals("before_char", ignoreCase = true)) {
         StWorldInfoPosition.BEFORE
@@ -293,8 +291,8 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       }
   }
 
-  private fun CharacterBookEntry.extensions(): StCharacterBookEntryExtensions {
-    return extensionsJson.parseJsonObject().toCharacterBookEntryExtensions()
+  private fun StCharacterBookEntry.extensions(): StCharacterBookEntryExtensions {
+    return (extensions ?: JsonObject()).toCharacterBookEntryExtensions()
   }
 
   private fun StScanContext.toScanText(
@@ -350,19 +348,8 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     return haystack.contains(needle)
   }
 
-  private fun String.parseJsonObject(): JsonObject {
-    if (isBlank()) {
-      return JsonObject()
-    }
-    return runCatching {
-        JsonParser.parseString(this).takeIf { it.isJsonObject }?.asJsonObject ?: JsonObject()
-      }
-      .getOrElse { JsonObject() }
-  }
-
-  private fun String?.toDepthPrompt(): DepthPromptInsertion? {
-    val json = this?.parseJsonObject() ?: return null
-    val depthPrompt = json.getAsJsonObject("depth_prompt") ?: return null
+  private fun JsonObject?.toDepthPrompt(): DepthPromptInsertion? {
+    val depthPrompt = this?.getAsJsonObject("depth_prompt") ?: return null
     val prompt = depthPrompt.get("prompt")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
     if (prompt.isBlank()) {
       return null

@@ -83,8 +83,8 @@ class StRoleCardDocumentInteropUseCaseTest {
     assertEquals("Street cat turned catboy.", imported.summary)
     assertEquals("<div>Hello</div>", imported.openingLine)
     assertEquals(listOf("NSFW", "Catboy"), imported.tags)
-    assertEquals("legacy notes", imported.cardCore?.creatorNotes)
-    assertEquals(null, imported.cardCore?.characterBook)
+    assertEquals("legacy notes", imported.cardCore?.data?.creator_notes)
+    assertEquals(null, imported.cardCore?.data?.character_book)
   }
 
   @Test

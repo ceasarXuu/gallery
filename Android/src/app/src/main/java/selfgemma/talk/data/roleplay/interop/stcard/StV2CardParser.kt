@@ -2,108 +2,91 @@ package selfgemma.talk.data.roleplay.interop.stcard
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.google.gson.JsonElement
-import selfgemma.talk.domain.roleplay.model.CharacterBook
-import selfgemma.talk.domain.roleplay.model.CharacterBookEntry
-import selfgemma.talk.domain.roleplay.model.RoleCardCore
 import selfgemma.talk.domain.roleplay.model.RoleCardSourceFormat
-import selfgemma.talk.domain.roleplay.model.RoleCardSpecVersion
 import selfgemma.talk.domain.roleplay.model.RoleInteropState
+import selfgemma.talk.domain.roleplay.model.StCharacterCard
+import selfgemma.talk.domain.roleplay.model.StCharacterCardData
+import selfgemma.talk.domain.roleplay.model.cardDataOrEmpty
+import selfgemma.talk.domain.roleplay.model.resolvedName
 
 class StV2CardParser {
   private val gson: Gson = GsonBuilder().create()
 
   fun parse(rawJson: String): ParsedStCardV2 {
-    val dto = gson.fromJson(rawJson, StV2CardDto::class.java)
-    require(dto.spec == ST_V2_SPEC) { "Unsupported ST card spec: ${dto.spec}" }
-    require(dto.spec_version == ST_V2_SPEC_VERSION) {
-      "Unsupported ST card spec_version: ${dto.spec_version}"
+    val parsed = gson.fromJson(rawJson, StCharacterCard::class.java)
+    require(parsed.spec == ST_V2_SPEC) { "Unsupported ST card spec: ${parsed.spec}" }
+    require(parsed.spec_version == ST_V2_SPEC_VERSION) {
+      "Unsupported ST card spec_version: ${parsed.spec_version}"
     }
 
-    val data = requireNotNull(dto.data) { "ST v2 card is missing data payload." }
-    val core =
-      RoleCardCore(
-        spec = RoleCardSpecVersion.ST_V2,
-        name = data.name.orEmpty().ifBlank { dto.name.orEmpty() },
-        description = data.description.orEmpty().ifBlank { dto.description.orEmpty() },
-        personality = data.personality.orEmpty().ifBlank { dto.personality.orEmpty() },
-        scenario = data.scenario.orEmpty().ifBlank { dto.scenario.orEmpty() },
-        firstMessage = data.first_mes.orEmpty().ifBlank { dto.first_mes.orEmpty() },
-        messageExample = data.mes_example.orEmpty().ifBlank { dto.mes_example.orEmpty() },
-        creatorNotes = data.creator_notes.orEmpty(),
-        systemPrompt = data.system_prompt.orEmpty(),
-        postHistoryInstructions = data.post_history_instructions.orEmpty(),
-        alternateGreetings = parseAlternateGreetings(data.alternate_greetings),
-        tags = data.tags.orEmpty(),
-        creator = data.creator.orEmpty(),
-        characterVersion = data.character_version.orEmpty(),
-        characterBook = data.character_book?.toDomain(),
-        extensionsJson = data.extensions.toJsonString(),
-      )
-
-    require(core.name.isNotBlank()) { "ST v2 card name is blank." }
+    val normalized = readFromV2(parsed)
+    require(normalized.data != null) { "ST v2 card is missing data payload." }
+    require(normalized.resolvedName().isNotBlank()) { "ST v2 card name is blank." }
 
     return ParsedStCardV2(
-      core = core,
+      card = normalized,
       interopState =
         RoleInteropState(
           sourceFormat = RoleCardSourceFormat.ST_JSON,
-          sourceSpec = dto.spec,
-          sourceSpecVersion = dto.spec_version,
+          sourceSpec = normalized.spec,
+          sourceSpecVersion = normalized.spec_version,
           rawCardJson = rawJson,
         ),
     )
   }
 
-  private fun parseAlternateGreetings(element: JsonElement?): List<String> {
-    if (element == null || element.isJsonNull) {
-      return emptyList()
-    }
-    if (element.isJsonArray) {
-      return element.asJsonArray.mapNotNull { item ->
-        item.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString?.trim()
-      }.filter(String::isNotBlank)
-    }
-    if (element.isJsonPrimitive && element.asJsonPrimitive.isString) {
-      return listOf(element.asString.trim()).filter(String::isNotBlank)
-    }
-    return emptyList()
-  }
+  private fun readFromV2(card: StCharacterCard): StCharacterCard {
+    val data = card.data ?: return card
+    val talkativeness = data.extensions?.get("talkativeness")?.takeIf { it.isJsonPrimitive }?.asDouble ?: 0.5
+    val fav = data.extensions?.get("fav")?.takeIf { it.isJsonPrimitive }?.asBoolean ?: false
+    val tags = data.tags ?: card.tags
+    val name = data.name ?: card.name
+    val description = data.description ?: card.description
+    val personality = data.personality ?: card.personality
+    val scenario = data.scenario ?: card.scenario
+    val firstMes = data.first_mes ?: card.first_mes
+    val mesExample = data.mes_example ?: card.mes_example
 
-  private fun StCharacterBookDto.toDomain(): CharacterBook {
-    return CharacterBook(
+    return card.copy(
       name = name,
       description = description,
-      scanDepth = scan_depth,
-      tokenBudget = token_budget,
-      recursiveScanning = recursive_scanning,
-      extensionsJson = extensions.toJsonString(),
-      entries = entries.orEmpty().mapNotNull { it.toDomain() },
+      personality = personality,
+      scenario = scenario,
+      first_mes = firstMes,
+      mes_example = mesExample,
+      talkativeness = talkativeness,
+      fav = fav,
+      tags = tags,
+      chat = card.chat ?: "${name.orEmpty()} - ${humanizedDateTime()}",
+      data =
+        data.copy(
+          alternate_greetings = data.alternate_greetings.orEmpty(),
+          tags = data.tags ?: card.tags ?: emptyList(),
+          extensions = data.extensions,
+        ),
     )
   }
 
-  private fun StCharacterBookEntryDto.toDomain(): CharacterBookEntry? {
-    val resolvedId = id ?: return null
-    return CharacterBookEntry(
-      id = resolvedId,
-      keys = keys.orEmpty(),
-      secondaryKeys = secondary_keys.orEmpty(),
-      comment = comment.orEmpty(),
-      content = content.orEmpty(),
-      constant = constant ?: false,
-      selective = selective ?: false,
-      insertionOrder = insertion_order ?: 0,
-      enabled = enabled ?: true,
-      position = position ?: "before_char",
-      extensionsJson = extensions.toJsonString(),
-    )
-  }
-
-  private fun JsonElement?.toJsonString(): String {
-    if (this == null || isJsonNull) {
-      return "{}"
+  private fun humanizedDateTime(timestamp: Long = System.currentTimeMillis()): String {
+    val date = java.util.Date(timestamp)
+    val calendar = java.util.Calendar.getInstance().apply { time = date }
+    fun pad(value: Int, width: Int = 2): String = value.toString().padStart(width, '0')
+    return buildString {
+      append(calendar.get(java.util.Calendar.YEAR))
+      append('-')
+      append(pad(calendar.get(java.util.Calendar.MONTH) + 1))
+      append('-')
+      append(pad(calendar.get(java.util.Calendar.DAY_OF_MONTH)))
+      append('@')
+      append(pad(calendar.get(java.util.Calendar.HOUR_OF_DAY)))
+      append('h')
+      append(pad(calendar.get(java.util.Calendar.MINUTE)))
+      append('m')
+      append(pad(calendar.get(java.util.Calendar.SECOND)))
+      append('s')
+      append(pad(calendar.get(java.util.Calendar.MILLISECOND), 3))
+      append("ms")
     }
-    return gson.toJson(this)
   }
 
   companion object {

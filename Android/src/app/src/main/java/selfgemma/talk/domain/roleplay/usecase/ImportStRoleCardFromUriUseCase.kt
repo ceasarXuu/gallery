@@ -97,39 +97,57 @@ constructor(
       return null
     }
 
+    val name = jsonObject.stringValue("name")
+    val description = jsonObject.stringValue("description")
+    val personality = jsonObject.stringValue("personality")
+    val scenario = jsonObject.stringValue("scenario")
+    val firstMes = jsonObject.stringValue("first_mes")
+    val mesExample = jsonObject.stringValue("mes_example")
+    val creatorNotes = jsonObject.firstStringValue("creatorcomment", "creator_notes")
+    val talkativeness = jsonObject.doubleValue("talkativeness") ?: 0.5
+    val fav = jsonObject.booleanValue("fav") ?: false
+    val tags = jsonObject.toTagArray()
+    val creator = jsonObject.stringValue("creator")
+    val characterVersion = jsonObject.stringValue("character_version")
+
     return JsonObject().apply {
       addProperty("spec", "chara_card_v2")
       addProperty("spec_version", "2.0")
-      addProperty("name", jsonObject.stringValue("name"))
-      addProperty("description", jsonObject.stringValue("description"))
-      addProperty("personality", jsonObject.stringValue("personality"))
-      addProperty("scenario", jsonObject.stringValue("scenario"))
-      addProperty("first_mes", jsonObject.stringValue("first_mes"))
-      addProperty("mes_example", jsonObject.stringValue("mes_example"))
+      addProperty("name", name)
+      addProperty("description", description)
+      addProperty("personality", personality)
+      addProperty("scenario", scenario)
+      addProperty("first_mes", firstMes)
+      addProperty("mes_example", mesExample)
+      addProperty("creatorcomment", creatorNotes)
+      addProperty("avatar", "none")
+      addProperty("chat", "$name - ${humanizedDateTime()}")
+      addProperty("talkativeness", talkativeness)
+      addProperty("fav", fav)
+      add("tags", tags.deepCopy())
+      addProperty("creator", creator)
+      addProperty("create_date", jsonObject.stringValue("create_date"))
       add(
         "data",
         JsonObject().apply {
-          addProperty("name", jsonObject.stringValue("name"))
-          addProperty("description", jsonObject.stringValue("description"))
-          addProperty("personality", jsonObject.stringValue("personality"))
-          addProperty("scenario", jsonObject.stringValue("scenario"))
-          addProperty("first_mes", jsonObject.stringValue("first_mes"))
-          addProperty("mes_example", jsonObject.stringValue("mes_example"))
-          addProperty(
-            "creator_notes",
-            jsonObject.firstStringValue("creatorcomment", "creator_notes"),
-          )
+          addProperty("name", name)
+          addProperty("description", description)
+          addProperty("personality", personality)
+          addProperty("scenario", scenario)
+          addProperty("first_mes", firstMes)
+          addProperty("mes_example", mesExample)
+          addProperty("creator_notes", creatorNotes)
           addProperty("system_prompt", "")
           addProperty("post_history_instructions", "")
           add("alternate_greetings", JsonArray())
-          add("tags", jsonObject.toTagArray())
-          addProperty("creator", jsonObject.stringValue("creator"))
-          addProperty("character_version", jsonObject.stringValue("character_version"))
+          add("tags", tags.deepCopy())
+          addProperty("creator", creator)
+          addProperty("character_version", characterVersion)
           add(
             "extensions",
             JsonObject().apply {
-              addProperty("talkativeness", jsonObject.doubleValue("talkativeness") ?: 0.5)
-              addProperty("fav", jsonObject.booleanValue("fav") ?: false)
+              addProperty("talkativeness", talkativeness)
+              addProperty("fav", fav)
               addProperty("world", jsonObject.stringValue("world"))
             },
           )
@@ -189,6 +207,28 @@ constructor(
         }
       }
       else -> JsonArray()
+    }
+  }
+
+  private fun humanizedDateTime(timestamp: Long = System.currentTimeMillis()): String {
+    val date = java.util.Date(timestamp)
+    val calendar = java.util.Calendar.getInstance().apply { time = date }
+    fun pad(value: Int, width: Int = 2): String = value.toString().padStart(width, '0')
+    return buildString {
+      append(calendar.get(java.util.Calendar.YEAR))
+      append('-')
+      append(pad(calendar.get(java.util.Calendar.MONTH) + 1))
+      append('-')
+      append(pad(calendar.get(java.util.Calendar.DAY_OF_MONTH)))
+      append('@')
+      append(pad(calendar.get(java.util.Calendar.HOUR_OF_DAY)))
+      append('h')
+      append(pad(calendar.get(java.util.Calendar.MINUTE)))
+      append('m')
+      append(pad(calendar.get(java.util.Calendar.SECOND)))
+      append('s')
+      append(pad(calendar.get(java.util.Calendar.MILLISECOND), 3))
+      append("ms")
     }
   }
 }

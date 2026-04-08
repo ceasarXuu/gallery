@@ -1,12 +1,13 @@
 package selfgemma.talk.data.roleplay.interop.stcard
 
+import com.google.gson.JsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import selfgemma.talk.domain.roleplay.model.CharacterBook
-import selfgemma.talk.domain.roleplay.model.CharacterBookEntry
-import selfgemma.talk.domain.roleplay.model.RoleCardCore
-import selfgemma.talk.domain.roleplay.model.RoleCardSpecVersion
+import selfgemma.talk.domain.roleplay.model.StCharacterBook
+import selfgemma.talk.domain.roleplay.model.StCharacterBookEntry
+import selfgemma.talk.domain.roleplay.model.StCharacterCard
+import selfgemma.talk.domain.roleplay.model.StCharacterCardData
 
 class StV2CardParserTest {
   private val parser = StV2CardParser()
@@ -50,11 +51,11 @@ class StV2CardParserTest {
         """.trimIndent()
       )
 
-    assertEquals("Seraphina", parsed.core.name)
-    assertEquals(RoleCardSpecVersion.ST_V2, parsed.core.spec)
-    assertEquals("Warm and observant.", parsed.core.personality)
-    assertEquals(2, parsed.core.alternateGreetings.size)
-    assertEquals(1, parsed.core.characterBook?.entries?.size)
+    assertEquals("Seraphina", parsed.card.name)
+    assertEquals("chara_card_v2", parsed.card.spec)
+    assertEquals("Warm and observant.", parsed.card.personality)
+    assertEquals(2, parsed.card.data?.alternate_greetings?.size)
+    assertEquals(1, parsed.card.data?.character_book?.entries?.size)
     assertTrue(parsed.interopState.rawCardJson?.contains("chara_card_v2") == true)
   }
 
@@ -62,34 +63,46 @@ class StV2CardParserTest {
   fun serialize_writes_v2_shape_with_legacy_mirror_fields() {
     val json =
       serializer.serialize(
-        RoleCardCore(
-          spec = RoleCardSpecVersion.ST_V2,
+        StCharacterCard(
+          spec = "chara_card_v2",
+          spec_version = "2.0",
           name = "Captain Astra",
           description = "Mission-first captain.",
           personality = "Calm and decisive.",
           scenario = "Deep-space survey mission.",
-          firstMessage = "Crew report.",
-          messageExample = "User: Status?\nAstra: Stable.",
-          creatorNotes = "seed",
-          systemPrompt = "Stay immersive.",
-          postHistoryInstructions = "Keep continuity.",
-          alternateGreetings = listOf("Crew report.", "What changed on my watch?"),
-          tags = listOf("sci-fi", "captain"),
-          creator = "selfgemma",
-          characterVersion = "2.0",
-          characterBook =
-            CharacterBook(
-              name = "Ship Notes",
-              entries =
-                listOf(
-                  CharacterBookEntry(
-                    id = 1,
-                    keys = listOf("Meridian"),
-                    content = "The Meridian is an aging survey ship."
-                  )
-                )
+          first_mes = "Crew report.",
+          mes_example = "User: Status?\nAstra: Stable.",
+          data =
+            StCharacterCardData(
+              name = "Captain Astra",
+              description = "Mission-first captain.",
+              personality = "Calm and decisive.",
+              scenario = "Deep-space survey mission.",
+              first_mes = "Crew report.",
+              mes_example = "User: Status?\nAstra: Stable.",
+              creator_notes = "seed",
+              system_prompt = "Stay immersive.",
+              post_history_instructions = "Keep continuity.",
+              alternate_greetings = listOf("Crew report.", "What changed on my watch?"),
+              tags = listOf("sci-fi", "captain"),
+              creator = "selfgemma",
+              character_version = "2.0",
+              character_book =
+                StCharacterBook(
+                  name = "Ship Notes",
+                  entries =
+                    listOf(
+                      StCharacterBookEntry(
+                        id = 1,
+                        keys = listOf("Meridian"),
+                        content = "The Meridian is an aging survey ship."
+                      )
+                    )
+                ),
+              extensions = JsonObject().apply {
+                add("depth_prompt", JsonObject().apply { addProperty("depth", 4) })
+              },
             ),
-          extensionsJson = """{"depth_prompt":{"depth":4}}""",
         )
       )
 

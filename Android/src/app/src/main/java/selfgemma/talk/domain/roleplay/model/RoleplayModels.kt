@@ -60,7 +60,7 @@ data class RoleCard(
   val memoryEnabled: Boolean = true,
   val memoryMaxItems: Int = 32,
   val tags: List<String> = emptyList(),
-  val cardCore: RoleCardCore? = null,
+  val cardCore: StCharacterCard? = null,
   val runtimeProfile: RoleRuntimeProfile? = null,
   val mediaProfile: RoleMediaProfile? = null,
   val interopState: RoleInteropState? = null,
