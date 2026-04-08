@@ -292,3 +292,19 @@ Verification notes:
 
 - In this repo, Gradle commands must run from `D:\gallery\Android\src`; `D:\gallery\Android` does not contain the wrapper script.
 - On PowerShell, use `.\gradlew.bat ...` from that directory for build verification.
+
+## 2026-04-08 Role media phase-2 notes
+
+- When media editing expands beyond primary avatar and cover, keep `RoleMediaProfile` as the source of truth and mirror `avatarUri/coverUri` from it for legacy callers. This avoids spreading gallery/sprite assumptions into ST interop code.
+- `RoleCatalogScreen`, session list, and chat bubbles should consume `primaryAvatarUri()` instead of raw `avatarUri`, otherwise imported ST PNG avatars and future media-profile-only updates drift apart.
+- For role editor pickers, keep one launcher per asset class:
+  - `OpenDocument` for primary avatar and cover
+  - `OpenMultipleDocuments` for gallery and sprite assets
+  Mixing them makes it easy to wire the wrong callback and silently overwrite the primary avatar.
+- `:app:testDebugUnitTest` on this workspace can finish generating HTML/XML reports and still hang on Gradle/Kotlin daemon shutdown. When that happens, check `app/build/reports/tests/testDebugUnitTest/` and `app/build/test-results/testDebugUnitTest/` before treating it as a product regression.
+- Real-device verification blocker encountered this round:
+  - `assembleDebug` first failed on resource packaging because `benchmark_tokens_limit_message` used non-positional `%d` placeholders in multiple locales.
+  - After fixing that, the workspace still has broader Gradle/Kotlin/KAPT instability:
+    - `compileDebugKotlin` can report daemon-state corruption such as `Expected compiler error, but got exitCode=OK`
+    - downstream `hiltAggregateDepsDebug` / `compileDebugJavaWithJavac` can then fail on missing generated classes unrelated to the roleplay media changes
+  - Conclusion: for this repo, `compileDebugKotlin` is currently a reliable signal for local code correctness, but `assembleDebug` is not yet stable enough to serve as a regression gate until the build pipeline itself is repaired.

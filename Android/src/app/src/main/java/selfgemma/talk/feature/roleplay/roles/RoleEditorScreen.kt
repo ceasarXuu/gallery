@@ -96,6 +96,20 @@ fun RoleEditorScreen(
         viewModel.updateCoverUri(it.toString())
       }
     }
+  val galleryLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
+      if (uris.isNotEmpty()) {
+        uris.forEach { takeReadPermission(context = context, uri = it) }
+        viewModel.addGalleryAssets(uris.map(Uri::toString))
+      }
+    }
+  val spriteLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
+      if (uris.isNotEmpty()) {
+        uris.forEach { takeReadPermission(context = context, uri = it) }
+        viewModel.addSpriteAssets(uris.map(Uri::toString))
+      }
+    }
 
   val handleNavigateUp: () -> Unit = {
     if (modelMenuExpanded) {
@@ -140,11 +154,25 @@ fun RoleEditorScreen(
         RoleEditorMediaSection(
           avatarUri = uiState.avatarUri,
           coverUri = uiState.coverUri,
+          avatarSource = uiState.avatarSource,
+          coverSource = uiState.coverSource,
+          galleryAssets = uiState.galleryAssets,
+          spriteAssets = uiState.spriteAssets,
           importedFromStPng = uiState.importedFromStPng,
           onPickAvatar = { avatarLauncher.launch(arrayOf("image/*")) },
           onClearAvatar = { viewModel.updateAvatarUri(null) },
           onPickCover = { coverLauncher.launch(arrayOf("image/*")) },
           onClearCover = { viewModel.updateCoverUri(null) },
+          onAddGallery = { galleryLauncher.launch(arrayOf("image/*")) },
+          onRenameGalleryAsset = viewModel::updateGalleryAssetName,
+          onUpdateGalleryUsage = viewModel::updateGalleryAssetUsage,
+          onSetGalleryAsAvatar = viewModel::setGalleryAssetAsAvatar,
+          onSetGalleryAsCover = viewModel::setGalleryAssetAsCover,
+          onRemoveGalleryAsset = viewModel::removeGalleryAsset,
+          onAddSprites = { spriteLauncher.launch(arrayOf("image/*")) },
+          onRenameSpriteAsset = viewModel::updateSpriteAssetName,
+          onUpdateSpriteStateTag = viewModel::updateSpriteStateTag,
+          onRemoveSpriteAsset = viewModel::removeSpriteAsset,
         )
       }
       item {

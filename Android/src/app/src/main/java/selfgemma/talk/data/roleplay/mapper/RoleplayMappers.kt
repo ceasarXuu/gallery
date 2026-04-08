@@ -16,6 +16,7 @@ import selfgemma.talk.domain.roleplay.model.SessionSummary
 fun RoleEntity.toDomain(): RoleCard {
   val cardCore = toRoleCardCoreOrLegacy()
   val runtimeProfile = toRoleRuntimeProfileOrLegacy()
+  val mediaProfile = toRoleMediaProfileOrLegacy()
   val interopState = toRoleInteropStateOrDefault()
   return RoleCard(
     id = id,
@@ -40,6 +41,7 @@ fun RoleEntity.toDomain(): RoleCard {
     tags = tags,
     cardCore = cardCore,
     runtimeProfile = runtimeProfile,
+    mediaProfile = mediaProfile,
     interopState = interopState,
     builtIn = builtIn,
     archived = archived,
@@ -51,12 +53,13 @@ fun RoleEntity.toDomain(): RoleCard {
 fun RoleCard.toEntity(): RoleEntity {
   val cardCore = toPersistedRoleCardCore()
   val runtimeProfile = toPersistedRoleRuntimeProfile()
+  val mediaProfile = toPersistedRoleMediaProfile()
   val interopState = toPersistedRoleInteropState()
   return RoleEntity(
     id = id,
     name = name,
-    avatarUri = avatarUri,
-    coverUri = coverUri,
+    avatarUri = mediaProfile?.primaryAvatar?.uri ?: avatarUri,
+    coverUri = mediaProfile?.coverImage?.uri ?: coverUri,
     summary = summary,
     systemPrompt = systemPrompt,
     personaDescription = personaDescription,
@@ -75,6 +78,7 @@ fun RoleCard.toEntity(): RoleEntity {
     tags = tags,
     cardCoreJson = RoleplayInteropJsonCodec.encodeRoleCardCore(cardCore),
     runtimeProfileJson = RoleplayInteropJsonCodec.encodeRoleRuntimeProfile(runtimeProfile),
+    mediaProfileJson = RoleplayInteropJsonCodec.encodeRoleMediaProfile(mediaProfile),
     interopStateJson = RoleplayInteropJsonCodec.encodeRoleInteropState(interopState),
     builtIn = builtIn,
     archived = archived,

@@ -1,11 +1,17 @@
 package selfgemma.talk.domain.roleplay.usecase
 
 import com.google.gson.JsonParser
+import java.util.UUID
 import selfgemma.talk.data.roleplay.interop.stcardpng.StPngRoleCardCodec
 import javax.inject.Inject
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.RoleCardExportTarget
 import selfgemma.talk.domain.roleplay.model.RoleCardSourceFormat
+import selfgemma.talk.domain.roleplay.model.RoleMediaAsset
+import selfgemma.talk.domain.roleplay.model.RoleMediaImportState
+import selfgemma.talk.domain.roleplay.model.RoleMediaKind
+import selfgemma.talk.domain.roleplay.model.RoleMediaProfile
+import selfgemma.talk.domain.roleplay.model.RoleMediaSource
 import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentRepository
 
 class ImportStRoleCardFromUriUseCase
@@ -42,6 +48,24 @@ constructor(
 
     return imported.copy(
       avatarUri = uri,
+      mediaProfile =
+        (imported.mediaProfile ?: RoleMediaProfile()).copy(
+          primaryAvatar =
+            RoleMediaAsset(
+              id = UUID.nameUUIDFromBytes("st-avatar:$uri".toByteArray()).toString(),
+              kind = RoleMediaKind.PRIMARY_AVATAR,
+              uri = uri,
+              source = RoleMediaSource.ST_PNG_IMPORT,
+              createdAt = imported.createdAt,
+              updatedAt = imported.updatedAt,
+            ),
+          importState =
+            RoleMediaImportState(
+              lastImportedPrimaryAvatarSource = uri,
+              importedFromStPng = true,
+              lastImportHadEmbeddedImage = true,
+            ),
+        ),
       interopState =
         imported.interopState?.copy(
           sourceFormat = RoleCardSourceFormat.ST_PNG,

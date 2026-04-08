@@ -189,7 +189,7 @@
   <string name="benchmark_no_results">无基准测试结果</string>
   <string name="benchmark_comparison_help_title">如何比较基准测试运行</string>
   <string name="benchmark_comparison_help_content">点击任意运行结果卡片上的**基准线**芯片将该运行设置为比较基准。我们将自动计算并显示**所有其他**运行结果卡片中的百分比差异。</string>
-  <string name="benchmark_tokens_limit_message">确保预填充和解码令牌的总和保持在模型的最大令牌限制之下（%d vs %d）</string>
+  <string name="benchmark_tokens_limit_message">确保预填充和解码令牌的总和保持在模型的最大令牌限制之下（%1$d vs %2$d）</string>
   <string name="best_overall">整体最佳</string>
   <string name="run_benchmark">运行基准测试</string>
   <string name="run_benchmark_confirmation_msg">此过程通常需要几分钟，一旦开始就无法中断。您要继续吗？</string>

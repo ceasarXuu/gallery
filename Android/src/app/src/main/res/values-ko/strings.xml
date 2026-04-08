@@ -185,7 +185,7 @@
   <string name="benchmark_no_results">벤치마크 결과 없음</string>
   <string name="benchmark_comparison_help_title">벤치마크 실행 비교 방법</string>
   <string name="benchmark_comparison_help_content">임의의 실행 결과 카드에서 **베이스라인** 칩을 탭하여 해당 실행을 비교 베이스라인으로 설정합니다. 다른 모든 실행 결과 카드에 백분율 차이가 자동으로 계산되어 표시됩니다.</string>
-  <string name="benchmark_tokens_limit_message">프리필과 디코드 토큰의 합이 모델의 최대 토큰 제한을 초과하지 않도록 하세요 (%d vs %d)</string>
+  <string name="benchmark_tokens_limit_message">프리필과 디코드 토큰의 합이 모델의 최대 토큰 제한을 초과하지 않도록 하세요 (%1$d vs %2$d)</string>
   <string name="best_overall">전체 최고</string>
   <string name="run_benchmark">벤치마크 실행</string>
   <string name="run_benchmark_confirmation_msg">이 프로세스는 일반적으로 몇 분이 소요되며 시작된 후에는 중단할 수 없습니다. 계속하시겠습니까?</string>

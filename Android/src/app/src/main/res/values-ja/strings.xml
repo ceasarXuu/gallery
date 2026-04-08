@@ -185,7 +185,7 @@
   <string name="benchmark_no_results">ベンチマーク結果がありません</string>
   <string name="benchmark_comparison_help_title">ベンチマーク実行の比較方法</string>
   <string name="benchmark_comparison_help_content">任意の実行結果カードの**ベースライン**チップをタップして、その実行を比較ベースラインとして設定します。他のすべての実行結果カードにパーセンテージの差異が自動的に計算・表示されます。</string>
-  <string name="benchmark_tokens_limit_message">プリフィルとデコードトークンの合計がモデルの最大トークン制限を下回るようにしてください（%d vs %d）</string>
+  <string name="benchmark_tokens_limit_message">プリフィルとデコードトークンの合計がモデルの最大トークン制限を下回るようにしてください（%1$d vs %2$d）</string>
   <string name="best_overall">総合ベスト</string>
   <string name="run_benchmark">ベンチマークを実行</string>
   <string name="run_benchmark_confirmation_msg">このプロセスは通常数分かかり、一度開始すると中断できません。続行しますか？</string>

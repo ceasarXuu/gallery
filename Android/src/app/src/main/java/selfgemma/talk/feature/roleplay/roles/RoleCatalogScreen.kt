@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -50,6 +51,8 @@ import selfgemma.talk.R
 import kotlinx.coroutines.launch
 import selfgemma.talk.performance.TrackPerformanceState
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import selfgemma.talk.domain.roleplay.model.primaryAvatarUri
+import selfgemma.talk.feature.roleplay.common.RoleAvatar
 
 private const val TAG = "RoleCatalogScreen"
 
@@ -287,7 +290,23 @@ private fun RoleCardItem(
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-      Text(role.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+      Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        RoleAvatar(
+          name = role.name,
+          avatarUri = role.primaryAvatarUri(),
+          modifier = Modifier.size(52.dp),
+        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+          Text(role.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+          if (role.primaryAvatarUri().isNullOrBlank()) {
+            Text(
+              text = stringResource(R.string.role_catalog_no_avatar),
+              style = MaterialTheme.typography.labelSmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          }
+        }
+      }
       Text(
         role.summary,
         style = MaterialTheme.typography.bodyMedium,

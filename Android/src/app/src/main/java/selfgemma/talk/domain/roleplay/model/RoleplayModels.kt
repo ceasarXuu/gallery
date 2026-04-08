@@ -62,6 +62,7 @@ data class RoleCard(
   val tags: List<String> = emptyList(),
   val cardCore: RoleCardCore? = null,
   val runtimeProfile: RoleRuntimeProfile? = null,
+  val mediaProfile: RoleMediaProfile? = null,
   val interopState: RoleInteropState? = null,
   val builtIn: Boolean = false,
   val archived: Boolean = false,

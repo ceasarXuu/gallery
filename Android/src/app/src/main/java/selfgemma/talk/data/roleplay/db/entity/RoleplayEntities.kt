@@ -42,6 +42,7 @@ data class RoleEntity(
   val tags: List<String> = emptyList(),
   val cardCoreJson: String? = null,
   val runtimeProfileJson: String? = null,
+  val mediaProfileJson: String? = null,
   val interopStateJson: String? = null,
   val builtIn: Boolean = false,
   val archived: Boolean = false,

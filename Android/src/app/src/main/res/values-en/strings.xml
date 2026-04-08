@@ -186,7 +186,7 @@
   <string name="benchmark_no_results">No benchmark results</string>
   <string name="benchmark_comparison_help_title">How to compare benchmark runs</string>
   <string name="benchmark_comparison_help_content">Compare benchmark runs by tapping the **Baseline** chip on any run result card to set the run as the comparison baseline. We\'ll automatically calculate and display the percentage differences in **all other** run result cards.</string>
-  <string name="benchmark_tokens_limit_message">Ensure that the sum of prefill and decode tokens remains under the model\'s maximum token limit (%d vs %d)</string>
+  <string name="benchmark_tokens_limit_message">Ensure that the sum of prefill and decode tokens remains under the model\'s maximum token limit (%1$d vs %2$d)</string>
   <string name="best_overall">Best overall</string>
   <string name="run_benchmark">Run benchmark</string>
   <string name="run_benchmark_confirmation_msg">This process typically takes several minutes and cannot be interrupted once started. Would you like to proceed?</string>

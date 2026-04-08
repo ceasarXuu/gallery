@@ -16,6 +16,7 @@ import selfgemma.talk.domain.roleplay.repository.RoleRepository
 import selfgemma.talk.domain.roleplay.usecase.EnsureRoleplaySeedDataUseCase
 import selfgemma.talk.domain.roleplay.usecase.ExportStChatJsonlFromSessionUseCase
 import selfgemma.talk.domain.roleplay.usecase.ImportStChatJsonlIntoSessionUseCase
+import selfgemma.talk.domain.roleplay.model.primaryAvatarUri
 
 data class SessionListItemUiState(
   val id: String,
@@ -62,7 +63,7 @@ constructor(
               id = session.id,
               title = session.title,
               roleName = role?.name ?: "Unknown role",
-              avatarUri = role?.avatarUri,
+              avatarUri = role?.primaryAvatarUri(),
               pinned = session.pinned,
               updatedAt = session.updatedAt,
               lastMessage =

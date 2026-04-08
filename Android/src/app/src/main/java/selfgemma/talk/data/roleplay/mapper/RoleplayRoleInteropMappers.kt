@@ -1,5 +1,6 @@
 package selfgemma.talk.data.roleplay.mapper
 
+import java.util.UUID
 import selfgemma.talk.data.roleplay.db.entity.RoleEntity
 import selfgemma.talk.domain.roleplay.model.MemoryPolicy
 import selfgemma.talk.domain.roleplay.model.RoleCard
@@ -8,6 +9,11 @@ import selfgemma.talk.domain.roleplay.model.RoleCardExportTarget
 import selfgemma.talk.domain.roleplay.model.RoleCardSourceFormat
 import selfgemma.talk.domain.roleplay.model.RoleCardSpecVersion
 import selfgemma.talk.domain.roleplay.model.RoleInteropState
+import selfgemma.talk.domain.roleplay.model.RoleMediaAsset
+import selfgemma.talk.domain.roleplay.model.RoleMediaImportState
+import selfgemma.talk.domain.roleplay.model.RoleMediaKind
+import selfgemma.talk.domain.roleplay.model.RoleMediaProfile
+import selfgemma.talk.domain.roleplay.model.RoleMediaSource
 import selfgemma.talk.domain.roleplay.model.RoleRuntimeProfile
 import selfgemma.talk.domain.roleplay.model.RuntimeModelParams
 import selfgemma.talk.domain.roleplay.model.RuntimeSafetyPolicy
@@ -65,6 +71,49 @@ internal fun RoleEntity.toRoleInteropStateOrDefault(): RoleInteropState {
     )
 }
 
+internal fun RoleEntity.toRoleMediaProfileOrLegacy(): RoleMediaProfile {
+  return mediaProfileJson
+    ?.takeIf { it.isNotBlank() }
+    ?.let(RoleplayInteropJsonCodec::decodeRoleMediaProfile)
+    ?: RoleMediaProfile(
+      primaryAvatar =
+        avatarUri?.let { uri ->
+          RoleMediaAsset(
+            id = UUID.nameUUIDFromBytes("avatar:$id:$uri".toByteArray()).toString(),
+            kind = RoleMediaKind.PRIMARY_AVATAR,
+            uri = uri,
+            displayName = name.ifBlank { "Primary avatar" },
+            source =
+              if (toRoleInteropStateOrDefault().sourceFormat == RoleCardSourceFormat.ST_PNG) {
+                RoleMediaSource.ST_PNG_IMPORT
+              } else {
+                RoleMediaSource.MIGRATED_LEGACY
+              },
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+          )
+        },
+      coverImage =
+        coverUri?.let { uri ->
+          RoleMediaAsset(
+            id = UUID.nameUUIDFromBytes("cover:$id:$uri".toByteArray()).toString(),
+            kind = RoleMediaKind.COVER,
+            uri = uri,
+            displayName = "$name cover".trim(),
+            source = RoleMediaSource.MIGRATED_LEGACY,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+          )
+        },
+      importState =
+        RoleMediaImportState(
+          lastImportedPrimaryAvatarSource = avatarUri,
+          importedFromStPng = toRoleInteropStateOrDefault().sourceFormat == RoleCardSourceFormat.ST_PNG,
+          lastImportHadEmbeddedImage = !avatarUri.isNullOrBlank(),
+        ),
+    )
+}
+
 internal fun RoleCard.toPersistedRoleCardCore(): RoleCardCore {
   return cardCore
     ?: RoleCardCore(
@@ -99,6 +148,47 @@ internal fun RoleCard.toPersistedRoleRuntimeProfile(): RoleRuntimeProfile {
           summaryTurnThreshold = summaryTurnThreshold,
         ),
       safetyPolicy = RuntimeSafetyPolicy(policyText = safetyPolicy),
+    )
+}
+
+internal fun RoleCard.toPersistedRoleMediaProfile(): RoleMediaProfile {
+  return mediaProfile
+    ?: RoleMediaProfile(
+      primaryAvatar =
+        avatarUri?.let { uri ->
+          RoleMediaAsset(
+            id = UUID.nameUUIDFromBytes("avatar:$id:$uri".toByteArray()).toString(),
+            kind = RoleMediaKind.PRIMARY_AVATAR,
+            uri = uri,
+            displayName = name.ifBlank { "Primary avatar" },
+            source =
+              if (interopState?.sourceFormat == RoleCardSourceFormat.ST_PNG) {
+                RoleMediaSource.ST_PNG_IMPORT
+              } else {
+                RoleMediaSource.MIGRATED_LEGACY
+              },
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+          )
+        },
+      coverImage =
+        coverUri?.let { uri ->
+          RoleMediaAsset(
+            id = UUID.nameUUIDFromBytes("cover:$id:$uri".toByteArray()).toString(),
+            kind = RoleMediaKind.COVER,
+            uri = uri,
+            displayName = "$name cover".trim(),
+            source = RoleMediaSource.MIGRATED_LEGACY,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+          )
+        },
+      importState =
+        RoleMediaImportState(
+          lastImportedPrimaryAvatarSource = avatarUri,
+          importedFromStPng = interopState?.sourceFormat == RoleCardSourceFormat.ST_PNG,
+          lastImportHadEmbeddedImage = !avatarUri.isNullOrBlank(),
+        ),
     )
 }
 

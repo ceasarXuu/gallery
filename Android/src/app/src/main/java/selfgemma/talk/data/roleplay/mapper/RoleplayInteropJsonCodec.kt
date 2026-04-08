@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import selfgemma.talk.domain.roleplay.model.RoleCardCore
 import selfgemma.talk.domain.roleplay.model.RoleInteropState
+import selfgemma.talk.domain.roleplay.model.RoleMediaProfile
 import selfgemma.talk.domain.roleplay.model.RoleRuntimeProfile
 
 object RoleplayInteropJsonCodec {
@@ -40,5 +41,16 @@ object RoleplayInteropJsonCodec {
       return null
     }
     return gson.fromJson(value, RoleInteropState::class.java)
+  }
+
+  fun encodeRoleMediaProfile(value: RoleMediaProfile?): String? {
+    return value?.let(gson::toJson)
+  }
+
+  fun decodeRoleMediaProfile(value: String?): RoleMediaProfile? {
+    if (value.isNullOrBlank()) {
+      return null
+    }
+    return gson.fromJson(value, RoleMediaProfile::class.java)
   }
 }

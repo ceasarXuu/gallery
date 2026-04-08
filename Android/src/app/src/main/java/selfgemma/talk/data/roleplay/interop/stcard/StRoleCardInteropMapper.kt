@@ -2,6 +2,7 @@ package selfgemma.talk.data.roleplay.interop.stcard
 
 import java.util.UUID
 import selfgemma.talk.data.roleplay.mapper.toPersistedRoleInteropState
+import selfgemma.talk.data.roleplay.mapper.toPersistedRoleMediaProfile
 import selfgemma.talk.data.roleplay.mapper.toPersistedRoleRuntimeProfile
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.RoleCardCore
@@ -43,6 +44,7 @@ internal object StRoleCardInteropMapper {
       tags = core.tags,
       cardCore = core,
       runtimeProfile = runtimeProfile,
+      mediaProfile = existingRole?.toPersistedRoleMediaProfile(),
       interopState = interopState,
       builtIn = existingRole?.builtIn ?: false,
       archived = existingRole?.archived ?: false,

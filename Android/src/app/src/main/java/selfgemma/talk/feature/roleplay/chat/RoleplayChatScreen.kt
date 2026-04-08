@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -87,6 +88,8 @@ import selfgemma.talk.ui.modelmanager.ModelInitializationStatusType
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import androidx.compose.ui.res.stringResource
 import selfgemma.talk.R
+import selfgemma.talk.domain.roleplay.model.primaryAvatarUri
+import selfgemma.talk.feature.roleplay.common.RoleAvatar
 
 private const val TAG = "RoleplayChatScreen"
 
@@ -338,6 +341,7 @@ fun RoleplayChatScreen(
           ChatMessageBubble(
             message = message,
             roleName = roleName,
+            roleAvatarUri = uiState.role?.primaryAvatarUri(),
             animateOnEnter = hasCompletedInitialPositioning && message.id == lastMessage?.id,
           )
         }
@@ -443,6 +447,7 @@ fun RoleplayChatScreen(
 private fun ChatMessageBubble(
   message: Message,
   roleName: String,
+  roleAvatarUri: String?,
   animateOnEnter: Boolean,
 ) {
   val isUser = message.side == MessageSide.USER
@@ -472,6 +477,15 @@ private fun ChatMessageBubble(
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(end = 8.dp, bottom = 10.dp),
           )
+        }
+
+        if (!isUser) {
+          RoleAvatar(
+            name = roleName,
+            avatarUri = roleAvatarUri,
+            modifier = Modifier.size(32.dp),
+          )
+          Spacer(modifier = Modifier.width(8.dp))
         }
 
         Surface(

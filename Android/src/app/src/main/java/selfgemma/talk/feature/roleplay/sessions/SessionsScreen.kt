@@ -64,6 +64,7 @@ import selfgemma.talk.data.AppBarAction
 import selfgemma.talk.data.AppBarActionType
 import selfgemma.talk.R
 import selfgemma.talk.performance.TrackPerformanceState
+import selfgemma.talk.feature.roleplay.common.RoleAvatar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -364,19 +365,11 @@ private fun SessionCard(
         modifier=Modifier.fillMaxSize().padding(horizontal=16.dp, vertical=12.dp),
         verticalAlignment=Alignment.CenterVertically,
       ) {
-        Box(
-          modifier=
-            Modifier.size(56.dp)
-              .clip(MaterialTheme.shapes.medium)
-              .background(MaterialTheme.colorScheme.primaryContainer),
-          contentAlignment=Alignment.Center,
-        ) {
-          Text(
-            session.roleName.firstOrNull()?.uppercase() ?: "?",
-            style=MaterialTheme.typography.headlineMedium,
-            color=MaterialTheme.colorScheme.onPrimaryContainer,
-          )
-        }
+        RoleAvatar(
+          name = session.roleName,
+          avatarUri = session.avatarUri,
+          modifier = Modifier.size(56.dp),
+        )
 
         Spacer(Modifier.width(12.dp))
 

@@ -6,6 +6,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.RoleCardSourceFormat
+import selfgemma.talk.domain.roleplay.model.RoleMediaAsset
+import selfgemma.talk.domain.roleplay.model.RoleMediaKind
+import selfgemma.talk.domain.roleplay.model.RoleMediaProfile
+import selfgemma.talk.domain.roleplay.model.RoleMediaSource
 import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentMetadata
 import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentRepository
 
@@ -43,6 +47,7 @@ class StRoleCardDocumentInteropUseCaseTest {
 
     assertEquals("Iris", imported.name)
     assertEquals("content://cards/iris.png", imported.avatarUri)
+    assertEquals("content://cards/iris.png", imported.mediaProfile?.primaryAvatar?.uri)
     assertEquals(RoleCardSourceFormat.ST_PNG, imported.interopState?.sourceFormat)
   }
 
@@ -72,6 +77,48 @@ class StRoleCardDocumentInteropUseCaseTest {
     )
 
     assertTrue(repository.byteDocuments.getValue("content://cards/astra.png").isNotEmpty())
+  }
+
+  @Test
+  fun exportToUri_usesPrimaryAvatarFromMediaProfile() = runBlocking {
+    val repository =
+      FakeRoleCardDocumentRepository().apply {
+        metadata["content://cards/export.png"] =
+          RoleplayInteropDocumentMetadata(displayName = "export.png", mimeType = "image/png")
+        byteDocuments["content://images/avatar.png"] = byteArrayOf(1, 2, 3, 4)
+      }
+    val useCase =
+      ExportStRoleCardToUriUseCase(
+        documentRepository = repository,
+        exportStV2RoleCardUseCase = ExportStV2RoleCardUseCase(),
+      )
+
+    useCase.exportToUri(
+      uri = "content://cards/export.png",
+      role =
+        RoleCard(
+          id = "role-2",
+          name = "Nova",
+          summary = "Scout",
+          systemPrompt = "Stay immersive.",
+          mediaProfile =
+            RoleMediaProfile(
+              primaryAvatar =
+                RoleMediaAsset(
+                  id = "avatar-1",
+                  kind = RoleMediaKind.PRIMARY_AVATAR,
+                  uri = "content://images/avatar.png",
+                  source = RoleMediaSource.LOCAL_PICKER,
+                  createdAt = 1L,
+                  updatedAt = 1L,
+                )
+            ),
+          createdAt = 1L,
+          updatedAt = 1L,
+        ),
+    )
+
+    assertTrue(repository.byteDocuments.getValue("content://cards/export.png").isNotEmpty())
   }
 }
 
