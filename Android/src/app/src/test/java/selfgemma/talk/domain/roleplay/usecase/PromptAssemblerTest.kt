@@ -340,4 +340,170 @@ class PromptAssemblerTest {
     assertFalse(prompt.contains("{{user}}"))
     assertFalse(prompt.contains("<USER>"))
   }
+
+  @Test
+  fun assemble_supports_regex_budget_and_recursive_world_info() {
+    val now = System.currentTimeMillis()
+    val result =
+      assembler.assembleForSession(
+        role =
+          RoleCard(
+            id = "role-5",
+            name = "Regex Tester",
+            summary = "Budget test.",
+            systemPrompt = "",
+            cardCore =
+              StCharacterCard(
+                name = "Regex Tester",
+                data =
+                  StCharacterCardData(
+                    character_book =
+                      StCharacterBook(
+                        token_budget = 7,
+                        recursive_scanning = true,
+                        entries =
+                          listOf(
+                            StCharacterBookEntry(
+                              id = 1,
+                              keys = listOf("/secret [0-9]+/i"),
+                              content = "alpha beta gamma delta",
+                              extensions = JsonObject().apply { addProperty("ignore_budget", true) },
+                            ),
+                            StCharacterBookEntry(
+                              id = 2,
+                              keys = listOf("gamma"),
+                              content = "recursive trigger content",
+                              position = "before_char",
+                            ),
+                            StCharacterBookEntry(
+                              id = 3,
+                              keys = listOf("recursive"),
+                              content = "this should be dropped by token budget overflow",
+                              position = "before_char",
+                            ),
+                          ),
+                      ),
+                  ),
+              ),
+            createdAt = now,
+            updatedAt = now,
+          ),
+        summary = null,
+        memories = emptyList(),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-5",
+              sessionId = "session-5",
+              seq = 1,
+              side = MessageSide.USER,
+              content = "I found secret 42 in the budget report.",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            )
+          ),
+        pendingUserInput = "",
+        chatMetadataJson = null,
+      )
+
+    assertTrue(result.prompt, result.prompt.contains("alpha beta gamma delta"))
+    assertTrue(result.prompt, result.prompt.contains("recursive trigger content"))
+    assertFalse(result.prompt, result.prompt.contains("this should be dropped by token budget overflow"))
+  }
+
+  @Test
+  fun assemble_persists_sticky_entries_through_chat_metadata() {
+    val now = System.currentTimeMillis()
+    val role =
+      RoleCard(
+        id = "role-6",
+        name = "Sticky Tester",
+        summary = "Sticky test.",
+        systemPrompt = "",
+        cardCore =
+          StCharacterCard(
+            name = "Sticky Tester",
+            data =
+              StCharacterCardData(
+                character_book =
+                  StCharacterBook(
+                    entries =
+                      listOf(
+                        StCharacterBookEntry(
+                          id = 1,
+                          keys = listOf("sticky"),
+                          content = "sticky lore entry",
+                          position = "before_char",
+                          extensions =
+                            JsonObject().apply {
+                              addProperty("sticky", 2)
+                              addProperty("cooldown", 2)
+                            },
+                        )
+                      ),
+                  ),
+              ),
+          ),
+        createdAt = now,
+        updatedAt = now,
+      )
+
+    val first =
+      assembler.assembleForSession(
+        role = role,
+        summary = null,
+        memories = emptyList(),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-6",
+              sessionId = "session-6",
+              seq = 1,
+              side = MessageSide.USER,
+              content = "sticky",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            )
+          ),
+        pendingUserInput = "",
+        chatMetadataJson = null,
+      )
+    val second =
+      assembler.assembleForSession(
+        role = role,
+        summary = null,
+        memories = emptyList(),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-7",
+              sessionId = "session-6",
+              seq = 1,
+              side = MessageSide.USER,
+              content = "no key now",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            ),
+            Message(
+              id = "message-8",
+              sessionId = "session-6",
+              seq = 2,
+              side = MessageSide.ASSISTANT,
+              content = "reply",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            ),
+          ),
+        pendingUserInput = "",
+        chatMetadataJson = first.updatedChatMetadataJson,
+      )
+
+    assertTrue(first.prompt.contains("sticky lore entry"))
+    assertTrue(second.prompt.contains("sticky lore entry"))
+    assertTrue(first.updatedChatMetadataJson != null)
+  }
 }

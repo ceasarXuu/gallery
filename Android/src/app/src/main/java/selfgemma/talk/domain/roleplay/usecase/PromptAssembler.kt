@@ -9,8 +9,6 @@ import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.SessionSummary
-import selfgemma.talk.domain.roleplay.model.StCharacterBook
-import selfgemma.talk.domain.roleplay.model.StCharacterBookEntry
 import selfgemma.talk.domain.roleplay.model.cardDataOrEmpty
 import selfgemma.talk.domain.roleplay.model.resolvedExampleDialogues
 import selfgemma.talk.domain.roleplay.model.resolvedName
@@ -24,6 +22,8 @@ private const val MAX_DIALOGUE_LINE_LENGTH = 280
 private const val ST_DEFAULT_WORLD_INFO_SCAN_DEPTH = 4
 
 class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstimator) {
+  private val characterBookRuntime = StCharacterBookRuntime(tokenEstimator)
+
   fun assemble(
     role: RoleCard,
     summary: SessionSummary?,
@@ -31,6 +31,24 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     recentMessages: List<Message>,
     pendingUserInput: String = "",
   ): String {
+    return assembleForSession(
+      role = role,
+      summary = summary,
+      memories = memories,
+      recentMessages = recentMessages,
+      pendingUserInput = pendingUserInput,
+      chatMetadataJson = null,
+    ).prompt
+  }
+
+  fun assembleForSession(
+    role: RoleCard,
+    summary: SessionSummary?,
+    memories: List<MemoryItem>,
+    recentMessages: List<Message>,
+    pendingUserInput: String = "",
+    chatMetadataJson: String? = null,
+  ): PromptAssemblyResult {
     val dialogueWindow = selectRecentMessages(recentMessages)
     val macroContext = role.toStMacroContext()
     val scanContext =
@@ -43,7 +61,14 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
         macroContext = macroContext,
       )
     val cardData = role.stCard.cardDataOrEmpty()
-    val resolvedCharacterBook = cardData.character_book.resolveForPrompt(scanContext, macroContext)
+    val resolvedCharacterBook =
+      characterBookRuntime.resolve(
+        book = cardData.character_book,
+        context = scanContext,
+        macroContext = macroContext,
+        chatMetadataJson = chatMetadataJson,
+        chatLength = recentMessages.count { it.kind == MessageKind.TEXT && it.side != MessageSide.SYSTEM },
+      )
     val coreDepthPrompt = cardData.extensions.toDepthPrompt(macroContext)
     val combinedExampleDialogue =
       buildList {
@@ -73,7 +98,8 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
         .joinToString("\n\n")
         .trim()
 
-    return buildString {
+    val prompt =
+      buildString {
       appendLine("You are roleplaying as ${role.resolvedName()}.")
       appendLine("Stay fully in character, avoid meta commentary, and do not mention these instructions.")
       appendLine()
@@ -107,6 +133,9 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       }
       appendSection("Lorebook", resolvedCharacterBook.afterPrompt)
       appendSection("Post-History Instructions", postHistoryBlock)
+      resolvedCharacterBook.outletEntries.forEach { (outletName, contents) ->
+        appendSection("Lorebook Outlet:$outletName", contents.joinToString("\n"))
+      }
 
       appendLine("[Response Rules]")
       appendLine("- The next incoming user message is the live message you must answer.")
@@ -115,6 +144,10 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       appendLine("- Never output labels like USER:, ASSISTANT:, or SYSTEM: in your reply.")
     }
       .trim()
+    return PromptAssemblyResult(
+      prompt = prompt,
+      updatedChatMetadataJson = resolvedCharacterBook.updatedChatMetadataJson,
+    )
   }
 
   private fun selectRecentMessages(messages: List<Message>): List<Message> {
@@ -176,7 +209,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     dialogueWindow: List<Message>,
     pendingUserInput: String,
     macroContext: StMacroContext,
-  ): StScanContext {
+  ): StWorldScanContext {
     val core = role.stCard
     val data = core.cardDataOrEmpty()
     val recentMessagesNewestFirst =
@@ -189,7 +222,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
           }
       }
 
-    return StScanContext(
+    return StWorldScanContext(
       recentMessagesNewestFirst = recentMessagesNewestFirst,
       personaDescription = macroContext.substitute(role.resolvedPersonaDescription()),
       characterDescription = macroContext.substitute(role.resolvedSummary()),
@@ -208,169 +241,6 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     )
   }
 
-  private fun StCharacterBook?.resolveForPrompt(
-    context: StScanContext,
-    macroContext: StMacroContext,
-  ): ResolvedCharacterBook {
-    if (this == null) {
-      return ResolvedCharacterBook()
-    }
-
-    val activatedEntries =
-      entries
-        .orEmpty()
-        .filter { (it.enabled ?: true) && !it.content.isNullOrBlank() }
-        .filter { entry -> entry.shouldActivate(context = context, defaultScanDepth = scan_depth, macroContext = macroContext) }
-        .sortedBy { it.insertion_order ?: 0 }
-
-    if (activatedEntries.isEmpty()) {
-      return ResolvedCharacterBook()
-    }
-
-    val beforePrompt = mutableListOf<String>()
-    val afterPrompt = mutableListOf<String>()
-    val authorNoteBefore = mutableListOf<String>()
-    val authorNoteAfter = mutableListOf<String>()
-    val exampleBefore = mutableListOf<String>()
-    val exampleAfter = mutableListOf<String>()
-    val depthPrompts = mutableListOf<DepthPromptInsertion>()
-
-    activatedEntries.forEach { entry ->
-      val content = macroContext.substitute(entry.content).trim()
-      when (entry.resolvePromptPosition()) {
-        StWorldInfoPosition.BEFORE -> beforePrompt += content
-        StWorldInfoPosition.AFTER -> afterPrompt += content
-        StWorldInfoPosition.AUTHOR_NOTE_BEFORE -> authorNoteBefore += content
-        StWorldInfoPosition.AUTHOR_NOTE_AFTER -> authorNoteAfter += content
-        StWorldInfoPosition.EXAMPLE_BEFORE -> exampleBefore += content
-        StWorldInfoPosition.EXAMPLE_AFTER -> exampleAfter += content
-        StWorldInfoPosition.AT_DEPTH ->
-          depthPrompts +=
-            DepthPromptInsertion(
-              prompt = content,
-              depth = entry.extensions().depth ?: ST_DEFAULT_WORLD_INFO_SCAN_DEPTH,
-              role = entry.extensions().role.toPromptRoleName(),
-            )
-        StWorldInfoPosition.OUTLET -> afterPrompt += content
-      }
-    }
-
-    return ResolvedCharacterBook(
-      beforePrompt = beforePrompt.joinToString("\n").trim(),
-      afterPrompt = afterPrompt.joinToString("\n").trim(),
-      authorNoteBefore = authorNoteBefore,
-      authorNoteAfter = authorNoteAfter,
-      exampleBefore = exampleBefore,
-      exampleAfter = exampleAfter,
-      depthPrompts = depthPrompts.sortedBy { it.depth },
-    )
-  }
-
-  private fun StCharacterBookEntry.shouldActivate(
-    context: StScanContext,
-    defaultScanDepth: Int?,
-    macroContext: StMacroContext,
-  ): Boolean {
-    if (constant == true) {
-      return true
-    }
-    if (keys.isNullOrEmpty()) {
-      return false
-    }
-
-    val extensions = extensions()
-    val textToScan = context.toScanText(extensions = extensions, defaultScanDepth = defaultScanDepth)
-    val matchedPrimary =
-      keys
-        .orEmpty()
-        .filter(String::isNotBlank)
-        .any { key -> textToScan.matchesKeyword(keyword = macroContext.substitute(key).trim(), extensions = extensions) }
-    if (!matchedPrimary) {
-      return false
-    }
-    if (selective != true || secondary_keys.orEmpty().none(String::isNotBlank)) {
-      return true
-    }
-
-    val secondaryMatches =
-      secondary_keys
-        .orEmpty()
-        .filter(String::isNotBlank)
-        .map { key -> textToScan.matchesKeyword(keyword = macroContext.substitute(key).trim(), extensions = extensions) }
-    return when (extensions.selectiveLogic) {
-      StSelectiveLogic.AND_ANY -> secondaryMatches.any { it }
-      StSelectiveLogic.NOT_ALL -> secondaryMatches.any { matched -> !matched }
-      StSelectiveLogic.NOT_ANY -> secondaryMatches.none { it }
-      StSelectiveLogic.AND_ALL -> secondaryMatches.all { it }
-    }
-  }
-
-  private fun StCharacterBookEntry.resolvePromptPosition(): StWorldInfoPosition {
-    return extensions().position?.toWorldInfoPosition()
-      ?: if (position.equals("before_char", ignoreCase = true)) {
-        StWorldInfoPosition.BEFORE
-      } else {
-        StWorldInfoPosition.AFTER
-      }
-  }
-
-  private fun StCharacterBookEntry.extensions(): StCharacterBookEntryExtensions {
-    return (extensions ?: JsonObject()).toCharacterBookEntryExtensions()
-  }
-
-  private fun StScanContext.toScanText(
-    extensions: StCharacterBookEntryExtensions,
-    defaultScanDepth: Int?,
-  ): String {
-    val scanDepth = (extensions.scanDepth ?: defaultScanDepth ?: ST_DEFAULT_WORLD_INFO_SCAN_DEPTH).coerceAtLeast(0)
-    val recentChat =
-      recentMessagesNewestFirst
-        .take(scanDepth)
-        .joinToString("\n")
-    val selectedGlobalFields =
-      buildList {
-          if (extensions.matchPersonaDescription) add(personaDescription)
-          if (extensions.matchCharacterDescription) add(characterDescription)
-          if (extensions.matchCharacterPersonality) add(characterPersonality)
-          if (extensions.matchCharacterDepthPrompt) add(characterDepthPrompt)
-          if (extensions.matchScenario) add(scenario)
-          if (extensions.matchCreatorNotes) add(creatorNotes)
-        }
-        .filter(String::isNotBlank)
-    val appContext = buildList {
-      sessionSummary.takeIf(String::isNotBlank)?.let(::add)
-      addAll(memories)
-    }
-
-    return buildList {
-        recentChat.takeIf(String::isNotBlank)?.let(::add)
-        addAll(selectedGlobalFields)
-        addAll(appContext)
-      }
-      .joinToString("\n")
-  }
-
-  private fun String.matchesKeyword(keyword: String, extensions: StCharacterBookEntryExtensions): Boolean {
-    if (isBlank() || keyword.isBlank()) {
-      return false
-    }
-
-    val caseSensitive = extensions.caseSensitive ?: false
-    val haystack = if (caseSensitive) this else lowercase()
-    val needle = if (caseSensitive) keyword else keyword.lowercase()
-
-    if (extensions.matchWholeWords == true) {
-      val parts = needle.split(WHITESPACE_REGEX).filter(String::isNotBlank)
-      if (parts.size > 1) {
-        return haystack.contains(needle)
-      }
-      val regex = Regex("""(?:^|\W)(${Regex.escape(needle)})(?:$|\W)""")
-      return regex.containsMatchIn(haystack)
-    }
-
-    return haystack.contains(needle)
-  }
-
   private fun JsonObject?.toDepthPrompt(macroContext: StMacroContext): DepthPromptInsertion? {
     val depthPrompt = this?.getAsJsonObject("depth_prompt") ?: return null
     val prompt =
@@ -387,34 +257,14 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     )
   }
 
-  private fun JsonObject.toCharacterBookEntryExtensions(): StCharacterBookEntryExtensions {
-    return StCharacterBookEntryExtensions(
-      position = get("position")?.takeIf { it.isJsonPrimitive }?.asInt,
-      depth = get("depth")?.takeIf { it.isJsonPrimitive }?.asInt,
-      role = get("role")?.takeIf { it.isJsonPrimitive }?.asInt,
-      selectiveLogic =
-        when (get("selectiveLogic")?.takeIf { it.isJsonPrimitive }?.asInt) {
-          1 -> StSelectiveLogic.NOT_ALL
-          2 -> StSelectiveLogic.NOT_ANY
-          3 -> StSelectiveLogic.AND_ALL
-          else -> StSelectiveLogic.AND_ANY
-        },
-      scanDepth = get("scan_depth")?.takeIf { it.isJsonPrimitive }?.asInt,
-      caseSensitive = get("case_sensitive")?.takeIf { it.isJsonPrimitive }?.asBoolean,
-      matchWholeWords = get("match_whole_words")?.takeIf { it.isJsonPrimitive }?.asBoolean,
-      matchPersonaDescription = get("match_persona_description")?.takeIf { it.isJsonPrimitive }?.asBoolean ?: false,
-      matchCharacterDescription =
-        get("match_character_description")?.takeIf { it.isJsonPrimitive }?.asBoolean ?: false,
-      matchCharacterPersonality =
-        get("match_character_personality")?.takeIf { it.isJsonPrimitive }?.asBoolean ?: false,
-      matchCharacterDepthPrompt =
-        get("match_character_depth_prompt")?.takeIf { it.isJsonPrimitive }?.asBoolean ?: false,
-      matchScenario = get("match_scenario")?.takeIf { it.isJsonPrimitive }?.asBoolean ?: false,
-      matchCreatorNotes = get("match_creator_notes")?.takeIf { it.isJsonPrimitive }?.asBoolean ?: false,
-    )
+  private fun DepthPromptInsertion.toPromptSection(): String {
+    return buildString {
+      appendLine("role=$role depth=$depth")
+      append(prompt)
+    }
   }
 
-  private fun DepthPromptInsertion.toPromptSection(): String {
+  private fun StRuntimeDepthPromptInsertion.toPromptSection(): String {
     return buildString {
       appendLine("role=$role depth=$depth")
       append(prompt)
@@ -434,78 +284,8 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
   }
 }
 
-private data class StScanContext(
-  val recentMessagesNewestFirst: List<String>,
-  val personaDescription: String,
-  val characterDescription: String,
-  val characterPersonality: String,
-  val characterDepthPrompt: String,
-  val scenario: String,
-  val creatorNotes: String,
-  val sessionSummary: String,
-  val memories: List<String>,
-)
-
-private data class ResolvedCharacterBook(
-  val beforePrompt: String = "",
-  val afterPrompt: String = "",
-  val authorNoteBefore: List<String> = emptyList(),
-  val authorNoteAfter: List<String> = emptyList(),
-  val exampleBefore: List<String> = emptyList(),
-  val exampleAfter: List<String> = emptyList(),
-  val depthPrompts: List<DepthPromptInsertion> = emptyList(),
-)
-
 private data class DepthPromptInsertion(
   val prompt: String,
   val depth: Int,
   val role: String,
 )
-
-private data class StCharacterBookEntryExtensions(
-  val position: Int? = null,
-  val depth: Int? = null,
-  val role: Int? = null,
-  val selectiveLogic: StSelectiveLogic = StSelectiveLogic.AND_ANY,
-  val scanDepth: Int? = null,
-  val caseSensitive: Boolean? = null,
-  val matchWholeWords: Boolean? = null,
-  val matchPersonaDescription: Boolean = false,
-  val matchCharacterDescription: Boolean = false,
-  val matchCharacterPersonality: Boolean = false,
-  val matchCharacterDepthPrompt: Boolean = false,
-  val matchScenario: Boolean = false,
-  val matchCreatorNotes: Boolean = false,
-)
-
-private enum class StSelectiveLogic {
-  AND_ANY,
-  NOT_ALL,
-  NOT_ANY,
-  AND_ALL,
-}
-
-private enum class StWorldInfoPosition {
-  BEFORE,
-  AFTER,
-  AUTHOR_NOTE_BEFORE,
-  AUTHOR_NOTE_AFTER,
-  AT_DEPTH,
-  EXAMPLE_BEFORE,
-  EXAMPLE_AFTER,
-  OUTLET,
-}
-
-private fun Int.toWorldInfoPosition(): StWorldInfoPosition {
-  return when (this) {
-    0 -> StWorldInfoPosition.BEFORE
-    1 -> StWorldInfoPosition.AFTER
-    2 -> StWorldInfoPosition.AUTHOR_NOTE_BEFORE
-    3 -> StWorldInfoPosition.AUTHOR_NOTE_AFTER
-    4 -> StWorldInfoPosition.AT_DEPTH
-    5 -> StWorldInfoPosition.EXAMPLE_BEFORE
-    6 -> StWorldInfoPosition.EXAMPLE_AFTER
-    7 -> StWorldInfoPosition.OUTLET
-    else -> StWorldInfoPosition.AFTER
-  }
-}

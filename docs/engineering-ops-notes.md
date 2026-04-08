@@ -431,3 +431,12 @@ Notes:
 - Legacy placeholders `<USER>`, `<BOT>`, and `<CHAR>` should flow through the same substitution path. Converting them only at render time keeps stored card JSON intact while matching old-card ST behavior.
 - After touching ST normalization or macro substitution, rerun:
   - `.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.CreateRoleplaySessionUseCaseTest" --tests "selfgemma.talk.domain.roleplay.usecase.PromptAssemblerTest" --tests "selfgemma.talk.domain.roleplay.usecase.StRoleCardDocumentInteropUseCaseTest" --tests "selfgemma.talk.domain.roleplay.usecase.StSampleCardsRegressionTest" --no-daemon`
+
+## 2026-04-09 ST world-info runtime note
+
+- The app now has a dedicated [`StCharacterBookRuntime`](D:/gallery/Android/src/app/src/main/java/selfgemma/talk/domain/roleplay/usecase/StCharacterBookRuntime.kt) path instead of burying all world-info logic inside `PromptAssembler`. Continue extending ST world-info semantics there, then keep `PromptAssembler` focused on prompt layout.
+- `sticky`, `cooldown`, and related ST world-info timed effects need session-level persistence. In this app the least invasive place is `Session.interopChatMetadataJson`; update it during prompt assembly so the next turn sees the timed world-info state.
+- `transformDebugUnitTestClassesWithAsm` is still an intermittent Gradle infrastructure failure in this workspace. If targeted roleplay tests compile and run but a broader unit-test invocation dies there with `NoSuchFileException ... transformDebugUnitTestClassesWithAsm`, treat it as a build-pipeline issue unless a focused test also fails.
+- Useful verification split for ST world-info work:
+  - semantic regression: `.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.PromptAssemblerTest" --tests "selfgemma.talk.domain.roleplay.usecase.StSampleCardsRegressionTest" --tests "selfgemma.talk.domain.roleplay.usecase.CreateRoleplaySessionUseCaseTest" --no-daemon`
+  - installable product check: `.\gradlew.bat :app:assembleDebug --no-daemon`

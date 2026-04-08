@@ -200,16 +200,26 @@ constructor(
       memoryRepository.markUsed(relevantMemories.map { it.id }, System.currentTimeMillis())
     }
 
-    val systemInstruction =
-      Contents.of(
-        promptAssembler.assemble(
-          role = role,
-          summary = summary,
-          memories = relevantMemories,
-          recentMessages = recentMessages,
-          pendingUserInput = trimmedInput,
-        )
+    val promptAssembly =
+      promptAssembler.assembleForSession(
+        role = role,
+        summary = summary,
+        memories = relevantMemories,
+        recentMessages = recentMessages,
+        pendingUserInput = trimmedInput,
+        chatMetadataJson = session.interopChatMetadataJson,
       )
+    promptAssembly.updatedChatMetadataJson
+      ?.takeIf { it != session.interopChatMetadataJson }
+      ?.let { updatedChatMetadataJson ->
+        conversationRepository.updateSession(
+          session.copy(
+            interopChatMetadataJson = updatedChatMetadataJson,
+            updatedAt = System.currentTimeMillis(),
+          )
+        )
+      }
+    val systemInstruction = Contents.of(promptAssembly.prompt)
     Log.d(
       TAG,
       "assembled prompt sessionId=$sessionId recentMessages=${recentMessages.size} memories=${relevantMemories.size} promptChars=${systemInstruction.toString().length}",
