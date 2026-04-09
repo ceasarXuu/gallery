@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -26,9 +27,8 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -161,23 +161,38 @@ fun RoleEditorScreen(
       verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
       item {
-        PrimaryScrollableTabRow(
-          selectedTabIndex = tabs.indexOfFirst { it.first == uiState.selectedTab },
-          edgePadding = 0.dp,
+        LazyRow(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          contentPadding = PaddingValues(horizontal = 4.dp),
         ) {
-          tabs.forEach { (tab, title) ->
-            Tab(
-              selected = uiState.selectedTab == tab,
+          items(tabs.size) { index ->
+            val (tab, title) = tabs[index]
+            Surface(
               onClick = { viewModel.selectTab(tab) },
-              text = {
-                Text(
-                  text = title,
-                  maxLines = 1,
-                  softWrap = false,
-                  overflow = TextOverflow.Ellipsis,
-                )
-              },
-            )
+              shape = MaterialTheme.shapes.large,
+              color =
+                if (uiState.selectedTab == tab) {
+                  MaterialTheme.colorScheme.primaryContainer
+                } else {
+                  MaterialTheme.colorScheme.surfaceVariant
+                },
+              contentColor =
+                if (uiState.selectedTab == tab) {
+                  MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                  MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            ) {
+              Text(
+                text = title,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleSmall,
+              )
+            }
           }
         }
       }
