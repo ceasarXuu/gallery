@@ -133,8 +133,9 @@ object LlmChatModelHelper : LlmModelHelper {
       )
 
     // Create an instance of LiteRT LM engine and conversation.
+    var engine: Engine? = null
     try {
-      val engine = Engine(engineConfig)
+      engine = Engine(engineConfig)
       engine.initialize()
 
       val conversation =
@@ -169,6 +170,11 @@ object LlmChatModelHelper : LlmModelHelper {
             ),
         )
     } catch (e: Exception) {
+      try {
+        engine?.close()
+      } catch (closeException: Exception) {
+        Log.w(TAG, "Failed to close engine after initialize failure", closeException)
+      }
       onDone(cleanUpMediapipeTaskErrorMessage(e.message ?: "Unknown error"))
       return
     }
@@ -224,6 +230,20 @@ object LlmChatModelHelper : LlmModelHelper {
               tools = tools,
             ),
         )
+      try {
+        previousConversation.close()
+      } catch (closeException: Exception) {
+        try {
+          newConversation.close()
+        } catch (newConversationCloseException: Exception) {
+          Log.w(
+            TAG,
+            "Failed to close replacement conversation after previous close failure",
+            newConversationCloseException,
+          )
+        }
+        throw closeException
+      }
       instance.conversation = newConversation
       instance.sessionConfig =
         buildSessionConfig(
@@ -231,11 +251,6 @@ object LlmChatModelHelper : LlmModelHelper {
           tools = tools,
           enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
         )
-      try {
-        previousConversation.close()
-      } catch (closeException: Exception) {
-        Log.w(TAG, "Failed to close previous conversation after reset", closeException)
-      }
 
       Log.d(TAG, "Resetting done")
     } catch (e: Exception) {

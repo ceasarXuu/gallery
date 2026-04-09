@@ -552,20 +552,22 @@ open class LlmChatViewModelBase() : ChatViewModel() {
     supportImage: Boolean,
     supportAudio: Boolean,
   ): LlmChatPreparationResult {
-    val sessionConfig = (model.instance as? LlmModelInstance)?.sessionConfig ?: LlmConversationSessionConfig()
+    val persistentSessionConfig =
+      (model.instance as? LlmModelInstance)?.sessionConfig ?: LlmConversationSessionConfig()
     return try {
       model.runtimeHelper.resetConversation(
         model = model,
         supportImage = supportImage,
         supportAudio = supportAudio,
         systemInstruction = plan.systemInstruction,
-        tools = sessionConfig.tools,
+        tools = persistentSessionConfig.tools,
         enableConversationConstrainedDecoding =
-          sessionConfig.enableConversationConstrainedDecoding,
+          persistentSessionConfig.enableConversationConstrainedDecoding,
       )
+      (model.instance as? LlmModelInstance)?.sessionConfig = persistentSessionConfig
       Log.d(
         TAG,
-        "Prepared llmchat conversation model=${model.name} mode=${plan.report.mode} estimatedInstructionTokens=${plan.report.estimatedInstructionTokens} availableInstructionTokens=${plan.report.availableInstructionTokens} recentLines=${plan.report.recentLineCount} summaryLines=${plan.report.summaryLineCount} droppedLines=${plan.report.droppedLineCount} tools=${sessionConfig.tools.size} constrained=${sessionConfig.enableConversationConstrainedDecoding}",
+        "Prepared llmchat conversation model=${model.name} mode=${plan.report.mode} estimatedInstructionTokens=${plan.report.estimatedInstructionTokens} availableInstructionTokens=${plan.report.availableInstructionTokens} recentLines=${plan.report.recentLineCount} summaryLines=${plan.report.summaryLineCount} droppedLines=${plan.report.droppedLineCount} tools=${persistentSessionConfig.tools.size} constrained=${persistentSessionConfig.enableConversationConstrainedDecoding}",
       )
       LlmChatPreparationResult()
     } catch (exception: Exception) {
