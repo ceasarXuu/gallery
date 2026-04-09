@@ -536,7 +536,7 @@ open class LlmChatViewModelBase() : ChatViewModel() {
     val allMessages = getMessages(model = model)
     val priorMessages = allMessages.take((allMessages.size - currentTurnMessages.size).coerceAtLeast(0))
     return contextManager.buildPlan(
-      baseSystemPrompt = currentSystemPrompt,
+      baseSystemPrompt = resolveBaseSystemPrompt(model = model, currentSystemPrompt = currentSystemPrompt),
       historyMessages = priorMessages,
       pendingInput = currentInput,
       pendingImageCount = imageCount,
@@ -552,16 +552,20 @@ open class LlmChatViewModelBase() : ChatViewModel() {
     supportImage: Boolean,
     supportAudio: Boolean,
   ): LlmChatPreparationResult {
+    val sessionConfig = (model.instance as? LlmModelInstance)?.sessionConfig ?: LlmConversationSessionConfig()
     return try {
       model.runtimeHelper.resetConversation(
         model = model,
         supportImage = supportImage,
         supportAudio = supportAudio,
         systemInstruction = plan.systemInstruction,
+        tools = sessionConfig.tools,
+        enableConversationConstrainedDecoding =
+          sessionConfig.enableConversationConstrainedDecoding,
       )
       Log.d(
         TAG,
-        "Prepared llmchat conversation model=${model.name} mode=${plan.report.mode} estimatedInstructionTokens=${plan.report.estimatedInstructionTokens} availableInstructionTokens=${plan.report.availableInstructionTokens} recentLines=${plan.report.recentLineCount} summaryLines=${plan.report.summaryLineCount} droppedLines=${plan.report.droppedLineCount}",
+        "Prepared llmchat conversation model=${model.name} mode=${plan.report.mode} estimatedInstructionTokens=${plan.report.estimatedInstructionTokens} availableInstructionTokens=${plan.report.availableInstructionTokens} recentLines=${plan.report.recentLineCount} summaryLines=${plan.report.summaryLineCount} droppedLines=${plan.report.droppedLineCount} tools=${sessionConfig.tools.size} constrained=${sessionConfig.enableConversationConstrainedDecoding}",
       )
       LlmChatPreparationResult()
     } catch (exception: Exception) {
@@ -575,6 +579,12 @@ open class LlmChatViewModelBase() : ChatViewModel() {
         overflowDetected = LlmChatOverflowRecovery.isContextOverflow(exception.message),
       )
     }
+  }
+
+  private fun resolveBaseSystemPrompt(model: Model, currentSystemPrompt: String): String {
+    val configuredSystemPrompt =
+      (model.instance as? LlmModelInstance)?.sessionConfig?.systemInstructionText.orEmpty()
+    return configuredSystemPrompt.ifBlank { currentSystemPrompt }
   }
 
   fun handleError(

@@ -2,9 +2,14 @@ package selfgemma.talk.ui.llmchat
 
 import selfgemma.talk.data.Accelerator
 import selfgemma.talk.data.Model
+import com.google.ai.edge.litertlm.Contents
+import com.google.ai.edge.litertlm.ExperimentalApi
+import com.google.ai.edge.litertlm.ExperimentalFlags
 import java.io.File
 import kotlin.io.path.createTempDirectory
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -53,5 +58,32 @@ class LlmChatModelHelperTest {
     } finally {
       tempDir.deleteRecursively()
     }
+  }
+
+  @Test
+  fun buildSessionConfig_capturesPromptTextAndConstrainedDecoding() {
+    val config =
+      buildSessionConfig(
+        systemInstruction = Contents.of("System prompt"),
+        tools = listOf(),
+        enableConversationConstrainedDecoding = true,
+      )
+
+    assertTrue(config.systemInstructionText.contains("System prompt"))
+    assertTrue(config.enableConversationConstrainedDecoding)
+  }
+
+  @OptIn(ExperimentalApi::class)
+  @Test
+  fun withConversationConstrainedDecoding_restoresPreviousFlagAfterFailure() {
+    ExperimentalFlags.enableConversationConstrainedDecoding = false
+
+    runCatching {
+      withConversationConstrainedDecoding(enableConversationConstrainedDecoding = true) {
+        throw IllegalStateException("boom")
+      }
+    }
+
+    assertFalse(ExperimentalFlags.enableConversationConstrainedDecoding)
   }
 }

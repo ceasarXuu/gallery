@@ -51,7 +51,17 @@ import kotlinx.coroutines.CoroutineScope
 
 private const val TAG = "AGLlmChatModelHelper"
 
-data class LlmModelInstance(val engine: Engine, var conversation: Conversation)
+data class LlmConversationSessionConfig(
+  val systemInstructionText: String = "",
+  val tools: List<ToolProvider> = listOf(),
+  val enableConversationConstrainedDecoding: Boolean = false,
+)
+
+data class LlmModelInstance(
+  val engine: Engine,
+  var conversation: Conversation,
+  var sessionConfig: LlmConversationSessionConfig = LlmConversationSessionConfig(),
+)
 
 object LlmChatModelHelper : LlmModelHelper {
   // Indexed by model name.
@@ -127,27 +137,37 @@ object LlmChatModelHelper : LlmModelHelper {
       val engine = Engine(engineConfig)
       engine.initialize()
 
-      ExperimentalFlags.enableConversationConstrainedDecoding =
-        enableConversationConstrainedDecoding
       val conversation =
-        engine.createConversation(
-          ConversationConfig(
-            samplerConfig =
-              if (preferredBackend is Backend.NPU) {
-                null
-              } else {
-                SamplerConfig(
-                  topK = topK,
-                  topP = topP.toDouble(),
-                  temperature = temperature.toDouble(),
-                )
-              },
-            systemInstruction = systemInstruction,
-            tools = tools,
-          )
+        createConversation(
+          engine = engine,
+          enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
+          config =
+            ConversationConfig(
+              samplerConfig =
+                if (preferredBackend is Backend.NPU) {
+                  null
+                } else {
+                  SamplerConfig(
+                    topK = topK,
+                    topP = topP.toDouble(),
+                    temperature = temperature.toDouble(),
+                  )
+                },
+              systemInstruction = systemInstruction,
+              tools = tools,
+            ),
         )
-      ExperimentalFlags.enableConversationConstrainedDecoding = false
-      model.instance = LlmModelInstance(engine = engine, conversation = conversation)
+      model.instance =
+        LlmModelInstance(
+          engine = engine,
+          conversation = conversation,
+          sessionConfig =
+            buildSessionConfig(
+              systemInstruction = systemInstruction,
+              tools = tools,
+              enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
+            ),
+        )
     } catch (e: Exception) {
       onDone(cleanUpMediapipeTaskErrorMessage(e.message ?: "Unknown error"))
       return
@@ -168,7 +188,7 @@ object LlmChatModelHelper : LlmModelHelper {
       Log.d(TAG, "Resetting conversation for model '${model.name}'")
 
       val instance = model.instance as LlmModelInstance? ?: return
-      instance.conversation.close()
+      val previousConversation = instance.conversation
 
       val engine = instance.engine
       val topK = model.getIntConfigValue(key = ConfigKeys.TOPK, defaultValue = DEFAULT_TOPK)
@@ -184,27 +204,38 @@ object LlmChatModelHelper : LlmModelHelper {
           key = ConfigKeys.ACCELERATOR,
           defaultValue = Accelerator.GPU.label,
         )
-      ExperimentalFlags.enableConversationConstrainedDecoding =
-        enableConversationConstrainedDecoding
       val newConversation =
-        engine.createConversation(
-          ConversationConfig(
-            samplerConfig =
-              if (accelerator == Accelerator.NPU.label) {
-                null
-              } else {
-                SamplerConfig(
-                  topK = topK,
-                  topP = topP.toDouble(),
-                  temperature = temperature.toDouble(),
-                )
-              },
-            systemInstruction = systemInstruction,
-            tools = tools,
-          )
+        createConversation(
+          engine = engine,
+          enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
+          config =
+            ConversationConfig(
+              samplerConfig =
+                if (accelerator == Accelerator.NPU.label) {
+                  null
+                } else {
+                  SamplerConfig(
+                    topK = topK,
+                    topP = topP.toDouble(),
+                    temperature = temperature.toDouble(),
+                  )
+                },
+              systemInstruction = systemInstruction,
+              tools = tools,
+            ),
         )
-      ExperimentalFlags.enableConversationConstrainedDecoding = false
       instance.conversation = newConversation
+      instance.sessionConfig =
+        buildSessionConfig(
+          systemInstruction = systemInstruction,
+          tools = tools,
+          enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
+        )
+      try {
+        previousConversation.close()
+      } catch (closeException: Exception) {
+        Log.w(TAG, "Failed to close previous conversation after reset", closeException)
+      }
 
       Log.d(TAG, "Resetting done")
     } catch (e: Exception) {
@@ -313,6 +344,46 @@ object LlmChatModelHelper : LlmModelHelper {
     this.compress(Bitmap.CompressFormat.PNG, 100, stream)
     return stream.toByteArray()
   }
+
+  @OptIn(ExperimentalApi::class)
+  private fun createConversation(
+    engine: Engine,
+    enableConversationConstrainedDecoding: Boolean,
+    config: ConversationConfig,
+  ): Conversation {
+    return withConversationConstrainedDecoding(
+      enableConversationConstrainedDecoding = enableConversationConstrainedDecoding
+    ) {
+      engine.createConversation(config)
+    }
+  }
+}
+
+@OptIn(ExperimentalApi::class)
+internal inline fun <T> withConversationConstrainedDecoding(
+  enableConversationConstrainedDecoding: Boolean,
+  block: () -> T,
+): T {
+  val previousValue = ExperimentalFlags.enableConversationConstrainedDecoding
+  ExperimentalFlags.enableConversationConstrainedDecoding =
+    enableConversationConstrainedDecoding
+  return try {
+    block()
+  } finally {
+    ExperimentalFlags.enableConversationConstrainedDecoding = previousValue
+  }
+}
+
+internal fun buildSessionConfig(
+  systemInstruction: Contents?,
+  tools: List<ToolProvider>,
+  enableConversationConstrainedDecoding: Boolean,
+): LlmConversationSessionConfig {
+  return LlmConversationSessionConfig(
+    systemInstructionText = systemInstruction?.toString()?.trim().orEmpty(),
+    tools = tools.toList(),
+    enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
+  )
 }
 
 internal fun resolveImportedCpuWeightCacheFile(

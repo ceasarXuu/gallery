@@ -199,8 +199,6 @@ constructor(
     prevAction: String,
     onError: ((String) -> Unit)? = null,
   ) {
-    resetNumTurns()
-
     viewModelScope.launch(Dispatchers.Default) {
       _isResettingConversation.value = true
       val curSystemPrompt =
@@ -227,6 +225,7 @@ constructor(
         }
       _isResettingConversation.value = false
       if (errorMessage == null) {
+        resetNumTurns()
         addMessage(
           message =
             ChatMessageWarning(content = context.getString(R.string.conversation_reset_message))
