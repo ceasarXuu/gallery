@@ -620,3 +620,9 @@ Notes:
 - Detailed field help should explain four things, not just one sentence: what the field does, what happens if it is empty or disabled, what value ranges mean, and what content/length is recommended for a 4k-class local model.
 - The help dialog body can outgrow `AlertDialog` quickly once field docs become useful. Make the dialog text area scrollable, or long multi-paragraph help will clip on smaller phones.
 - Add explicit logs for `help opened` and `field exceeds budget` in the role editor. These two events are enough to diagnose whether users are discovering the guidance and which fields most often drift beyond the intended editor budgets.
+
+## 2026-04-10 Role editor pill clipping note
+
+- On this device, Chinese labels in the role-editor top section pills can have their lower glyph area clipped even when `maxLines = 1` is correct. The problem is vertical font padding, not wrapping.
+- The robust fix is to give the pill label both more vertical breathing room and `PlatformTextStyle(includeFontPadding = true)`. Only increasing horizontal width or switching to scrollable tabs does not solve descent clipping.
+- For similar Compose chips/pills on Android OEM fonts, use a minimum height instead of relying on text padding alone. This reduces device-specific clipping regressions across Chinese/Japanese/Korean fonts.
