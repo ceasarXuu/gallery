@@ -45,6 +45,7 @@ import com.google.ai.edge.litertlm.MessageCallback
 import com.google.ai.edge.litertlm.SamplerConfig
 import com.google.ai.edge.litertlm.ToolProvider
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.util.concurrent.CancellationException
 import kotlinx.coroutines.CoroutineScope
 
@@ -103,6 +104,11 @@ object LlmChatModelHelper : LlmModelHelper {
     Log.d(TAG, "Preferred backend: $preferredBackend")
 
     val modelPath = model.getPath(context = context)
+    purgeImportedCpuWeightCacheIfPresent(
+      model = model,
+      accelerator = accelerator,
+      modelPath = modelPath,
+    )
     val engineConfig =
       EngineConfig(
         modelPath = modelPath,
@@ -305,5 +311,39 @@ object LlmChatModelHelper : LlmModelHelper {
     val stream = ByteArrayOutputStream()
     this.compress(Bitmap.CompressFormat.PNG, 100, stream)
     return stream.toByteArray()
+  }
+}
+
+internal fun resolveImportedCpuWeightCacheFile(
+  model: Model,
+  accelerator: String,
+  modelPath: String,
+): File? {
+  if (!model.imported || accelerator != Accelerator.CPU.label || modelPath.isBlank()) {
+    return null
+  }
+
+  val cacheFile = File("${modelPath}.xnnpack_cache")
+  return cacheFile.takeIf { it.exists() }
+}
+
+private fun purgeImportedCpuWeightCacheIfPresent(
+  model: Model,
+  accelerator: String,
+  modelPath: String,
+) {
+  val cacheFile =
+    resolveImportedCpuWeightCacheFile(
+      model = model,
+      accelerator = accelerator,
+      modelPath = modelPath,
+    ) ?: return
+
+  // Imported CPU models can carry stale XNNPACK sidecar caches across runtime/app upgrades.
+  // If LiteRT-LM consumes an incompatible cache, native initialization can abort the process.
+  if (cacheFile.delete()) {
+    Log.w(TAG, "Purged imported CPU weight cache before init: ${cacheFile.absolutePath}")
+  } else {
+    Log.w(TAG, "Failed to purge imported CPU weight cache before init: ${cacheFile.absolutePath}")
   }
 }

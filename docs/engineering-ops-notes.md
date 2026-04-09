@@ -483,3 +483,9 @@ Notes:
 
 - Android's regex engine is less forgiving than the desktop/JVM path for malformed escaped braces. For ST macro matching, use `\{\{ ... \}\}` explicitly on both sides; leaving the trailing `}}` unescaped can pass some local checks but crash at class initialization on device with `PatternSyntaxException`.
 - When a roleplay action crashes immediately on tap before any repository or network work, always grab `AndroidRuntime` first. In this case the failure surfaced as `ExceptionInInitializerError` on `StMacroSubstitutionKt.<clinit>`, which pointed straight to a bad top-level `Regex(...)` initializer rather than session creation logic.
+
+## 2026-04-09 LiteRT imported CPU cache note
+
+- If chat-page entry dies 1-2 seconds later with `APP CRASH(NATIVE)` and the tombstone points at `com.google.ai.edge.litertlm.Engine.initialize` / `liblitertlm_jni.so`, inspect whether an imported CPU model already has a sibling `*.xnnpack_cache` file.
+- On this workspace/device, `gemma-4-E4B-it.litertlm` crashed only when LiteRT-LM loaded an existing imported CPU XNNPACK cache; deleting the sidecar cache let the same chat/session open and rebuild the cache successfully.
+- The app-side mitigation is to purge `modelPath + ".xnnpack_cache"` before `Engine.initialize()` for imported CPU models. Do not rely on Java exception handling here; this failure is native `SIGABRT`, so the only safe fix is to prevent the bad cache from reaching native init at all.
