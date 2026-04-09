@@ -29,6 +29,7 @@ Notes:
 - Keep the editor draft as an ST-shaped form state and only compile `runtimeProfile` on save; do not let the UI round-trip through simplified canonical text buckets.
 - Log `source format`, `lore entry count`, and `tag count` on import/save. These are high-signal diagnostics when users report "the editor still doesn't look like ST".
 - For long-card verification, cap multiline editor fields with `maxLines` plus `heightIn(max=...)`. In Compose Material 3 this keeps the field internally scrollable and prevents description/prompt fields from stretching the entire page.
+- For editor tabs with 5+ sections, prefer `ScrollableTabRow` over squeezing all tabs into one row. This avoids forced line wraps and keeps the active tab readable on narrow devices.
 
 ## 2026-04-10 LiteRT-LM single-session reset failure
 

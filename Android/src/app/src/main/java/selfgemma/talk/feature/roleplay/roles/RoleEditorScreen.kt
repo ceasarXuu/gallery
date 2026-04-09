@@ -26,9 +26,9 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -160,7 +160,10 @@ fun RoleEditorScreen(
       verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
       item {
-        TabRow(selectedTabIndex = tabs.indexOfFirst { it.first == uiState.selectedTab }) {
+        PrimaryScrollableTabRow(
+          selectedTabIndex = tabs.indexOfFirst { it.first == uiState.selectedTab },
+          edgePadding = 0.dp,
+        ) {
           tabs.forEach { (tab, title) ->
             Tab(
               selected = uiState.selectedTab == tab,
