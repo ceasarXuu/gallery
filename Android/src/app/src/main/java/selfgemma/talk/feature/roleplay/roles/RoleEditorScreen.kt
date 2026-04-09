@@ -543,13 +543,6 @@ fun RoleEditorScreen(
       uiState.errorMessage?.let { errorMessage ->
         item { StatusText(errorMessage, isError = true) }
       }
-      if (!uiState.isNewRole && !uiState.builtIn) {
-        item {
-          OutlinedButton(onClick = { viewModel.deleteRole { handleNavigateUp() } }, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.role_editor_delete_button))
-          }
-        }
-      }
     }
   }
 

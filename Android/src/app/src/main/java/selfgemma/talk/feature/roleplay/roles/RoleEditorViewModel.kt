@@ -524,14 +524,6 @@ constructor(
     }
   }
 
-  fun deleteRole(onDeleted: () -> Unit) {
-    val roleId = _uiState.value.roleId ?: return
-    viewModelScope.launch {
-      roleRepository.deleteRole(roleId)
-      onDeleted()
-    }
-  }
-
   private fun buildRoleSnapshot(): RoleCard? {
     val snapshot = _uiState.value
     val roleName = snapshot.name.trim()

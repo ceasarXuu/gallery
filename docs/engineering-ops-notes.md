@@ -31,6 +31,7 @@ Notes:
 - For long-card verification, cap multiline editor fields with `maxLines` plus `heightIn(max=...)`. In Compose Material 3 this keeps the field internally scrollable and prevents description/prompt fields from stretching the entire page.
 - For editor tabs with 5+ sections, prefer `ScrollableTabRow` over squeezing all tabs into one row. This avoids forced line wraps and keeps the active tab readable on narrow devices.
 - Also clamp tab labels to `maxLines = 1`, `softWrap = false`, and `overflow = Ellipsis`. A scrollable tab row alone does not stop the `Text` inside each tab from wrapping when localized labels get wider.
+- Keep destructive role actions outside the role editor. If the catalog/list page already owns delete, do not repeat a full-width delete button inside every editor tab state; it adds noise and increases accidental-delete risk during editing.
 
 ## 2026-04-10 LiteRT-LM single-session reset failure
 
