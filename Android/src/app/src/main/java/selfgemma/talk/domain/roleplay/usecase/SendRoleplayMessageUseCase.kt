@@ -19,6 +19,8 @@ import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.Session
+import selfgemma.talk.domain.roleplay.model.SessionEvent
+import selfgemma.talk.domain.roleplay.model.SessionEventType
 import selfgemma.talk.domain.roleplay.model.toStChatRuntimeRole
 import selfgemma.talk.domain.roleplay.model.toStChatRuntimeSession
 import selfgemma.talk.domain.roleplay.model.toModelContextProfile
@@ -248,6 +250,7 @@ constructor(
           budgetMode = attemptMode,
         )
     }
+    appendBudgetEventIfNeeded(sessionId = sessionId, report = promptAssembly.budgetReport)
 
     var finalMessage: Message? = null
     var overflowRetries = 0
@@ -275,6 +278,12 @@ constructor(
             TAG,
             "context overflow during reset sessionId=$sessionId retry=$overflowRetries message=${preparationResult.failureMessage.errorMessage}",
           )
+          appendOverflowRecoveryEvent(
+            sessionId = sessionId,
+            stage = "reset",
+            retry = overflowRetries,
+            report = promptAssembly.budgetReport,
+          )
           promptAssembly =
             assemblePrompt(
               runtimeRole = runtimeRole,
@@ -287,6 +296,7 @@ constructor(
               contextProfile = contextProfile,
               budgetMode = attemptMode,
             )
+          appendBudgetEventIfNeeded(sessionId = sessionId, report = promptAssembly.budgetReport)
           continue
         }
         val failedMessage = preparationResult.failureMessage
@@ -322,6 +332,12 @@ constructor(
         TAG,
         "context overflow retry sessionId=$sessionId retry=$overflowRetries message=${finalMessage.errorMessage}",
       )
+      appendOverflowRecoveryEvent(
+        sessionId = sessionId,
+        stage = "inference",
+        retry = overflowRetries,
+        report = promptAssembly.budgetReport,
+      )
       promptAssembly =
         assemblePrompt(
           runtimeRole = runtimeRole,
@@ -334,6 +350,7 @@ constructor(
           contextProfile = contextProfile,
           budgetMode = attemptMode,
         )
+      appendBudgetEventIfNeeded(sessionId = sessionId, report = promptAssembly.budgetReport)
     }
     finalMessage = checkNotNull(finalMessage)
     conversationRepository.updateMessage(finalMessage)
@@ -390,6 +407,44 @@ constructor(
           )
         )
       }
+  }
+
+  private suspend fun appendBudgetEventIfNeeded(sessionId: String, report: PromptBudgetReport?) {
+    if (
+      report == null ||
+        report.mode == PromptBudgetMode.FULL ||
+        (report.compactedSectionIds.isEmpty() && report.droppedSectionIds.isEmpty())
+    ) {
+      return
+    }
+    conversationRepository.appendEvent(
+      SessionEvent(
+        id = UUID.randomUUID().toString(),
+        sessionId = sessionId,
+        eventType = SessionEventType.CONTEXT_BUDGET_APPLIED,
+        payloadJson =
+          """{"mode":"${report.mode.name}","estimatedInputTokens":${report.estimatedInputTokens},"usableInputTokens":${report.usableInputTokens},"compactedSectionCount":${report.compactedSectionIds.size},"droppedSectionCount":${report.droppedSectionIds.size}}""",
+        createdAt = System.currentTimeMillis(),
+      )
+    )
+  }
+
+  private suspend fun appendOverflowRecoveryEvent(
+    sessionId: String,
+    stage: String,
+    retry: Int,
+    report: PromptBudgetReport?,
+  ) {
+    conversationRepository.appendEvent(
+      SessionEvent(
+        id = UUID.randomUUID().toString(),
+        sessionId = sessionId,
+        eventType = SessionEventType.CONTEXT_OVERFLOW_RECOVERED,
+        payloadJson =
+          """{"stage":"$stage","retry":$retry,"mode":"${report?.mode?.name ?: PromptBudgetMode.AGGRESSIVE.name}","estimatedInputTokens":${report?.estimatedInputTokens ?: -1},"usableInputTokens":${report?.usableInputTokens ?: -1}}""",
+        createdAt = System.currentTimeMillis(),
+      )
+    )
   }
 
   private fun prepareConversation(

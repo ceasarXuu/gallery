@@ -535,3 +535,4 @@ Notes:
   - the budget planner only decides what activated text survives into the final prompt
 - If the budget planner tests are flaky, the usual cause is test budgets that are not tight enough to force compaction. Lower `usableInputTokens` in the test profile until the intended degradation path is actually exercised.
 - Input-overflow recovery on this app needs to cover both `resetConversation(...)` and `runInference(...)`. With the current rough token estimator, a prompt can pass preflight but still fail at runtime; only handling inference errors leaves a real gap for small 4k models.
+- For observability, don't stop at `Log.d/w`. Roleplay send-message turns already have `SessionEvent`; use it for prompt compaction and overflow recovery so one problematic session can be diagnosed without digging through transient device logs.

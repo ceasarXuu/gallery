@@ -37,6 +37,8 @@ enum class SessionEventType {
   MEMORY_UPSERT,
   RESET,
   EXPORT,
+  CONTEXT_BUDGET_APPLIED,
+  CONTEXT_OVERFLOW_RECOVERED,
 }
 
 data class RoleCard(
