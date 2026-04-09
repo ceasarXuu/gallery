@@ -32,6 +32,7 @@ Notes:
 - For editor tabs with 5+ sections, prefer `ScrollableTabRow` over squeezing all tabs into one row. This avoids forced line wraps and keeps the active tab readable on narrow devices.
 - Also clamp tab labels to `maxLines = 1`, `softWrap = false`, and `overflow = Ellipsis`. A scrollable tab row alone does not stop the `Text` inside each tab from wrapping when localized labels get wider.
 - Keep destructive role actions outside the role editor. If the catalog/list page already owns delete, do not repeat a full-width delete button inside every editor tab state; it adds noise and increases accidental-delete risk during editing.
+- For multi-section editors, make the section pills and content area share one pager state. Scrollable pills without horizontal swipe support create a false tab expectation and make the UI feel broken on mobile.
 
 ## 2026-04-10 LiteRT-LM single-session reset failure
 

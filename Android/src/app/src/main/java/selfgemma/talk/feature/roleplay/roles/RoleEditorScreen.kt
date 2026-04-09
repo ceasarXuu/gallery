@@ -15,8 +15,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -31,14 +35,18 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -46,10 +54,13 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import kotlinx.coroutines.launch
 import selfgemma.talk.AppTopBar
 import selfgemma.talk.R
 import selfgemma.talk.data.AppBarAction
 import selfgemma.talk.data.AppBarActionType
+import selfgemma.talk.data.Model
+import selfgemma.talk.domain.roleplay.model.RoleMediaUsage
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 
 private const val TAG = "RoleEditorScreen"
@@ -154,331 +165,155 @@ fun RoleEditorScreen(
         RoleEditorTab.MEDIA to stringResource(R.string.role_editor_tab_media),
         RoleEditorTab.INTEROP to stringResource(R.string.role_editor_tab_interop),
       )
+    val pagerState = rememberPagerState(initialPage = uiState.selectedTab.ordinal) { tabs.size }
+    val pagerScope = rememberCoroutineScope()
+    val swipeThresholdPx = with(LocalDensity.current) { 72.dp.toPx() }
 
-    LazyColumn(
+    LaunchedEffect(uiState.selectedTab) {
+      if (pagerState.currentPage != uiState.selectedTab.ordinal) {
+        pagerState.animateScrollToPage(uiState.selectedTab.ordinal)
+      }
+    }
+
+    LaunchedEffect(pagerState.settledPage) {
+      val pagerTab = RoleEditorTab.entries.getOrNull(pagerState.settledPage) ?: return@LaunchedEffect
+      if (pagerTab != uiState.selectedTab) {
+        Log.d(TAG, "Role editor page changed by swipe tab=$pagerTab")
+        viewModel.selectTab(pagerTab)
+      }
+    }
+
+    Column(
       modifier = Modifier.fillMaxSize().padding(innerPadding),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-      item {
-        LazyRow(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-          contentPadding = PaddingValues(horizontal = 4.dp),
-        ) {
-          items(tabs.size) { index ->
-            val (tab, title) = tabs[index]
-            Surface(
-              onClick = { viewModel.selectTab(tab) },
-              shape = MaterialTheme.shapes.large,
-              color =
-                if (uiState.selectedTab == tab) {
-                  MaterialTheme.colorScheme.primaryContainer
-                } else {
-                  MaterialTheme.colorScheme.surfaceVariant
-                },
-              contentColor =
-                if (uiState.selectedTab == tab) {
-                  MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                  MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            ) {
-              Text(
-                text = title,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.titleSmall,
-              )
-            }
+      LazyRow(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp),
+      ) {
+        items(tabs) { (tab, title) ->
+          Surface(
+            onClick = {
+              viewModel.selectTab(tab)
+              pagerScope.launch {
+                pagerState.animateScrollToPage(tab.ordinal)
+              }
+            },
+            shape = MaterialTheme.shapes.large,
+            color =
+              if (uiState.selectedTab == tab) {
+                MaterialTheme.colorScheme.primaryContainer
+              } else {
+                MaterialTheme.colorScheme.surfaceVariant
+              },
+            contentColor =
+              if (uiState.selectedTab == tab) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+              } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+              },
+          ) {
+            Text(
+              text = title,
+              modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis,
+              style = MaterialTheme.typography.titleSmall,
+            )
           }
         }
       }
-      when (uiState.selectedTab) {
-        RoleEditorTab.CARD -> {
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_name_label),
-              value = uiState.name,
-              onValueChange = viewModel::updateName,
-              minLines = 1,
-              testTag = "role_editor_name",
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_summary_label),
-              value = uiState.description,
-              onValueChange = viewModel::updateDescription,
-              minLines = 3,
-              maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
-              testTag = "role_editor_description",
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_persona_label),
-              value = uiState.personality,
-              onValueChange = viewModel::updatePersonality,
-              minLines = 4,
-              maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
-              testTag = "role_editor_personality",
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_world_settings_label),
-              value = uiState.scenario,
-              onValueChange = viewModel::updateScenario,
-              minLines = 4,
-              maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
-              testTag = "role_editor_scenario",
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_opening_line_label),
-              value = uiState.firstMessage,
-              onValueChange = viewModel::updateFirstMessage,
-              minLines = 3,
-              maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
-              testTag = "role_editor_first_message",
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_message_example_label),
-              value = uiState.messageExample,
-              onValueChange = viewModel::updateMessageExample,
-              minLines = 8,
-              maxLines = ROLE_EDITOR_XL_TEXT_MAX_LINES,
-              testTag = "role_editor_message_example",
-            )
-          }
-        }
-        RoleEditorTab.PROMPT -> {
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_system_prompt_label),
-              value = uiState.systemPrompt,
-              onValueChange = viewModel::updateSystemPrompt,
-              minLines = 6,
-              maxLines = ROLE_EDITOR_XL_TEXT_MAX_LINES,
-              testTag = "role_editor_system_prompt",
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_post_history_instructions_label),
-              value = uiState.postHistoryInstructions,
-              onValueChange = viewModel::updatePostHistoryInstructions,
-              minLines = 4,
-              maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
-              testTag = "role_editor_post_history",
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_alternate_greetings_label),
-              subtitle = stringResource(R.string.role_editor_alternate_greetings_hint),
-              value = uiState.alternateGreetingsText,
-              onValueChange = viewModel::updateAlternateGreetingsText,
-              minLines = 4,
-              maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
-              testTag = "role_editor_alternate_greetings",
-            )
-          }
-        }
-        RoleEditorTab.LOREBOOK -> {
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_lorebook_name_label),
-              value = uiState.characterBook.name,
-              onValueChange = viewModel::updateCharacterBookName,
-              minLines = 1,
-              testTag = "role_editor_lorebook_name",
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_lorebook_description_label),
-              value = uiState.characterBook.description,
-              onValueChange = viewModel::updateCharacterBookDescription,
-              minLines = 3,
-              maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
-              testTag = "role_editor_lorebook_description",
-            )
-          }
-          item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-              Box(modifier = Modifier.weight(1f)) {
-                EditorTextCard(
-                  title = stringResource(R.string.role_editor_lorebook_scan_depth_label),
-                  value = uiState.characterBook.scanDepthText,
-                  onValueChange = viewModel::updateCharacterBookScanDepth,
-                  minLines = 1,
-                  testTag = "role_editor_lorebook_scan_depth",
-                )
-              }
-              Box(modifier = Modifier.weight(1f)) {
-                EditorTextCard(
-                  title = stringResource(R.string.role_editor_lorebook_token_budget_label),
-                  value = uiState.characterBook.tokenBudgetText,
-                  onValueChange = viewModel::updateCharacterBookTokenBudget,
-                  minLines = 1,
-                  testTag = "role_editor_lorebook_token_budget",
-                )
-              }
-            }
-          }
-          item {
-            BooleanFieldCard(
-              title = stringResource(R.string.role_editor_lorebook_recursive_label),
-              checked = uiState.characterBook.recursiveScanning,
-              onCheckedChange = viewModel::updateCharacterBookRecursiveScanning,
-            )
-          }
-          item {
-            OutlinedButton(
-              onClick = viewModel::addCharacterBookEntry,
-              modifier = Modifier.fillMaxWidth().testTag("role_editor_lorebook_add_entry"),
-            ) {
-              Text(stringResource(R.string.role_editor_lorebook_add_entry))
-            }
-          }
-          uiState.characterBook.entries.forEach { entry ->
-            item(key = entry.editorId) {
-              LorebookEntryCard(
-                entry = entry,
-                onUpdateId = viewModel::updateCharacterBookEntryId,
-                onUpdateKeys = viewModel::updateCharacterBookEntryKeys,
-                onUpdateSecondaryKeys = viewModel::updateCharacterBookEntrySecondaryKeys,
-                onUpdateComment = viewModel::updateCharacterBookEntryComment,
-                onUpdateContent = viewModel::updateCharacterBookEntryContent,
-                onUpdateConstant = viewModel::updateCharacterBookEntryConstant,
-                onUpdateSelective = viewModel::updateCharacterBookEntrySelective,
-                onUpdateInsertionOrder = viewModel::updateCharacterBookEntryInsertionOrder,
-                onUpdateEnabled = viewModel::updateCharacterBookEntryEnabled,
-                onUpdatePosition = viewModel::updateCharacterBookEntryPosition,
-                onUpdateUseRegex = viewModel::updateCharacterBookEntryUseRegex,
-                onRemove = viewModel::removeCharacterBookEntry,
-              )
-            }
-          }
-        }
-        RoleEditorTab.METADATA -> {
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_creator_label),
-              value = uiState.creator,
-              onValueChange = viewModel::updateCreator,
-              minLines = 1,
-              testTag = "role_editor_creator",
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_creator_notes_label),
-              value = uiState.creatorNotes,
-              onValueChange = viewModel::updateCreatorNotes,
-              minLines = 4,
-              maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
-              testTag = "role_editor_creator_notes",
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_character_version_label),
-              value = uiState.characterVersion,
-              onValueChange = viewModel::updateCharacterVersion,
-              minLines = 1,
-              testTag = "role_editor_character_version",
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_tags_label),
-              value = uiState.tagsText,
-              onValueChange = viewModel::updateTagsText,
-              minLines = 2,
-              maxLines = 4,
-              testTag = "role_editor_tags",
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_talkativeness_label),
-              value = uiState.talkativenessText,
-              onValueChange = viewModel::updateTalkativenessText,
-              minLines = 1,
-              testTag = "role_editor_talkativeness",
-            )
-          }
-          item {
-            BooleanFieldCard(
-              title = stringResource(R.string.role_editor_favorite_label),
-              checked = uiState.fav,
-              onCheckedChange = viewModel::updateFav,
-            )
-          }
-          item {
-            EditorTextCard(
-              title = stringResource(R.string.role_editor_safety_policy_label),
-              value = uiState.safetyPolicy,
-              onValueChange = viewModel::updateSafetyPolicy,
-              minLines = 3,
-              maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
-              testTag = "role_editor_safety_policy",
-            )
-          }
-          item {
-            Card {
-              Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-              ) {
-                Text(stringResource(R.string.role_editor_default_model_label), style = MaterialTheme.typography.titleSmall)
-                Box {
-                  OutlinedButton(onClick = { modelMenuExpanded = true }) {
-                    Text(uiState.defaultModelId ?: stringResource(R.string.role_editor_no_default_model))
-                  }
-                  DropdownMenu(
-                    expanded = modelMenuExpanded,
-                    onDismissRequest = { modelMenuExpanded = false },
-                  ) {
-                    DropdownMenuItem(
-                      text = { Text(stringResource(R.string.role_editor_no_default_model)) },
-                      onClick = {
-                        modelMenuExpanded = false
-                        viewModel.updateDefaultModelId(null)
-                      },
-                    )
-                    downloadedModels.forEach { model ->
-                      DropdownMenuItem(
-                        text = { Text(model.displayName.ifEmpty { model.name }) },
-                        onClick = {
-                          modelMenuExpanded = false
-                          viewModel.updateDefaultModelId(model.name)
-                        },
-                      )
+
+      HorizontalPager(
+        state = pagerState,
+        userScrollEnabled = false,
+        modifier =
+          Modifier
+            .fillMaxSize()
+            .pointerInput(uiState.selectedTab) {
+              var totalHorizontalDrag = 0f
+              detectHorizontalDragGestures(
+                onHorizontalDrag = { change, dragAmount ->
+                  totalHorizontalDrag += dragAmount
+                  change.consume()
+                },
+                onDragEnd = {
+                  val targetPage =
+                    when {
+                      totalHorizontalDrag <= -swipeThresholdPx && pagerState.currentPage < tabs.lastIndex -> pagerState.currentPage + 1
+                      totalHorizontalDrag >= swipeThresholdPx && pagerState.currentPage > 0 -> pagerState.currentPage - 1
+                      else -> null
+                    }
+                  totalHorizontalDrag = 0f
+                  if (targetPage != null) {
+                    pagerScope.launch {
+                      Log.d(TAG, "Role editor page changed by horizontal gesture targetPage=$targetPage")
+                      pagerState.animateScrollToPage(targetPage)
                     }
                   }
-                }
-              }
-            }
-          }
-        }
-        RoleEditorTab.MEDIA -> {
-          item {
-            RoleEditorMediaSection(
-              avatarUri = uiState.avatarUri,
-              avatarSource = uiState.avatarSource,
-              galleryAssets = uiState.galleryAssets,
-              importedFromStPng = uiState.importedFromStPng,
-              showAvatarSection = true,
-              showGallerySection = true,
+                },
+              )
+            },
+      ) { page ->
+        when (RoleEditorTab.entries[page]) {
+          RoleEditorTab.CARD ->
+            RoleEditorCardPage(
+              uiState = uiState,
+              onUpdateName = viewModel::updateName,
+              onUpdateDescription = viewModel::updateDescription,
+              onUpdatePersonality = viewModel::updatePersonality,
+              onUpdateScenario = viewModel::updateScenario,
+              onUpdateFirstMessage = viewModel::updateFirstMessage,
+              onUpdateMessageExample = viewModel::updateMessageExample,
+            )
+          RoleEditorTab.PROMPT ->
+            RoleEditorPromptPage(
+              uiState = uiState,
+              onUpdateSystemPrompt = viewModel::updateSystemPrompt,
+              onUpdatePostHistoryInstructions = viewModel::updatePostHistoryInstructions,
+              onUpdateAlternateGreetingsText = viewModel::updateAlternateGreetingsText,
+            )
+          RoleEditorTab.LOREBOOK ->
+            RoleEditorLorebookPage(
+              uiState = uiState,
+              onUpdateCharacterBookName = viewModel::updateCharacterBookName,
+              onUpdateCharacterBookDescription = viewModel::updateCharacterBookDescription,
+              onUpdateCharacterBookScanDepth = viewModel::updateCharacterBookScanDepth,
+              onUpdateCharacterBookTokenBudget = viewModel::updateCharacterBookTokenBudget,
+              onUpdateCharacterBookRecursiveScanning = viewModel::updateCharacterBookRecursiveScanning,
+              onAddCharacterBookEntry = viewModel::addCharacterBookEntry,
+              onUpdateEntryId = viewModel::updateCharacterBookEntryId,
+              onUpdateEntryKeys = viewModel::updateCharacterBookEntryKeys,
+              onUpdateEntrySecondaryKeys = viewModel::updateCharacterBookEntrySecondaryKeys,
+              onUpdateEntryComment = viewModel::updateCharacterBookEntryComment,
+              onUpdateEntryContent = viewModel::updateCharacterBookEntryContent,
+              onUpdateEntryConstant = viewModel::updateCharacterBookEntryConstant,
+              onUpdateEntrySelective = viewModel::updateCharacterBookEntrySelective,
+              onUpdateEntryInsertionOrder = viewModel::updateCharacterBookEntryInsertionOrder,
+              onUpdateEntryEnabled = viewModel::updateCharacterBookEntryEnabled,
+              onUpdateEntryPosition = viewModel::updateCharacterBookEntryPosition,
+              onUpdateEntryUseRegex = viewModel::updateCharacterBookEntryUseRegex,
+              onRemoveEntry = viewModel::removeCharacterBookEntry,
+            )
+          RoleEditorTab.METADATA ->
+            RoleEditorMetadataPage(
+              uiState = uiState,
+              downloadedModels = downloadedModels,
+              modelMenuExpanded = modelMenuExpanded,
+              onModelMenuExpandedChange = { modelMenuExpanded = it },
+              onUpdateCreator = viewModel::updateCreator,
+              onUpdateCreatorNotes = viewModel::updateCreatorNotes,
+              onUpdateCharacterVersion = viewModel::updateCharacterVersion,
+              onUpdateTagsText = viewModel::updateTagsText,
+              onUpdateTalkativenessText = viewModel::updateTalkativenessText,
+              onUpdateFav = viewModel::updateFav,
+              onUpdateSafetyPolicy = viewModel::updateSafetyPolicy,
+              onUpdateDefaultModelId = viewModel::updateDefaultModelId,
+            )
+          RoleEditorTab.MEDIA ->
+            RoleEditorMediaPage(
+              uiState = uiState,
               onPickAvatar = { avatarLauncher.launch(arrayOf("image/*")) },
               onClearAvatar = { viewModel.updateAvatarUri(null) },
               onAddGallery = { galleryLauncher.launch(arrayOf("image/*")) },
@@ -487,61 +322,25 @@ fun RoleEditorScreen(
               onSetGalleryAsAvatar = viewModel::setGalleryAssetAsAvatar,
               onRemoveGalleryAsset = viewModel::removeGalleryAsset,
             )
-          }
-        }
-        RoleEditorTab.INTEROP -> {
-          item {
-            ReadonlyInfoCard(
-              title = stringResource(R.string.role_editor_interop_title),
-              lines =
-                listOf(
-                  stringResource(R.string.role_editor_interop_source_format, uiState.sourceFormat.name),
-                  stringResource(R.string.role_editor_interop_spec, uiState.sourceSpec ?: "-"),
-                  stringResource(R.string.role_editor_interop_spec_version, uiState.sourceSpecVersion ?: "-"),
-                ) + uiState.compatibilityWarnings.map { warning ->
-                  context.getString(R.string.role_editor_interop_warning, warning)
-                },
-            )
-          }
-          item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-              OutlinedButton(
-                onClick = { importLauncher.launch("*/*") },
-                modifier = Modifier.fillMaxWidth().testTag("role_editor_import_st_json"),
-              ) {
-                Text(stringResource(R.string.role_editor_import_st_card))
-              }
-              OutlinedButton(
-                onClick = {
+          RoleEditorTab.INTEROP ->
+            RoleEditorInteropPage(
+              uiState = uiState,
+              context = context,
+              onImportStCard = { importLauncher.launch("*/*") },
+              onExportStJson = {
+                val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                exportJsonLauncher.launch("${fileName}.json")
+              },
+              onExportStPng = {
+                if (uiState.avatarUri.isNullOrBlank()) {
+                  showMissingAvatarExportDialog = true
+                } else {
                   val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-                  exportJsonLauncher.launch("${fileName}.json")
-                },
-                modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_json"),
-              ) {
-                Text(stringResource(R.string.role_editor_export_st_json))
-              }
-              OutlinedButton(
-                onClick = {
-                  if (uiState.avatarUri.isNullOrBlank()) {
-                    showMissingAvatarExportDialog = true
-                  } else {
-                    val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-                    exportPngLauncher.launch("${fileName}.png")
-                  }
-                },
-                modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_png"),
-              ) {
-                Text(stringResource(R.string.role_editor_export_st_png))
-              }
-            }
-          }
+                  exportPngLauncher.launch("${fileName}.png")
+                }
+              },
+            )
         }
-      }
-      uiState.statusMessage?.let { statusMessage ->
-        item { StatusText(statusMessage, isError = false) }
-      }
-      uiState.errorMessage?.let { errorMessage ->
-        item { StatusText(errorMessage, isError = true) }
       }
     }
   }
@@ -587,6 +386,459 @@ fun RoleEditorScreen(
         }
       },
     )
+  }
+}
+
+@Composable
+private fun RoleEditorCardPage(
+  uiState: RoleEditorUiState,
+  onUpdateName: (String) -> Unit,
+  onUpdateDescription: (String) -> Unit,
+  onUpdatePersonality: (String) -> Unit,
+  onUpdateScenario: (String) -> Unit,
+  onUpdateFirstMessage: (String) -> Unit,
+  onUpdateMessageExample: (String) -> Unit,
+) {
+  LazyColumn(
+    modifier = Modifier.fillMaxSize(),
+    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+    verticalArrangement = Arrangement.spacedBy(12.dp),
+  ) {
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_name_label),
+        value = uiState.name,
+        onValueChange = onUpdateName,
+        minLines = 1,
+        testTag = "role_editor_name",
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_summary_label),
+        value = uiState.description,
+        onValueChange = onUpdateDescription,
+        minLines = 3,
+        maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
+        testTag = "role_editor_description",
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_persona_label),
+        value = uiState.personality,
+        onValueChange = onUpdatePersonality,
+        minLines = 4,
+        maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
+        testTag = "role_editor_personality",
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_world_settings_label),
+        value = uiState.scenario,
+        onValueChange = onUpdateScenario,
+        minLines = 4,
+        maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
+        testTag = "role_editor_scenario",
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_opening_line_label),
+        value = uiState.firstMessage,
+        onValueChange = onUpdateFirstMessage,
+        minLines = 3,
+        maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
+        testTag = "role_editor_first_message",
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_message_example_label),
+        value = uiState.messageExample,
+        onValueChange = onUpdateMessageExample,
+        minLines = 8,
+        maxLines = ROLE_EDITOR_XL_TEXT_MAX_LINES,
+        testTag = "role_editor_message_example",
+      )
+    }
+    roleEditorStatusItems(uiState)
+  }
+}
+
+@Composable
+private fun RoleEditorPromptPage(
+  uiState: RoleEditorUiState,
+  onUpdateSystemPrompt: (String) -> Unit,
+  onUpdatePostHistoryInstructions: (String) -> Unit,
+  onUpdateAlternateGreetingsText: (String) -> Unit,
+) {
+  LazyColumn(
+    modifier = Modifier.fillMaxSize(),
+    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+    verticalArrangement = Arrangement.spacedBy(12.dp),
+  ) {
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_system_prompt_label),
+        value = uiState.systemPrompt,
+        onValueChange = onUpdateSystemPrompt,
+        minLines = 6,
+        maxLines = ROLE_EDITOR_XL_TEXT_MAX_LINES,
+        testTag = "role_editor_system_prompt",
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_post_history_instructions_label),
+        value = uiState.postHistoryInstructions,
+        onValueChange = onUpdatePostHistoryInstructions,
+        minLines = 4,
+        maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
+        testTag = "role_editor_post_history",
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_alternate_greetings_label),
+        subtitle = stringResource(R.string.role_editor_alternate_greetings_hint),
+        value = uiState.alternateGreetingsText,
+        onValueChange = onUpdateAlternateGreetingsText,
+        minLines = 4,
+        maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
+        testTag = "role_editor_alternate_greetings",
+      )
+    }
+    roleEditorStatusItems(uiState)
+  }
+}
+
+@Composable
+private fun RoleEditorLorebookPage(
+  uiState: RoleEditorUiState,
+  onUpdateCharacterBookName: (String) -> Unit,
+  onUpdateCharacterBookDescription: (String) -> Unit,
+  onUpdateCharacterBookScanDepth: (String) -> Unit,
+  onUpdateCharacterBookTokenBudget: (String) -> Unit,
+  onUpdateCharacterBookRecursiveScanning: (Boolean) -> Unit,
+  onAddCharacterBookEntry: () -> Unit,
+  onUpdateEntryId: (String, String) -> Unit,
+  onUpdateEntryKeys: (String, String) -> Unit,
+  onUpdateEntrySecondaryKeys: (String, String) -> Unit,
+  onUpdateEntryComment: (String, String) -> Unit,
+  onUpdateEntryContent: (String, String) -> Unit,
+  onUpdateEntryConstant: (String, Boolean) -> Unit,
+  onUpdateEntrySelective: (String, Boolean) -> Unit,
+  onUpdateEntryInsertionOrder: (String, String) -> Unit,
+  onUpdateEntryEnabled: (String, Boolean) -> Unit,
+  onUpdateEntryPosition: (String, String) -> Unit,
+  onUpdateEntryUseRegex: (String, Boolean) -> Unit,
+  onRemoveEntry: (String) -> Unit,
+) {
+  LazyColumn(
+    modifier = Modifier.fillMaxSize(),
+    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+    verticalArrangement = Arrangement.spacedBy(12.dp),
+  ) {
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_lorebook_name_label),
+        value = uiState.characterBook.name,
+        onValueChange = onUpdateCharacterBookName,
+        minLines = 1,
+        testTag = "role_editor_lorebook_name",
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_lorebook_description_label),
+        value = uiState.characterBook.description,
+        onValueChange = onUpdateCharacterBookDescription,
+        minLines = 3,
+        maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
+        testTag = "role_editor_lorebook_description",
+      )
+    }
+    item {
+      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(modifier = Modifier.weight(1f)) {
+          EditorTextCard(
+            title = stringResource(R.string.role_editor_lorebook_scan_depth_label),
+            value = uiState.characterBook.scanDepthText,
+            onValueChange = onUpdateCharacterBookScanDepth,
+            minLines = 1,
+            testTag = "role_editor_lorebook_scan_depth",
+          )
+        }
+        Box(modifier = Modifier.weight(1f)) {
+          EditorTextCard(
+            title = stringResource(R.string.role_editor_lorebook_token_budget_label),
+            value = uiState.characterBook.tokenBudgetText,
+            onValueChange = onUpdateCharacterBookTokenBudget,
+            minLines = 1,
+            testTag = "role_editor_lorebook_token_budget",
+          )
+        }
+      }
+    }
+    item {
+      BooleanFieldCard(
+        title = stringResource(R.string.role_editor_lorebook_recursive_label),
+        checked = uiState.characterBook.recursiveScanning,
+        onCheckedChange = onUpdateCharacterBookRecursiveScanning,
+      )
+    }
+    item {
+      OutlinedButton(
+        onClick = onAddCharacterBookEntry,
+        modifier = Modifier.fillMaxWidth().testTag("role_editor_lorebook_add_entry"),
+      ) {
+        Text(stringResource(R.string.role_editor_lorebook_add_entry))
+      }
+    }
+    uiState.characterBook.entries.forEach { entry ->
+      item(key = entry.editorId) {
+        LorebookEntryCard(
+          entry = entry,
+          onUpdateId = onUpdateEntryId,
+          onUpdateKeys = onUpdateEntryKeys,
+          onUpdateSecondaryKeys = onUpdateEntrySecondaryKeys,
+          onUpdateComment = onUpdateEntryComment,
+          onUpdateContent = onUpdateEntryContent,
+          onUpdateConstant = onUpdateEntryConstant,
+          onUpdateSelective = onUpdateEntrySelective,
+          onUpdateInsertionOrder = onUpdateEntryInsertionOrder,
+          onUpdateEnabled = onUpdateEntryEnabled,
+          onUpdatePosition = onUpdateEntryPosition,
+          onUpdateUseRegex = onUpdateEntryUseRegex,
+          onRemove = onRemoveEntry,
+        )
+      }
+    }
+    roleEditorStatusItems(uiState)
+  }
+}
+
+@Composable
+private fun RoleEditorMetadataPage(
+  uiState: RoleEditorUiState,
+  downloadedModels: List<Model>,
+  modelMenuExpanded: Boolean,
+  onModelMenuExpandedChange: (Boolean) -> Unit,
+  onUpdateCreator: (String) -> Unit,
+  onUpdateCreatorNotes: (String) -> Unit,
+  onUpdateCharacterVersion: (String) -> Unit,
+  onUpdateTagsText: (String) -> Unit,
+  onUpdateTalkativenessText: (String) -> Unit,
+  onUpdateFav: (Boolean) -> Unit,
+  onUpdateSafetyPolicy: (String) -> Unit,
+  onUpdateDefaultModelId: (String?) -> Unit,
+) {
+  LazyColumn(
+    modifier = Modifier.fillMaxSize(),
+    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+    verticalArrangement = Arrangement.spacedBy(12.dp),
+  ) {
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_creator_label),
+        value = uiState.creator,
+        onValueChange = onUpdateCreator,
+        minLines = 1,
+        testTag = "role_editor_creator",
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_creator_notes_label),
+        value = uiState.creatorNotes,
+        onValueChange = onUpdateCreatorNotes,
+        minLines = 4,
+        maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
+        testTag = "role_editor_creator_notes",
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_character_version_label),
+        value = uiState.characterVersion,
+        onValueChange = onUpdateCharacterVersion,
+        minLines = 1,
+        testTag = "role_editor_character_version",
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_tags_label),
+        value = uiState.tagsText,
+        onValueChange = onUpdateTagsText,
+        minLines = 2,
+        maxLines = 4,
+        testTag = "role_editor_tags",
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_talkativeness_label),
+        value = uiState.talkativenessText,
+        onValueChange = onUpdateTalkativenessText,
+        minLines = 1,
+        testTag = "role_editor_talkativeness",
+      )
+    }
+    item {
+      BooleanFieldCard(
+        title = stringResource(R.string.role_editor_favorite_label),
+        checked = uiState.fav,
+        onCheckedChange = onUpdateFav,
+      )
+    }
+    item {
+      EditorTextCard(
+        title = stringResource(R.string.role_editor_safety_policy_label),
+        value = uiState.safetyPolicy,
+        onValueChange = onUpdateSafetyPolicy,
+        minLines = 3,
+        maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
+        testTag = "role_editor_safety_policy",
+      )
+    }
+    item {
+      Card {
+        Column(
+          modifier = Modifier.fillMaxWidth().padding(16.dp),
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+          Text(stringResource(R.string.role_editor_default_model_label), style = MaterialTheme.typography.titleSmall)
+          Box {
+            OutlinedButton(onClick = { onModelMenuExpandedChange(true) }) {
+              Text(uiState.defaultModelId ?: stringResource(R.string.role_editor_no_default_model))
+            }
+            DropdownMenu(
+              expanded = modelMenuExpanded,
+              onDismissRequest = { onModelMenuExpandedChange(false) },
+            ) {
+              DropdownMenuItem(
+                text = { Text(stringResource(R.string.role_editor_no_default_model)) },
+                onClick = {
+                  onModelMenuExpandedChange(false)
+                  onUpdateDefaultModelId(null)
+                },
+              )
+              downloadedModels.forEach { model ->
+                DropdownMenuItem(
+                  text = { Text(model.displayName.ifEmpty { model.name }) },
+                  onClick = {
+                    onModelMenuExpandedChange(false)
+                    onUpdateDefaultModelId(model.name)
+                  },
+                )
+              }
+            }
+          }
+        }
+      }
+    }
+    roleEditorStatusItems(uiState)
+  }
+}
+
+@Composable
+private fun RoleEditorMediaPage(
+  uiState: RoleEditorUiState,
+  onPickAvatar: () -> Unit,
+  onClearAvatar: () -> Unit,
+  onAddGallery: () -> Unit,
+  onRenameGalleryAsset: (String, String) -> Unit,
+  onUpdateGalleryUsage: (String, RoleMediaUsage) -> Unit,
+  onSetGalleryAsAvatar: (String) -> Unit,
+  onRemoveGalleryAsset: (String) -> Unit,
+) {
+  LazyColumn(
+    modifier = Modifier.fillMaxSize(),
+    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+    verticalArrangement = Arrangement.spacedBy(12.dp),
+  ) {
+    item {
+      RoleEditorMediaSection(
+        avatarUri = uiState.avatarUri,
+        avatarSource = uiState.avatarSource,
+        galleryAssets = uiState.galleryAssets,
+        importedFromStPng = uiState.importedFromStPng,
+        showAvatarSection = true,
+        showGallerySection = true,
+        onPickAvatar = onPickAvatar,
+        onClearAvatar = onClearAvatar,
+        onAddGallery = onAddGallery,
+        onRenameGalleryAsset = onRenameGalleryAsset,
+        onUpdateGalleryUsage = onUpdateGalleryUsage,
+        onSetGalleryAsAvatar = onSetGalleryAsAvatar,
+        onRemoveGalleryAsset = onRemoveGalleryAsset,
+      )
+    }
+    roleEditorStatusItems(uiState)
+  }
+}
+
+@Composable
+private fun RoleEditorInteropPage(
+  uiState: RoleEditorUiState,
+  context: android.content.Context,
+  onImportStCard: () -> Unit,
+  onExportStJson: () -> Unit,
+  onExportStPng: () -> Unit,
+) {
+  LazyColumn(
+    modifier = Modifier.fillMaxSize(),
+    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+    verticalArrangement = Arrangement.spacedBy(12.dp),
+  ) {
+    item {
+      ReadonlyInfoCard(
+        title = stringResource(R.string.role_editor_interop_title),
+        lines =
+          listOf(
+            stringResource(R.string.role_editor_interop_source_format, uiState.sourceFormat.name),
+            stringResource(R.string.role_editor_interop_spec, uiState.sourceSpec ?: "-"),
+            stringResource(R.string.role_editor_interop_spec_version, uiState.sourceSpecVersion ?: "-"),
+          ) + uiState.compatibilityWarnings.map { warning ->
+            context.getString(R.string.role_editor_interop_warning, warning)
+          },
+      )
+    }
+    item {
+      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedButton(
+          onClick = onImportStCard,
+          modifier = Modifier.fillMaxWidth().testTag("role_editor_import_st_json"),
+        ) {
+          Text(stringResource(R.string.role_editor_import_st_card))
+        }
+        OutlinedButton(
+          onClick = onExportStJson,
+          modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_json"),
+        ) {
+          Text(stringResource(R.string.role_editor_export_st_json))
+        }
+        OutlinedButton(
+          onClick = onExportStPng,
+          modifier = Modifier.fillMaxWidth().testTag("role_editor_export_st_png"),
+        ) {
+          Text(stringResource(R.string.role_editor_export_st_png))
+        }
+      }
+    }
+    roleEditorStatusItems(uiState)
+  }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.roleEditorStatusItems(uiState: RoleEditorUiState) {
+  uiState.statusMessage?.let { statusMessage ->
+    item { StatusText(statusMessage, isError = false) }
+  }
+  uiState.errorMessage?.let { errorMessage ->
+    item { StatusText(errorMessage, isError = true) }
   }
 }
 
