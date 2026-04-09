@@ -24,3 +24,6 @@ build/
 .vscode/
 *.swp
 *.swo
+
+# tests
+tests/st_cards
