@@ -473,3 +473,8 @@ Notes:
   - `.\gradlew.bat --stop`
   - delete `app\build\kotlin\kaptGenerateStubsDebugUnitTestKotlin\cacheable\caches-jvm`
   - rerun the focused test command
+
+## 2026-04-09 ST-first chat runtime note
+
+- If the product definition is "ST chat layer integrated natively", the chat pipeline should not read app projection fields directly. Build a dedicated ST runtime role/session object first, then let opener seeding, macro substitution, prompt assembly, and chat export all consume that same object.
+- `RoleCard` can keep app-level policy and media fields, but ST chat semantics should resolve from `StChatRuntimeRole(card=stCard, ...)` plus session-side ST metadata/trigger state. This avoids drifting back to mixed source-of-truth behavior as the app evolves.

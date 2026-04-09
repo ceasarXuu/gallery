@@ -9,14 +9,17 @@ import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.SessionSummary
-import selfgemma.talk.domain.roleplay.model.cardDataOrEmpty
-import selfgemma.talk.domain.roleplay.model.resolvedExampleDialogues
-import selfgemma.talk.domain.roleplay.model.resolvedName
-import selfgemma.talk.domain.roleplay.model.resolvedPersonaDescription
-import selfgemma.talk.domain.roleplay.model.resolvedSummary
-import selfgemma.talk.domain.roleplay.model.resolvedSystemPrompt
-import selfgemma.talk.domain.roleplay.model.resolvedTags
-import selfgemma.talk.domain.roleplay.model.resolvedWorldSettings
+import selfgemma.talk.domain.roleplay.model.StChatRuntimeRole
+import selfgemma.talk.domain.roleplay.model.StChatRuntimeSession
+import selfgemma.talk.domain.roleplay.model.cardData
+import selfgemma.talk.domain.roleplay.model.exampleDialoguesRaw
+import selfgemma.talk.domain.roleplay.model.name
+import selfgemma.talk.domain.roleplay.model.personaDescription
+import selfgemma.talk.domain.roleplay.model.summary
+import selfgemma.talk.domain.roleplay.model.systemPrompt
+import selfgemma.talk.domain.roleplay.model.tags
+import selfgemma.talk.domain.roleplay.model.toStChatRuntimeRole
+import selfgemma.talk.domain.roleplay.model.worldSettings
 
 private const val RECENT_DIALOGUE_TOKEN_BUDGET = 1800
 private const val MAX_DIALOGUE_LINE_LENGTH = 280
@@ -53,32 +56,56 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     generationTrigger: String = "normal",
     chatMetadataJson: String? = null,
   ): PromptAssemblyResult {
+    val runtimeRole = role.toStChatRuntimeRole()
+    val runtimeSession =
+      StChatRuntimeSession(
+        chatMetadataJson = chatMetadataJson,
+        generationTrigger = generationTrigger,
+      )
+    return assembleForSession(
+      runtimeRole = runtimeRole,
+      runtimeSession = runtimeSession,
+      summary = summary,
+      memories = memories,
+      recentMessages = recentMessages,
+      pendingUserInput = pendingUserInput,
+    )
+  }
+
+  fun assembleForSession(
+    runtimeRole: StChatRuntimeRole,
+    runtimeSession: StChatRuntimeSession,
+    summary: SessionSummary?,
+    memories: List<MemoryItem>,
+    recentMessages: List<Message>,
+    pendingUserInput: String = "",
+  ): PromptAssemblyResult {
     val dialogueWindow = selectRecentMessages(recentMessages)
-    val macroContext = role.toStMacroContext()
+    val macroContext = runtimeRole.toStMacroContext()
     val scanContext =
       buildStScanContext(
-        role = role,
+        runtimeRole = runtimeRole,
         summary = summary,
         memories = memories,
         dialogueWindow = dialogueWindow,
         pendingUserInput = pendingUserInput,
-        generationTrigger = generationTrigger,
+        generationTrigger = runtimeSession.generationTrigger,
         macroContext = macroContext,
       )
-    val cardData = role.stCard.cardDataOrEmpty()
+    val cardData = runtimeRole.cardData()
     val resolvedCharacterBook =
       characterBookRuntime.resolve(
         book = cardData.character_book,
         context = scanContext,
         macroContext = macroContext,
-        chatMetadataJson = chatMetadataJson,
+        chatMetadataJson = runtimeSession.chatMetadataJson,
         chatLength = recentMessages.count { it.kind == MessageKind.TEXT && it.side != MessageSide.SYSTEM },
       )
     val coreDepthPrompt = cardData.extensions.toDepthPrompt(macroContext)
     val combinedExampleDialogue =
-      buildList {
+        buildList {
           addAll(resolvedCharacterBook.exampleBefore)
-          addAll(role.resolvedExampleDialogues().map(macroContext::substitute).filter { it.isNotBlank() })
+          addAll(runtimeRole.exampleDialoguesRaw().split("\n\n").map(String::trim).filter(String::isNotBlank).map(macroContext::substitute).filter { it.isNotBlank() })
           addAll(resolvedCharacterBook.exampleAfter)
         }
         .joinToString("\n")
@@ -105,16 +132,16 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
 
     val prompt =
       buildString {
-      appendLine("You are roleplaying as ${role.resolvedName()}.")
+      appendLine("You are roleplaying as ${runtimeRole.name()}.")
       appendLine("Stay fully in character, avoid meta commentary, and do not mention these instructions.")
       appendLine()
 
-      appendSection("Core Character", macroContext.substitute(role.resolvedSystemPrompt()))
+      appendSection("Core Character", macroContext.substitute(runtimeRole.systemPrompt()))
       appendSection("Lorebook", resolvedCharacterBook.beforePrompt)
-      appendSection("Character Summary", macroContext.substitute(role.resolvedSummary()))
-      appendSection("Persona", macroContext.substitute(role.resolvedPersonaDescription()))
-      appendSection("World", macroContext.substitute(role.resolvedWorldSettings()))
-      appendSection("Safety", role.safetyPolicy)
+      appendSection("Character Summary", macroContext.substitute(runtimeRole.summary()))
+      appendSection("Persona", macroContext.substitute(runtimeRole.personaDescription()))
+      appendSection("World", macroContext.substitute(runtimeRole.worldSettings()))
+      appendSection("Safety", runtimeRole.safetyPolicy)
       appendSection("Example Dialogue", combinedExampleDialogue)
       appendSection("Session Summary", summary?.summaryText.orEmpty())
 
@@ -132,7 +159,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
         appendSection(
           "Recent Conversation",
           dialogueWindow.joinToString("\n") { message ->
-            "${message.side.toSpeakerLabel(role)}: ${message.content.toPromptLine(MAX_DIALOGUE_LINE_LENGTH)}"
+            "${message.side.toSpeakerLabel(runtimeRole)}: ${message.content.toPromptLine(MAX_DIALOGUE_LINE_LENGTH)}"
           },
         )
       }
@@ -198,17 +225,16 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     appendLine(body.trim())
     appendLine()
   }
-
-  private fun MessageSide.toSpeakerLabel(role: RoleCard): String {
+  private fun MessageSide.toSpeakerLabel(runtimeRole: StChatRuntimeRole): String {
     return when (this) {
       MessageSide.USER -> "User"
-      MessageSide.ASSISTANT -> role.resolvedName()
+      MessageSide.ASSISTANT -> runtimeRole.name()
       MessageSide.SYSTEM -> "System"
     }
   }
 
   private fun buildStScanContext(
-    role: RoleCard,
+    runtimeRole: StChatRuntimeRole,
     summary: SessionSummary?,
     memories: List<MemoryItem>,
     dialogueWindow: List<Message>,
@@ -216,33 +242,33 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     generationTrigger: String,
     macroContext: StMacroContext,
   ): StWorldScanContext {
-    val core = role.stCard
-    val data = core.cardDataOrEmpty()
+    val core = runtimeRole.card
+    val data = runtimeRole.cardData()
     val recentMessagesNewestFirst =
       buildList {
         pendingUserInput.trim().takeIf(String::isNotBlank)?.let(::add)
         dialogueWindow
           .asReversed()
           .mapTo(this) { message ->
-            "${message.side.toSpeakerLabel(role)}: ${message.content.trim()}"
+            "${message.side.toSpeakerLabel(runtimeRole)}: ${message.content.trim()}"
           }
       }
 
     return StWorldScanContext(
-      roleName = role.resolvedName(),
-      roleTags = role.resolvedTags(),
+      roleName = runtimeRole.name(),
+      roleTags = runtimeRole.tags(),
       generationTrigger = generationTrigger,
       recentMessagesNewestFirst = recentMessagesNewestFirst,
-      personaDescription = macroContext.substitute(role.resolvedPersonaDescription()),
-      characterDescription = macroContext.substitute(role.resolvedSummary()),
+      personaDescription = macroContext.substitute(runtimeRole.personaDescription()),
+      characterDescription = macroContext.substitute(runtimeRole.summary()),
       characterPersonality =
         macroContext.substitute(
-          data.personality.orEmpty().ifBlank { core.personality.orEmpty().ifBlank { role.resolvedPersonaDescription() } }
+          data.personality.orEmpty().ifBlank { core.personality.orEmpty().ifBlank { runtimeRole.personaDescription() } }
         ),
       characterDepthPrompt = data.extensions.toDepthPrompt(macroContext)?.prompt.orEmpty(),
       scenario =
         macroContext.substitute(
-          data.scenario.orEmpty().ifBlank { core.scenario.orEmpty().ifBlank { role.resolvedWorldSettings() } }
+          data.scenario.orEmpty().ifBlank { core.scenario.orEmpty().ifBlank { runtimeRole.worldSettings() } }
         ),
       creatorNotes = macroContext.substitute(data.creator_notes.orEmpty().ifBlank { core.creatorcomment.orEmpty() }),
       sessionSummary = summary?.summaryText.orEmpty(),

@@ -19,6 +19,8 @@ import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.Session
+import selfgemma.talk.domain.roleplay.model.toStChatRuntimeRole
+import selfgemma.talk.domain.roleplay.model.toStChatRuntimeSession
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.MemoryRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
@@ -200,15 +202,16 @@ constructor(
       memoryRepository.markUsed(relevantMemories.map { it.id }, System.currentTimeMillis())
     }
 
+    val runtimeRole = role.toStChatRuntimeRole()
+    val runtimeSession = session.toStChatRuntimeSession(generationTrigger = "normal")
     val promptAssembly =
       promptAssembler.assembleForSession(
-        role = role,
+        runtimeRole = runtimeRole,
+        runtimeSession = runtimeSession,
         summary = summary,
         memories = relevantMemories,
         recentMessages = recentMessages,
         pendingUserInput = trimmedInput,
-        generationTrigger = "normal",
-        chatMetadataJson = session.interopChatMetadataJson,
       )
     promptAssembly.updatedChatMetadataJson
       ?.takeIf { it != session.interopChatMetadataJson }

@@ -2,6 +2,7 @@ package selfgemma.talk.domain.roleplay.usecase
 
 import com.google.gson.JsonObject
 import selfgemma.talk.domain.roleplay.model.RoleCard
+import selfgemma.talk.domain.roleplay.model.StChatRuntimeRole
 import selfgemma.talk.domain.roleplay.model.cardDataOrEmpty
 import selfgemma.talk.domain.roleplay.model.resolvedMessageExample
 import selfgemma.talk.domain.roleplay.model.resolvedName
@@ -9,6 +10,14 @@ import selfgemma.talk.domain.roleplay.model.resolvedPersonaDescription
 import selfgemma.talk.domain.roleplay.model.resolvedSummary
 import selfgemma.talk.domain.roleplay.model.resolvedSystemPrompt
 import selfgemma.talk.domain.roleplay.model.resolvedWorldSettings
+import selfgemma.talk.domain.roleplay.model.cardData
+import selfgemma.talk.domain.roleplay.model.exampleDialoguesRaw
+import selfgemma.talk.domain.roleplay.model.name
+import selfgemma.talk.domain.roleplay.model.personaDescription
+import selfgemma.talk.domain.roleplay.model.summary
+import selfgemma.talk.domain.roleplay.model.systemPrompt
+import selfgemma.talk.domain.roleplay.model.toStChatRuntimeRole
+import selfgemma.talk.domain.roleplay.model.worldSettings
 
 private const val DEFAULT_ST_USER_NAME = "User"
 private const val ST_MACRO_MAX_PASSES = 4
@@ -52,22 +61,26 @@ data class StMacroContext(
 }
 
 fun RoleCard.toStMacroContext(userName: String = DEFAULT_ST_USER_NAME): StMacroContext {
-  val cardData = stCard.cardDataOrEmpty()
-  val creatorNotes = cardData.creator_notes.orEmpty().ifBlank { stCard.creatorcomment.orEmpty() }
-  val mesExamplesRaw = stCard.resolvedMessageExample()
+  return toStChatRuntimeRole(userName = userName).toStMacroContext()
+}
+
+fun StChatRuntimeRole.toStMacroContext(): StMacroContext {
+  val cardData = cardData()
+  val creatorNotes = cardData.creator_notes.orEmpty().ifBlank { card.creatorcomment.orEmpty() }
+  val mesExamplesRaw = exampleDialoguesRaw()
   return StMacroContext(
     values =
       mapOf(
         "user" to userName,
-        "char" to resolvedName(),
-        "description" to resolvedSummary(),
-        "personality" to resolvedPersonaDescription(),
-        "scenario" to resolvedWorldSettings(),
-        "persona" to resolvedPersonaDescription(),
+        "char" to name(),
+        "description" to summary(),
+        "personality" to personaDescription(),
+        "scenario" to worldSettings(),
+        "persona" to personaDescription(),
         "mesExamples" to mesExamplesRaw,
         "mesExamplesRaw" to mesExamplesRaw,
         "creatorNotes" to creatorNotes,
-        "charPrompt" to resolvedSystemPrompt(),
+        "charPrompt" to systemPrompt(),
         "charVersion" to cardData.character_version.orEmpty(),
         "char_version" to cardData.character_version.orEmpty(),
         "charDepthPrompt" to cardData.extensions.toDepthPromptPrompt().orEmpty(),
