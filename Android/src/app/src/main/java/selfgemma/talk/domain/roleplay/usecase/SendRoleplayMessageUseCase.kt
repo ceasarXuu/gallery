@@ -52,6 +52,16 @@ private data class ModelReadinessResult(
   val errorMessage: String? = null,
 )
 
+private data class InferenceAttemptResult(
+  val message: Message,
+  val overflowDetected: Boolean,
+)
+
+private data class ConversationPreparationResult(
+  val failureMessage: Message? = null,
+  val overflowDetected: Boolean = false,
+)
+
 private const val TAG = "SendRoleplayMessage"
 
 class SendRoleplayMessageUseCase
@@ -205,176 +215,128 @@ constructor(
 
     val runtimeRole = role.toStChatRuntimeRole()
     val runtimeSession = session.toStChatRuntimeSession(generationTrigger = "normal")
-    val promptAssembly =
-      promptAssembler.assembleForSession(
+    val contextProfile = model.toModelContextProfile()
+    var attemptMode = PromptBudgetMode.FULL
+    var promptAssembly =
+      assemblePrompt(
         runtimeRole = runtimeRole,
         runtimeSession = runtimeSession,
         summary = summary,
-        memories = relevantMemories,
+        relevantMemories = relevantMemories,
         recentMessages = recentMessages,
-        pendingUserInput = trimmedInput,
-        runtimeProfile = role.runtimeProfile,
-        contextProfile = model.toModelContextProfile(),
+        trimmedInput = trimmedInput,
+        role = role,
+        contextProfile = contextProfile,
+        budgetMode = attemptMode,
       )
-    promptAssembly.updatedChatMetadataJson
-      ?.takeIf { it != session.interopChatMetadataJson }
-      ?.let { updatedChatMetadataJson ->
-        conversationRepository.updateSession(
-          session.copy(
-            interopChatMetadataJson = updatedChatMetadataJson,
-            updatedAt = System.currentTimeMillis(),
-          )
+    if (ContextOverflowRecovery.shouldUseAggressiveModePreflight(promptAssembly.budgetReport)) {
+      attemptMode = PromptBudgetMode.AGGRESSIVE
+      Log.w(
+        TAG,
+        "prompt preflight overflow sessionId=$sessionId estimatedTokens=${promptAssembly.budgetReport?.estimatedInputTokens} usableTokens=${promptAssembly.budgetReport?.usableInputTokens} switchingTo=$attemptMode",
+      )
+      promptAssembly =
+        assemblePrompt(
+          runtimeRole = runtimeRole,
+          runtimeSession = runtimeSession,
+          summary = summary,
+          relevantMemories = relevantMemories,
+          recentMessages = recentMessages,
+          trimmedInput = trimmedInput,
+          role = role,
+          contextProfile = contextProfile,
+          budgetMode = attemptMode,
         )
-      }
-    val systemInstruction = Contents.of(promptAssembly.prompt)
-    Log.d(
-      TAG,
-      "assembled prompt sessionId=$sessionId trigger=normal recentMessages=${recentMessages.size} memories=${relevantMemories.size} promptChars=${systemInstruction.toString().length}",
-    )
-
-    try {
-      model.runtimeHelper.resetConversation(
-        model = model,
-        supportImage = false,
-        supportAudio = false,
-        systemInstruction = systemInstruction,
-      )
-      Log.d(TAG, "conversation reset after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId")
-    } catch (exception: Exception) {
-      val failedMessage =
-        assistantSeed.copy(
-          status = MessageStatus.FAILED,
-          errorMessage = exception.message ?: "Failed to prepare the chat session.",
-          updatedAt = System.currentTimeMillis(),
-        )
-      conversationRepository.updateMessage(failedMessage)
-      return SendRoleplayMessageResult(
-        assistantMessage = failedMessage,
-        errorMessage = failedMessage.errorMessage,
-      )
     }
 
-    val callbackScope = CoroutineScope(Dispatchers.IO)
-    val partialContent = StringBuilder()
-    val completed = AtomicBoolean(false)
-    val start = System.currentTimeMillis()
-
-    val finalMessage =
-      try {
-        suspendCancellableCoroutine<Message> { continuation ->
-          fun finish(status: MessageStatus, errorMessage: String? = null) {
-            if (!completed.compareAndSet(false, true)) {
-              return
-            }
-
-            val updatedMessage =
-              assistantSeed.copy(
-                content = partialContent.toString().trim(),
-                status = status,
-                errorMessage = errorMessage,
-                latencyMs = (System.currentTimeMillis() - start).toDouble(),
-                updatedAt = System.currentTimeMillis(),
-              )
-            callbackScope.launch {
-              conversationRepository.updateMessage(updatedMessage)
-              if (continuation.isActive) {
-                continuation.resume(updatedMessage)
-              }
-            }
-          }
-
-          try {
-            model.runtimeHelper.runInference(
-              model = model,
-              input = trimmedInput,
-              resultListener = { partialResult, done, _ ->
-                if (!partialResult.startsWith("<ctrl") && partialResult.isNotEmpty()) {
-                  partialContent.append(partialResult)
-
-                  if (ENABLE_STREAMING) {
-                    val streamingMessage =
-                      assistantSeed.copy(
-                        content = partialContent.toString(),
-                        status = MessageStatus.STREAMING,
-                        updatedAt = System.currentTimeMillis(),
-                      )
-                    callbackScope.launch { conversationRepository.updateMessage(streamingMessage) }
-                  }
-                }
-
-                if (done) {
-                  Log.d(
-                    TAG,
-                    "inference callback done after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId",
-                  )
-                  finish(
-                    status =
-                      if (isStopRequested()) {
-                        MessageStatus.INTERRUPTED
-                      } else {
-                        MessageStatus.COMPLETED
-                      }
-                  )
-                }
-              },
-              cleanUpListener = {},
-              onError = { message ->
-                Log.d(
-                  TAG,
-                  "inference error after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId message=$message",
-                )
-                finish(
-                  status =
-                    if (isStopRequested()) {
-                      MessageStatus.INTERRUPTED
-                    } else {
-                      MessageStatus.FAILED
-                    },
-                  errorMessage = if (isStopRequested()) null else message,
-                )
-              },
-              extraContext =
-                if (
-                  role.enableThinking &&
-                    model.getBooleanConfigValue(
-                      key = ConfigKeys.ENABLE_THINKING,
-                      defaultValue = false,
-                    )
-                ) {
-                  mapOf("enable_thinking" to "true")
-                } else {
-                  null
-                },
-            )
-              Log.d(TAG, "runInference dispatched after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId")
-          } catch (exception: Exception) {
-            finish(
-              status = MessageStatus.FAILED,
-              errorMessage = exception.message ?: "Failed to generate a reply.",
-            )
-          }
-
-          continuation.invokeOnCancellation {
-            if (!completed.get()) {
-              model.runtimeHelper.stopResponse(model)
-            }
-          }
-        }
-      } catch (exception: Exception) {
-        val failedMessage =
-          assistantSeed.copy(
-            content = partialContent.toString().trim(),
-            status = MessageStatus.FAILED,
-            errorMessage = exception.message ?: "Failed to generate a reply.",
-            latencyMs = (System.currentTimeMillis() - start).toDouble(),
-            updatedAt = System.currentTimeMillis(),
+    var finalMessage: Message? = null
+    var overflowRetries = 0
+    while (true) {
+      applyUpdatedChatMetadata(session = session, promptAssembly = promptAssembly)
+      val preparationResult =
+        prepareConversation(
+          assistantSeed = assistantSeed,
+          model = model,
+          promptAssembly = promptAssembly,
+          sessionId = sessionId,
+          recentMessages = recentMessages,
+          relevantMemories = relevantMemories,
+          trigger = runtimeSession.generationTrigger,
+          startTime = startTime,
+        )
+      if (preparationResult.failureMessage != null) {
+        if (
+          preparationResult.overflowDetected &&
+            overflowRetries < ContextOverflowRecovery.MAX_OVERFLOW_RETRIES
+        ) {
+          overflowRetries += 1
+          attemptMode = PromptBudgetMode.AGGRESSIVE
+          Log.w(
+            TAG,
+            "context overflow during reset sessionId=$sessionId retry=$overflowRetries message=${preparationResult.failureMessage.errorMessage}",
           )
+          promptAssembly =
+            assemblePrompt(
+              runtimeRole = runtimeRole,
+              runtimeSession = runtimeSession,
+              summary = summary,
+              relevantMemories = relevantMemories,
+              recentMessages = recentMessages,
+              trimmedInput = trimmedInput,
+              role = role,
+              contextProfile = contextProfile,
+              budgetMode = attemptMode,
+            )
+          continue
+        }
+        val failedMessage = preparationResult.failureMessage
         conversationRepository.updateMessage(failedMessage)
         return SendRoleplayMessageResult(
           assistantMessage = failedMessage,
           errorMessage = failedMessage.errorMessage,
         )
       }
+
+      val inferenceResult =
+        runInferenceAttempt(
+          assistantSeed = assistantSeed,
+          model = model,
+          input = trimmedInput,
+          role = role,
+          sessionId = sessionId,
+          startTime = startTime,
+          isStopRequested = isStopRequested,
+        )
+      finalMessage = inferenceResult.message
+      if (
+        !inferenceResult.overflowDetected ||
+          finalMessage.status == MessageStatus.INTERRUPTED ||
+          overflowRetries >= ContextOverflowRecovery.MAX_OVERFLOW_RETRIES
+      ) {
+        break
+      }
+
+      overflowRetries += 1
+      attemptMode = PromptBudgetMode.AGGRESSIVE
+      Log.w(
+        TAG,
+        "context overflow retry sessionId=$sessionId retry=$overflowRetries message=${finalMessage.errorMessage}",
+      )
+      promptAssembly =
+        assemblePrompt(
+          runtimeRole = runtimeRole,
+          runtimeSession = runtimeSession,
+          summary = summary,
+          relevantMemories = relevantMemories,
+          recentMessages = recentMessages,
+          trimmedInput = trimmedInput,
+          role = role,
+          contextProfile = contextProfile,
+          budgetMode = attemptMode,
+        )
+    }
+    finalMessage = checkNotNull(finalMessage)
+    conversationRepository.updateMessage(finalMessage)
 
     if (finalMessage.status == MessageStatus.COMPLETED) {
       summarizeSessionUseCase(sessionId)
@@ -391,6 +353,212 @@ constructor(
       interrupted = finalMessage.status == MessageStatus.INTERRUPTED,
       errorMessage = finalMessage.errorMessage,
     )
+  }
+
+  private suspend fun assemblePrompt(
+    runtimeRole: selfgemma.talk.domain.roleplay.model.StChatRuntimeRole,
+    runtimeSession: selfgemma.talk.domain.roleplay.model.StChatRuntimeSession,
+    summary: selfgemma.talk.domain.roleplay.model.SessionSummary?,
+    relevantMemories: List<selfgemma.talk.domain.roleplay.model.MemoryItem>,
+    recentMessages: List<Message>,
+    trimmedInput: String,
+    role: selfgemma.talk.domain.roleplay.model.RoleCard,
+    contextProfile: selfgemma.talk.domain.roleplay.model.ModelContextProfile,
+    budgetMode: PromptBudgetMode,
+  ): PromptAssemblyResult {
+    return promptAssembler.assembleForSession(
+      runtimeRole = runtimeRole,
+      runtimeSession = runtimeSession,
+      summary = summary,
+      memories = relevantMemories,
+      recentMessages = recentMessages,
+      pendingUserInput = trimmedInput,
+      runtimeProfile = role.runtimeProfile,
+      contextProfile = contextProfile,
+      budgetMode = budgetMode,
+    )
+  }
+
+  private suspend fun applyUpdatedChatMetadata(session: Session, promptAssembly: PromptAssemblyResult) {
+    promptAssembly.updatedChatMetadataJson
+      ?.takeIf { it != session.interopChatMetadataJson }
+      ?.let { updatedChatMetadataJson ->
+        conversationRepository.updateSession(
+          session.copy(
+            interopChatMetadataJson = updatedChatMetadataJson,
+            updatedAt = System.currentTimeMillis(),
+          )
+        )
+      }
+  }
+
+  private fun prepareConversation(
+    assistantSeed: Message,
+    model: Model,
+    promptAssembly: PromptAssemblyResult,
+    sessionId: String,
+    recentMessages: List<Message>,
+    relevantMemories: List<selfgemma.talk.domain.roleplay.model.MemoryItem>,
+    trigger: String,
+    startTime: Long,
+  ): ConversationPreparationResult {
+    val systemInstruction = Contents.of(promptAssembly.prompt)
+    Log.d(
+      TAG,
+      "assembled prompt sessionId=$sessionId trigger=$trigger recentMessages=${recentMessages.size} memories=${relevantMemories.size} promptChars=${systemInstruction.toString().length} estimatedTokens=${promptAssembly.budgetReport?.estimatedInputTokens} usableTokens=${promptAssembly.budgetReport?.usableInputTokens} budgetMode=${promptAssembly.budgetReport?.mode}",
+    )
+
+    return try {
+      model.runtimeHelper.resetConversation(
+        model = model,
+        supportImage = false,
+        supportAudio = false,
+        systemInstruction = systemInstruction,
+      )
+      Log.d(TAG, "conversation reset after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId")
+      ConversationPreparationResult()
+    } catch (exception: Exception) {
+      val errorMessage = exception.message ?: "Failed to prepare the chat session."
+      ConversationPreparationResult(
+        failureMessage =
+          assistantSeed.copy(
+            status = MessageStatus.FAILED,
+            errorMessage = errorMessage,
+            updatedAt = System.currentTimeMillis(),
+          ),
+        overflowDetected = ContextOverflowRecovery.isContextOverflow(errorMessage),
+      )
+    }
+  }
+
+  private suspend fun runInferenceAttempt(
+    assistantSeed: Message,
+    model: Model,
+    input: String,
+    role: selfgemma.talk.domain.roleplay.model.RoleCard,
+    sessionId: String,
+    startTime: Long,
+    isStopRequested: () -> Boolean,
+  ): InferenceAttemptResult {
+    val callbackScope = CoroutineScope(Dispatchers.IO)
+    val partialContent = StringBuilder()
+    val completed = AtomicBoolean(false)
+    val inferenceStart = System.currentTimeMillis()
+
+    return try {
+      suspendCancellableCoroutine { continuation ->
+        fun finish(status: MessageStatus, errorMessage: String? = null) {
+          if (!completed.compareAndSet(false, true)) {
+            return
+          }
+          val updatedMessage =
+            assistantSeed.copy(
+              content = partialContent.toString().trim(),
+              status = status,
+              errorMessage = errorMessage,
+              latencyMs = (System.currentTimeMillis() - inferenceStart).toDouble(),
+              updatedAt = System.currentTimeMillis(),
+            )
+          if (continuation.isActive) {
+            continuation.resume(
+              InferenceAttemptResult(
+                message = updatedMessage,
+                overflowDetected = status == MessageStatus.FAILED && ContextOverflowRecovery.isContextOverflow(errorMessage),
+              )
+            )
+          }
+        }
+
+        try {
+          model.runtimeHelper.runInference(
+            model = model,
+            input = input,
+            resultListener = { partialResult, done, _ ->
+              if (!partialResult.startsWith("<ctrl") && partialResult.isNotEmpty()) {
+                partialContent.append(partialResult)
+
+                if (ENABLE_STREAMING) {
+                  val streamingMessage =
+                    assistantSeed.copy(
+                      content = partialContent.toString(),
+                      status = MessageStatus.STREAMING,
+                      updatedAt = System.currentTimeMillis(),
+                    )
+                  callbackScope.launch { conversationRepository.updateMessage(streamingMessage) }
+                }
+              }
+
+              if (done) {
+                Log.d(
+                  TAG,
+                  "inference callback done after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId",
+                )
+                finish(
+                  status =
+                    if (isStopRequested()) {
+                      MessageStatus.INTERRUPTED
+                    } else {
+                      MessageStatus.COMPLETED
+                    }
+                )
+              }
+            },
+            cleanUpListener = {},
+            onError = { message ->
+              Log.d(
+                TAG,
+                "inference error after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId message=$message",
+              )
+              finish(
+                status =
+                  if (isStopRequested()) {
+                    MessageStatus.INTERRUPTED
+                  } else {
+                    MessageStatus.FAILED
+                  },
+                errorMessage = if (isStopRequested()) null else message,
+              )
+            },
+            extraContext =
+              if (
+                role.enableThinking &&
+                  model.getBooleanConfigValue(
+                    key = ConfigKeys.ENABLE_THINKING,
+                    defaultValue = false,
+                  )
+              ) {
+                mapOf("enable_thinking" to "true")
+              } else {
+                null
+              },
+          )
+          Log.d(TAG, "runInference dispatched after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId")
+        } catch (exception: Exception) {
+          finish(
+            status = MessageStatus.FAILED,
+            errorMessage = exception.message ?: "Failed to generate a reply.",
+          )
+        }
+
+        continuation.invokeOnCancellation {
+          if (!completed.get()) {
+            model.runtimeHelper.stopResponse(model)
+          }
+        }
+      }
+    } catch (exception: Exception) {
+      InferenceAttemptResult(
+        message =
+          assistantSeed.copy(
+            content = partialContent.toString().trim(),
+            status = MessageStatus.FAILED,
+            errorMessage = exception.message ?: "Failed to generate a reply.",
+            latencyMs = (System.currentTimeMillis() - inferenceStart).toDouble(),
+            updatedAt = System.currentTimeMillis(),
+          ),
+        overflowDetected = ContextOverflowRecovery.isContextOverflow(exception.message),
+      )
+    }
   }
 
   private suspend fun awaitModelReady(

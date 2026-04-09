@@ -39,6 +39,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     pendingUserInput: String = "",
     generationTrigger: String = "normal",
     contextProfile: ModelContextProfile? = null,
+    budgetMode: PromptBudgetMode = PromptBudgetMode.FULL,
   ): String {
     return assembleForSession(
       role = role,
@@ -49,6 +50,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       generationTrigger = generationTrigger,
       chatMetadataJson = null,
       contextProfile = contextProfile,
+      budgetMode = budgetMode,
     ).prompt
   }
 
@@ -61,6 +63,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     generationTrigger: String = "normal",
     chatMetadataJson: String? = null,
     contextProfile: ModelContextProfile? = null,
+    budgetMode: PromptBudgetMode = PromptBudgetMode.FULL,
   ): PromptAssemblyResult {
     val runtimeRole = role.toStChatRuntimeRole()
     val runtimeSession =
@@ -77,6 +80,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       pendingUserInput = pendingUserInput,
       runtimeProfile = role.runtimeProfile,
       contextProfile = contextProfile,
+      budgetMode = budgetMode,
     )
   }
 
@@ -89,6 +93,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     pendingUserInput: String = "",
     runtimeProfile: RoleRuntimeProfile? = null,
     contextProfile: ModelContextProfile? = null,
+    budgetMode: PromptBudgetMode = PromptBudgetMode.FULL,
   ): PromptAssemblyResult {
     val dialogueWindow = selectRecentMessages(recentMessages)
     val macroContext = runtimeRole.toStMacroContext()
@@ -153,7 +158,12 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
         depthPromptBlock = depthPromptBlock,
         combinedExampleDialogue = combinedExampleDialogue,
       )
-    val plan = contextBudgetPlanner.plan(material = material, contextProfile = contextProfile)
+    val plan =
+      contextBudgetPlanner.plan(
+        material = material,
+        contextProfile = contextProfile,
+        preferredMode = budgetMode,
+      )
     return PromptAssemblyResult(
       prompt = plan.prompt,
       updatedChatMetadataJson = resolvedCharacterBook.updatedChatMetadataJson,

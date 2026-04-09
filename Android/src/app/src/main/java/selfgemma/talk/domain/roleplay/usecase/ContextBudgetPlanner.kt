@@ -4,13 +4,21 @@ import javax.inject.Inject
 import selfgemma.talk.domain.roleplay.model.ModelContextProfile
 
 class ContextBudgetPlanner @Inject constructor(private val tokenEstimator: TokenEstimator) {
-  internal fun plan(material: PromptMaterial, contextProfile: ModelContextProfile? = null): BudgetedPromptPlan {
-    val states = MutableList(material.sections.size) { PromptSectionLevel.FULL }
+  internal fun plan(
+    material: PromptMaterial,
+    contextProfile: ModelContextProfile? = null,
+    preferredMode: PromptBudgetMode = PromptBudgetMode.FULL,
+  ): BudgetedPromptPlan {
+    val states = material.sections.map { candidate -> initialLevelFor(candidate, preferredMode) }.toMutableList()
     val usableInputTokens = contextProfile?.usableInputTokens ?: Int.MAX_VALUE
     var rendered = render(material = material, states = states)
 
     if (rendered.estimatedInputTokens <= usableInputTokens) {
-      return rendered.toPlan(usableInputTokens = usableInputTokens, mode = PromptBudgetMode.FULL)
+      return rendered.toPlan(
+        candidateSectionIds = material.sections.map { it.id },
+        usableInputTokens = usableInputTokens,
+        mode = resolveMode(states),
+      )
     }
 
     while (rendered.estimatedInputTokens > usableInputTokens) {
@@ -21,14 +29,52 @@ class ContextBudgetPlanner @Inject constructor(private val tokenEstimator: Token
       rendered = render(material = material, states = states)
     }
 
-    val mode =
-      when {
-        states.any { it == PromptSectionLevel.DROPPED || it == PromptSectionLevel.MINIMAL } ->
-          PromptBudgetMode.AGGRESSIVE
-        states.any { it == PromptSectionLevel.COMPACT } -> PromptBudgetMode.COMPACT
-        else -> PromptBudgetMode.FULL
-      }
-    return rendered.toPlan(usableInputTokens = usableInputTokens, mode = mode)
+    return rendered.toPlan(
+      candidateSectionIds = material.sections.map { it.id },
+      usableInputTokens = usableInputTokens,
+      mode = resolveMode(states),
+    )
+  }
+
+  private fun initialLevelFor(
+    candidate: PromptSectionCandidate,
+    preferredMode: PromptBudgetMode,
+  ): PromptSectionLevel {
+    return when (preferredMode) {
+      PromptBudgetMode.FULL -> PromptSectionLevel.FULL
+      PromptBudgetMode.COMPACT ->
+        when (candidate.id) {
+          PromptSectionId.EXAMPLE_DIALOGUE,
+          PromptSectionId.SESSION_SUMMARY,
+          PromptSectionId.RELEVANT_MEMORY,
+          PromptSectionId.RECENT_CONVERSATION,
+          PromptSectionId.PERSONA,
+          PromptSectionId.WORLD,
+          PromptSectionId.CHARACTER_SUMMARY -> PromptSectionLevel.COMPACT
+          else -> PromptSectionLevel.FULL
+        }
+      PromptBudgetMode.AGGRESSIVE ->
+        when (candidate.id) {
+          PromptSectionId.EXAMPLE_DIALOGUE,
+          PromptSectionId.SESSION_SUMMARY -> if (candidate.required) PromptSectionLevel.MINIMAL else PromptSectionLevel.DROPPED
+          PromptSectionId.RELEVANT_MEMORY,
+          PromptSectionId.RECENT_CONVERSATION,
+          PromptSectionId.PERSONA,
+          PromptSectionId.WORLD,
+          PromptSectionId.CHARACTER_SUMMARY -> PromptSectionLevel.MINIMAL
+          PromptSectionId.CORE_CHARACTER -> PromptSectionLevel.COMPACT
+          else -> PromptSectionLevel.FULL
+        }
+    }
+  }
+
+  private fun resolveMode(states: List<PromptSectionLevel>): PromptBudgetMode {
+    return when {
+      states.any { it == PromptSectionLevel.DROPPED || it == PromptSectionLevel.MINIMAL } ->
+        PromptBudgetMode.AGGRESSIVE
+      states.any { it == PromptSectionLevel.COMPACT } -> PromptBudgetMode.COMPACT
+      else -> PromptBudgetMode.FULL
+    }
   }
 
   private fun degradeOnce(material: PromptMaterial, states: MutableList<PromptSectionLevel>): Boolean {
@@ -148,11 +194,13 @@ class ContextBudgetPlanner @Inject constructor(private val tokenEstimator: Token
   }
 
   private fun RenderedPrompt.toPlan(
+    candidateSectionIds: List<PromptSectionId>,
     usableInputTokens: Int,
     mode: PromptBudgetMode,
   ): BudgetedPromptPlan {
     val droppedSectionIds =
-      PromptSectionId.entries
+      candidateSectionIds
+        .distinct()
         .filter { sectionId -> sections.none { it.id == sectionId } }
         .map { it.name }
     val compactedSectionIds =

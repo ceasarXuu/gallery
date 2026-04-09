@@ -528,8 +528,10 @@ Notes:
 - When refactoring prompt assembly for small-context on-device models, keep validation split into two layers:
   - compile check: `.\gradlew.bat :app:compileDebugKotlin`
   - focused unit tests: `.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.PromptAssemblerTest" --tests "selfgemma.talk.domain.roleplay.usecase.ContextBudgetPlannerTest" --tests "selfgemma.talk.domain.roleplay.model.ModelContextProfileTest" --tests "selfgemma.talk.domain.roleplay.usecase.CompileRuntimeRoleProfileUseCaseTest"`
+- In this workspace the Gradle wrapper lives under `D:\gallery\Android\src`, not `D:\gallery` or `D:\gallery\Android`. If PowerShell says `gradlew.bat` is not recognized, check the working directory before treating it as a build failure.
 - `PromptAssembler` regressions after a budget-layer refactor are often macro-substitution regressions rather than budget math errors. If old prompt tests suddenly fail on `{{user}}` / `{{char}}`, inspect whether the new material-builder stage still applies `StMacroContext.substitute(...)` before budgeting.
 - Keep the ST runtime split explicit:
   - `StCharacterBookRuntime` decides activation and `chat_metadata`
   - the budget planner only decides what activated text survives into the final prompt
 - If the budget planner tests are flaky, the usual cause is test budgets that are not tight enough to force compaction. Lower `usableInputTokens` in the test profile until the intended degradation path is actually exercised.
+- Input-overflow recovery on this app needs to cover both `resetConversation(...)` and `runInference(...)`. With the current rough token estimator, a prompt can pass preflight but still fail at runtime; only handling inference errors leaves a real gap for small 4k models.
