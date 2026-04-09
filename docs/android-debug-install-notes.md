@@ -37,6 +37,32 @@ adb -s ONNZ95CAEMMZSKTS logcat -d -s AGMainActivity
 - Around `1400ms` after launch, the app-level tavern sign animation is visible and can be validated by screenshot.
 - `AGMainActivity` now logs `tavern intro animation started/finished`, which is enough to distinguish "still in app intro" from "app did not render first content yet".
 
+### MP4 splash replacement
+
+If a startup video is provided directly in the repo root, copy it into `app/src/main/res/raw/` with a resource-safe lowercase name and let the app-level splash overlay play that raw resource:
+
+```powershell
+Copy-Item D:\gallery\GemmaTavern.mp4 D:\gallery\Android\src\app\src\main\res\raw\gemma_tavern.mp4 -Force
+```
+
+Verification sequence:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:installDebug
+adb -s ONNZ95CAEMMZSKTS shell am force-stop selfgemma.talk
+adb -s ONNZ95CAEMMZSKTS shell am start -n selfgemma.talk/.MainActivity
+Start-Sleep -Milliseconds 250
+adb -s ONNZ95CAEMMZSKTS exec-out screencap -p > D:\gallery\tmp_video_splash_early.png
+Start-Sleep -Milliseconds 1200
+adb -s ONNZ95CAEMMZSKTS exec-out screencap -p > D:\gallery\tmp_video_splash_mid.png
+adb -s ONNZ95CAEMMZSKTS logcat -d -s AGMainActivity
+```
+
+- Early frame should show only the static warm-color system splash background, with no old four-shape animated icon.
+- Mid frame should show the MP4 content itself.
+- `AGMainActivity` should log `tavern intro video prepared` once the `VideoView` starts successfully.
+
 ## 2026-04-07
 
 ### Stable command sequence
