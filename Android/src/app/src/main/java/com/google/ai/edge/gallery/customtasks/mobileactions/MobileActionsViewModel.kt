@@ -28,6 +28,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import selfgemma.talk.R
 import selfgemma.talk.data.Model
+import selfgemma.talk.ui.llmchat.LlmChatOverflowRecovery
 import selfgemma.talk.ui.llmchat.LlmChatModelHelper
 import selfgemma.talk.ui.llmchat.LlmModelInstance
 import selfgemma.talk.ui.modelmanager.ModelInitializationStatus
@@ -170,7 +171,7 @@ constructor(@ApplicationContext private val appContext: Context) : ViewModel() {
         .onCompletion {
           setProcessing(processing = false)
           onProcessDone()
-          resetConversation(model = model, tools = tools)
+          resetConversation(model = model, tools = tools)?.let(onError)
         }
         .collect {
           setProcessing(processing = false)
@@ -179,9 +180,9 @@ constructor(@ApplicationContext private val appContext: Context) : ViewModel() {
     }
   }
 
-  fun resetConversation(model: Model, tools: List<ToolProvider>) {
+  fun resetConversation(model: Model, tools: List<ToolProvider>): String? {
     _isResettingConversation.value = true
-    try {
+    return try {
       LlmChatModelHelper.resetConversation(
         model = model,
         supportImage = false,
@@ -189,10 +190,13 @@ constructor(@ApplicationContext private val appContext: Context) : ViewModel() {
         systemInstruction = getSystemPrompt(),
         tools = tools,
       )
+      null
     } catch (e: Exception) {
       Log.e(TAG, "Failed to reset conversation", e)
+      LlmChatOverflowRecovery.toUserMessage(e.message ?: appContext.getString(R.string.unknown_error))
+    } finally {
+      _isResettingConversation.value = false
     }
-    _isResettingConversation.value = false
   }
 
   fun resetEngine(

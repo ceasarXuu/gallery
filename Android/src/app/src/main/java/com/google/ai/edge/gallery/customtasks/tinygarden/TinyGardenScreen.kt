@@ -387,6 +387,10 @@ fun MainUi(
                 prevSeed = prevSeed,
                 prevPlots = prevPlots,
                 prevAction = prevAction,
+                onError = { error ->
+                  errorDialogContent = error
+                  showErrorDialog = true
+                },
               )
             }
           },
@@ -458,6 +462,10 @@ fun MainUi(
             prevSeed = "",
             prevPlots = "",
             prevAction = "",
+            onError = { error ->
+              errorDialogContent = error
+              showErrorDialog = true
+            },
           )
         }
       }

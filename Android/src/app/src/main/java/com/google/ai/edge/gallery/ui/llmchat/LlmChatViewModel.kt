@@ -48,6 +48,7 @@ import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 
 private const val TAG = "AGLlmChatViewModel"
 private const val STREAM_UI_UPDATE_MIN_INTERVAL_MS = 50L
+private const val MAX_RESET_SESSION_RETRIES = 3
 
 private data class LlmChatPreparationResult(
   val errorMessage: String? = null,
@@ -98,6 +99,20 @@ open class LlmChatViewModelBase() : ChatViewModel() {
           contextProfile = contextProfile,
           preferredMode = attemptMode,
         )
+      if (contextPlan.report.currentTurnOverflowDetected) {
+        Log.w(
+          TAG,
+          "llmchat current turn exceeds usable input budget model=${model.name} reservedForCurrentTurnTokens=${contextPlan.report.reservedForCurrentTurnTokens} usableInputTokens=${contextPlan.report.usableInputTokens}",
+        )
+        setInProgress(false)
+        setPreparing(false)
+        onError(
+          LlmChatOverflowRecovery.toUserMessage(
+            "Input token exceeds model limit for the current turn."
+          )
+        )
+        return@launch
+      }
       if (LlmChatOverflowRecovery.shouldUseAggressiveModePreflight(contextPlan.report)) {
         attemptMode = LlmChatContextMode.AGGRESSIVE
         Log.w(
@@ -436,7 +451,9 @@ open class LlmChatViewModelBase() : ChatViewModel() {
       clearAllMessages(model = model)
       stopResponse(model = model)
 
-      while (true) {
+      var retries = 0
+      var failureMessage: String? = null
+      while (retries < MAX_RESET_SESSION_RETRIES) {
         try {
           model.runtimeHelper.resetConversation(
             model = model,
@@ -446,14 +463,33 @@ open class LlmChatViewModelBase() : ChatViewModel() {
             tools = tools,
             enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
           )
-          break
+          setIsResettingSession(false)
+          onDone()
+          return@launch
         } catch (exception: Exception) {
           Log.d(TAG, "Failed to reset session. Trying again", exception)
+          failureMessage = exception.message ?: "Failed to reset the session."
+          if (LlmChatOverflowRecovery.isContextOverflow(exception.message)) {
+            break
+          }
         }
-        delay(200)
+        retries += 1
+        if (retries < MAX_RESET_SESSION_RETRIES) {
+          delay(200)
+        }
       }
+      Log.e(
+        TAG,
+        "Failed to reset session after retries model=${model.name} retries=$retries message=$failureMessage",
+      )
       setIsResettingSession(false)
-      onDone()
+      addMessage(
+        model = model,
+        message =
+          ChatMessageError(
+            content = LlmChatOverflowRecovery.toUserMessage(failureMessage),
+          ),
+      )
     }
   }
 

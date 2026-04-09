@@ -7,6 +7,9 @@ internal object LlmChatOverflowRecovery {
   const val MAX_OVERFLOW_RETRIES = 1
 
   fun shouldUseAggressiveModePreflight(report: LlmChatContextReport): Boolean {
+    if (report.currentTurnOverflowDetected) {
+      return false
+    }
     return report.estimatedInstructionTokens > report.availableInstructionTokens &&
       report.mode != LlmChatContextMode.AGGRESSIVE
   }

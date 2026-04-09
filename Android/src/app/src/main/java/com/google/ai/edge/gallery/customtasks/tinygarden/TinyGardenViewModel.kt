@@ -24,9 +24,11 @@ import selfgemma.talk.R
 import selfgemma.talk.data.DataStoreRepository
 import selfgemma.talk.data.Model
 import selfgemma.talk.ui.common.chat.ChatMessage
+import selfgemma.talk.ui.common.chat.ChatMessageError
 import selfgemma.talk.ui.common.chat.ChatMessageText
 import selfgemma.talk.ui.common.chat.ChatMessageWarning
 import selfgemma.talk.ui.common.chat.ChatSide
+import selfgemma.talk.ui.llmchat.LlmChatOverflowRecovery
 import selfgemma.talk.ui.llmchat.LlmChatModelHelper
 import selfgemma.talk.ui.llmchat.LlmModelInstance
 import com.google.ai.edge.litertlm.Content
@@ -195,6 +197,7 @@ constructor(
     prevSeed: String,
     prevPlots: String,
     prevAction: String,
+    onError: ((String) -> Unit)? = null,
   ) {
     resetNumTurns()
 
@@ -207,23 +210,31 @@ constructor(
           prevAction = prevAction,
         )
       Log.d(TAG, "Current system prompt:\n$curSystemPrompt")
-      try {
-        LlmChatModelHelper.resetConversation(
-          model = model,
-          supportImage = false,
-          supportAudio = false,
-          systemInstruction = Contents.of(curSystemPrompt),
-          tools = tools,
-          enableConversationConstrainedDecoding = true,
-        )
-      } catch (e: Exception) {
-        Log.e(TAG, "Failed to reset tiny garden conversation", e)
-      }
+      val errorMessage =
+        try {
+          LlmChatModelHelper.resetConversation(
+            model = model,
+            supportImage = false,
+            supportAudio = false,
+            systemInstruction = Contents.of(curSystemPrompt),
+            tools = tools,
+            enableConversationConstrainedDecoding = true,
+          )
+          null
+        } catch (e: Exception) {
+          Log.e(TAG, "Failed to reset tiny garden conversation", e)
+          LlmChatOverflowRecovery.toUserMessage(e.message ?: context.getString(R.string.unknown_error))
+        }
       _isResettingConversation.value = false
-      addMessage(
-        message =
-          ChatMessageWarning(content = context.getString(R.string.conversation_reset_message))
-      )
+      if (errorMessage == null) {
+        addMessage(
+          message =
+            ChatMessageWarning(content = context.getString(R.string.conversation_reset_message))
+        )
+      } else {
+        addMessage(message = ChatMessageError(content = errorMessage))
+        onError?.invoke(errorMessage)
+      }
     }
   }
 }

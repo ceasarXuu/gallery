@@ -78,4 +78,28 @@ class LlmChatContextManagerTest {
     assertTrue(plan.report.reservedForCurrentTurnTokens >= 256 + 192)
     assertTrue(plan.report.availableInstructionTokens < plan.report.usableInputTokens)
   }
+
+  @Test
+  fun buildPlan_marksCurrentTurnOverflowWhenPendingInputAlreadyExceedsBudget() {
+    val longInput = "overflow ".repeat(400)
+
+    val plan =
+      contextManager.buildPlan(
+        baseSystemPrompt = "You are a concise assistant.",
+        historyMessages = emptyList(),
+        pendingInput = longInput,
+        pendingImageCount = 0,
+        pendingAudioCount = 0,
+        contextProfile =
+          ModelContextProfile(
+            contextWindowTokens = 1024,
+            reservedOutputTokens = 256,
+            reservedThinkingTokens = 0,
+            safetyMarginTokens = 256,
+          ),
+      )
+
+    assertTrue(plan.report.currentTurnOverflowDetected)
+    assertEquals(0, plan.report.availableInstructionTokens)
+  }
 }

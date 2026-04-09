@@ -14,6 +14,7 @@ class LlmChatOverflowRecoveryTest {
           reservedForCurrentTurnTokens = 128,
           availableInstructionTokens = 896,
           estimatedInstructionTokens = 1040,
+          currentTurnOverflowDetected = false,
           mode = LlmChatContextMode.FULL,
           recentLineCount = 4,
           summaryLineCount = 2,
@@ -29,6 +30,7 @@ class LlmChatOverflowRecoveryTest {
           reservedForCurrentTurnTokens = 128,
           availableInstructionTokens = 896,
           estimatedInstructionTokens = 1040,
+          currentTurnOverflowDetected = false,
           mode = LlmChatContextMode.AGGRESSIVE,
           recentLineCount = 4,
           summaryLineCount = 2,
@@ -44,5 +46,25 @@ class LlmChatOverflowRecoveryTest {
     assertTrue(LlmChatOverflowRecovery.isContextOverflow("Error code 3: input token exceeds model limit"))
     assertTrue(LlmChatOverflowRecovery.isContextOverflow("input tokens exceed context window"))
     assertFalse(LlmChatOverflowRecovery.isContextOverflow("Selected model failed to initialize."))
+  }
+
+  @Test
+  fun shouldUseAggressiveModePreflight_ignoresCurrentTurnOverflow() {
+    assertFalse(
+      LlmChatOverflowRecovery.shouldUseAggressiveModePreflight(
+        LlmChatContextReport(
+          usableInputTokens = 512,
+          reservedForCurrentTurnTokens = 640,
+          availableInstructionTokens = 0,
+          estimatedInstructionTokens = 0,
+          currentTurnOverflowDetected = true,
+          mode = LlmChatContextMode.AGGRESSIVE,
+          recentLineCount = 0,
+          summaryLineCount = 0,
+          droppedLineCount = 0,
+          systemPromptTrimmed = false,
+        )
+      )
+    )
   }
 }

@@ -26,6 +26,7 @@ internal data class LlmChatContextReport(
   val reservedForCurrentTurnTokens: Int,
   val availableInstructionTokens: Int,
   val estimatedInstructionTokens: Int,
+  val currentTurnOverflowDetected: Boolean,
   val mode: LlmChatContextMode,
   val recentLineCount: Int,
   val summaryLineCount: Int,
@@ -55,13 +56,14 @@ internal class LlmChatContextManager(
       tokenEstimator.estimate(pendingInput) +
         (pendingImageCount * PER_IMAGE_TOKEN_RESERVE) +
         (pendingAudioCount * PER_AUDIO_TOKEN_RESERVE)
+    val currentTurnOverflowDetected = pendingInputTokens > contextProfile.usableInputTokens
     val availableInstructionTokens =
-      (contextProfile.usableInputTokens - pendingInputTokens).coerceAtLeast(SYSTEM_PROMPT_FALLBACK_TOKENS)
+      (contextProfile.usableInputTokens - pendingInputTokens).coerceAtLeast(0)
 
     val promptBudget =
       when (preferredMode) {
         LlmChatContextMode.FULL -> availableInstructionTokens
-        LlmChatContextMode.AGGRESSIVE -> maxOf(SYSTEM_PROMPT_FALLBACK_TOKENS, availableInstructionTokens - 256)
+        LlmChatContextMode.AGGRESSIVE -> availableInstructionTokens
       }
     val normalizedBasePrompt = baseSystemPrompt.trim()
     var basePrompt = fitToBudget(normalizedBasePrompt, budgetTokens = promptBudget / 2)
@@ -105,8 +107,10 @@ internal class LlmChatContextManager(
           reservedForCurrentTurnTokens = pendingInputTokens,
           availableInstructionTokens = availableInstructionTokens,
           estimatedInstructionTokens = estimatedTokens,
+          currentTurnOverflowDetected = currentTurnOverflowDetected,
           mode =
             when {
+              currentTurnOverflowDetected -> LlmChatContextMode.AGGRESSIVE
               droppedLineCount > 0 || summaryLines.isEmpty() && olderLines.isNotEmpty() ->
                 LlmChatContextMode.AGGRESSIVE
               else -> preferredMode
