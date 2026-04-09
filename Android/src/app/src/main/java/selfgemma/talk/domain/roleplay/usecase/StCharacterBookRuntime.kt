@@ -32,6 +32,7 @@ internal data class StRuntimeDepthPromptInsertion(
 data class PromptAssemblyResult(
   val prompt: String,
   val updatedChatMetadataJson: String? = null,
+  val budgetReport: PromptBudgetReport? = null,
 )
 
 internal data class StResolvedPromptRuntime(

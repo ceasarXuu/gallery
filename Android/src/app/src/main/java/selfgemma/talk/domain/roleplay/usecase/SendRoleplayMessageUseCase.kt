@@ -21,6 +21,7 @@ import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.toStChatRuntimeRole
 import selfgemma.talk.domain.roleplay.model.toStChatRuntimeSession
+import selfgemma.talk.domain.roleplay.model.toModelContextProfile
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.MemoryRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
@@ -212,6 +213,8 @@ constructor(
         memories = relevantMemories,
         recentMessages = recentMessages,
         pendingUserInput = trimmedInput,
+        runtimeProfile = role.runtimeProfile,
+        contextProfile = model.toModelContextProfile(),
       )
     promptAssembly.updatedChatMetadataJson
       ?.takeIf { it != session.interopChatMetadataJson }

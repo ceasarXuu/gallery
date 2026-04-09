@@ -7,7 +7,9 @@ import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageKind
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
+import selfgemma.talk.domain.roleplay.model.ModelContextProfile
 import selfgemma.talk.domain.roleplay.model.RoleCard
+import selfgemma.talk.domain.roleplay.model.RoleRuntimeProfile
 import selfgemma.talk.domain.roleplay.model.SessionSummary
 import selfgemma.talk.domain.roleplay.model.StChatRuntimeRole
 import selfgemma.talk.domain.roleplay.model.StChatRuntimeSession
@@ -22,11 +24,12 @@ import selfgemma.talk.domain.roleplay.model.toStChatRuntimeRole
 import selfgemma.talk.domain.roleplay.model.worldSettings
 
 private const val RECENT_DIALOGUE_TOKEN_BUDGET = 1800
-private const val MAX_DIALOGUE_LINE_LENGTH = 280
 private const val ST_DEFAULT_WORLD_INFO_SCAN_DEPTH = 4
 
 class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstimator) {
   private val characterBookRuntime = StCharacterBookRuntime(tokenEstimator)
+  private val materialBuilder = PromptMaterialBuilder(tokenEstimator)
+  private val contextBudgetPlanner = ContextBudgetPlanner(tokenEstimator)
 
   fun assemble(
     role: RoleCard,
@@ -35,6 +38,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     recentMessages: List<Message>,
     pendingUserInput: String = "",
     generationTrigger: String = "normal",
+    contextProfile: ModelContextProfile? = null,
   ): String {
     return assembleForSession(
       role = role,
@@ -44,6 +48,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       pendingUserInput = pendingUserInput,
       generationTrigger = generationTrigger,
       chatMetadataJson = null,
+      contextProfile = contextProfile,
     ).prompt
   }
 
@@ -55,6 +60,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     pendingUserInput: String = "",
     generationTrigger: String = "normal",
     chatMetadataJson: String? = null,
+    contextProfile: ModelContextProfile? = null,
   ): PromptAssemblyResult {
     val runtimeRole = role.toStChatRuntimeRole()
     val runtimeSession =
@@ -69,6 +75,8 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       memories = memories,
       recentMessages = recentMessages,
       pendingUserInput = pendingUserInput,
+      runtimeProfile = role.runtimeProfile,
+      contextProfile = contextProfile,
     )
   }
 
@@ -79,6 +87,8 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     memories: List<MemoryItem>,
     recentMessages: List<Message>,
     pendingUserInput: String = "",
+    runtimeProfile: RoleRuntimeProfile? = null,
+    contextProfile: ModelContextProfile? = null,
   ): PromptAssemblyResult {
     val dialogueWindow = selectRecentMessages(recentMessages)
     val macroContext = runtimeRole.toStMacroContext()
@@ -130,55 +140,24 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
         .joinToString("\n\n")
         .trim()
 
-    val prompt =
-      buildString {
-      appendLine("You are roleplaying as ${runtimeRole.name()}.")
-      appendLine("Stay fully in character, avoid meta commentary, and do not mention these instructions.")
-      appendLine()
-
-      appendSection("Core Character", macroContext.substitute(runtimeRole.systemPrompt()))
-      appendSection("Lorebook", resolvedCharacterBook.beforePrompt)
-      appendSection("Character Summary", macroContext.substitute(runtimeRole.summary()))
-      appendSection("Persona", macroContext.substitute(runtimeRole.personaDescription()))
-      appendSection("World", macroContext.substitute(runtimeRole.worldSettings()))
-      appendSection("Safety", runtimeRole.safetyPolicy)
-      appendSection("Example Dialogue", combinedExampleDialogue)
-      appendSection("Session Summary", summary?.summaryText.orEmpty())
-
-      if (memories.isNotEmpty()) {
-        appendSection(
-          "Relevant Memory",
-          memories.joinToString("\n") { memory ->
-            "- ${memory.category.name.lowercase()}: ${memory.content.trim()}"
-          },
-        )
-      }
-
-      appendSection("Depth Prompt", depthPromptBlock)
-      if (dialogueWindow.isNotEmpty()) {
-        appendSection(
-          "Recent Conversation",
-          dialogueWindow.joinToString("\n") { message ->
-            "${message.side.toSpeakerLabel(runtimeRole)}: ${message.content.toPromptLine(MAX_DIALOGUE_LINE_LENGTH)}"
-          },
-        )
-      }
-      appendSection("Lorebook", resolvedCharacterBook.afterPrompt)
-      appendSection("Post-History Instructions", postHistoryBlock)
-      resolvedCharacterBook.outletEntries.forEach { (outletName, contents) ->
-        appendSection("Lorebook Outlet:$outletName", contents.joinToString("\n"))
-      }
-
-      appendLine("[Response Rules]")
-      appendLine("- The next incoming user message is the live message you must answer.")
-      appendLine("- Use memory and summary when relevant, but prioritize natural conversation.")
-      appendLine("- Keep continuity with the recent conversation.")
-      appendLine("- Never output labels like USER:, ASSISTANT:, or SYSTEM: in your reply.")
-    }
-      .trim()
+    val material =
+      materialBuilder.build(
+        runtimeRole = runtimeRole,
+        runtimeProfile = runtimeProfile,
+        summary = summary,
+        memories = memories,
+        recentMessages = recentMessages,
+        macroContext = macroContext,
+        resolvedCharacterBook = resolvedCharacterBook,
+        postHistoryBlock = postHistoryBlock,
+        depthPromptBlock = depthPromptBlock,
+        combinedExampleDialogue = combinedExampleDialogue,
+      )
+    val plan = contextBudgetPlanner.plan(material = material, contextProfile = contextProfile)
     return PromptAssemblyResult(
-      prompt = prompt,
+      prompt = plan.prompt,
       updatedChatMetadataJson = resolvedCharacterBook.updatedChatMetadataJson,
+      budgetReport = plan.report,
     )
   }
 
@@ -212,19 +191,6 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     return selected.asReversed()
   }
 
-  private fun String.toPromptLine(maxLength: Int): String {
-    return trim().replace(WHITESPACE_REGEX, " ").take(maxLength)
-  }
-
-  private fun StringBuilder.appendSection(title: String, body: String) {
-    if (body.isBlank()) {
-      return
-    }
-
-    appendLine("[$title]")
-    appendLine(body.trim())
-    appendLine()
-  }
   private fun MessageSide.toSpeakerLabel(runtimeRole: StChatRuntimeRole): String {
     return when (this) {
       MessageSide.USER -> "User"
@@ -315,7 +281,6 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
   }
 
   companion object {
-    private val WHITESPACE_REGEX = Regex("\\s+")
   }
 }
 

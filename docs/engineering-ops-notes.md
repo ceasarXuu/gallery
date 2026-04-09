@@ -522,3 +522,14 @@ Notes:
 - If chat-page entry dies 1-2 seconds later with `APP CRASH(NATIVE)` and the tombstone points at `com.google.ai.edge.litertlm.Engine.initialize` / `liblitertlm_jni.so`, inspect whether an imported CPU model already has a sibling `*.xnnpack_cache` file.
 - On this workspace/device, `gemma-4-E4B-it.litertlm` crashed only when LiteRT-LM loaded an existing imported CPU XNNPACK cache; deleting the sidecar cache let the same chat/session open and rebuild the cache successfully.
 - The app-side mitigation is to purge `modelPath + ".xnnpack_cache"` before `Engine.initialize()` for imported CPU models. Do not rely on Java exception handling here; this failure is native `SIGABRT`, so the only safe fix is to prevent the bad cache from reaching native init at all.
+
+## 2026-04-09 Roleplay context-budget refactor note
+
+- When refactoring prompt assembly for small-context on-device models, keep validation split into two layers:
+  - compile check: `.\gradlew.bat :app:compileDebugKotlin`
+  - focused unit tests: `.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.PromptAssemblerTest" --tests "selfgemma.talk.domain.roleplay.usecase.ContextBudgetPlannerTest" --tests "selfgemma.talk.domain.roleplay.model.ModelContextProfileTest" --tests "selfgemma.talk.domain.roleplay.usecase.CompileRuntimeRoleProfileUseCaseTest"`
+- `PromptAssembler` regressions after a budget-layer refactor are often macro-substitution regressions rather than budget math errors. If old prompt tests suddenly fail on `{{user}}` / `{{char}}`, inspect whether the new material-builder stage still applies `StMacroContext.substitute(...)` before budgeting.
+- Keep the ST runtime split explicit:
+  - `StCharacterBookRuntime` decides activation and `chat_metadata`
+  - the budget planner only decides what activated text survives into the final prompt
+- If the budget planner tests are flaky, the usual cause is test budgets that are not tight enough to force compaction. Lower `usableInputTokens` in the test profile until the intended degradation path is actually exercised.
