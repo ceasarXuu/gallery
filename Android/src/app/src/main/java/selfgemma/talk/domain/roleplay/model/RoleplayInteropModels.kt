@@ -119,6 +119,20 @@ data class RoleRuntimeProfile(
   val safetyPolicy: RuntimeSafetyPolicy = RuntimeSafetyPolicy(),
   val promptPolicy: PromptPolicy = PromptPolicy(),
   val uiHints: CharacterUiHints = CharacterUiHints(),
+  val compiledCorePrompt: String = "",
+  val compiledPersonaPrompt: String = "",
+  val compiledWorldPrompt: String = "",
+  val compiledStylePrompt: String = "",
+  val compiledExampleDigest: String = "",
+  val corePromptTokenEstimate: Int = 0,
+  val personaPromptTokenEstimate: Int = 0,
+  val worldPromptTokenEstimate: Int = 0,
+  val stylePromptTokenEstimate: Int = 0,
+  val exampleDigestTokenEstimate: Int = 0,
+  val compiledTotalTokenEstimate: Int = 0,
+  val oversizeWarning: Boolean = false,
+  val sourceFingerprint: String = "",
+  val compiledAt: Long? = null,
 )
 
 data class RoleInteropState(

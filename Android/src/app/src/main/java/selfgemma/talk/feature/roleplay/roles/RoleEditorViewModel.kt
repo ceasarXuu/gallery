@@ -39,6 +39,7 @@ import selfgemma.talk.domain.roleplay.model.resolvedSystemPrompt
 import selfgemma.talk.domain.roleplay.model.resolvedTags
 import selfgemma.talk.domain.roleplay.model.resolvedWorldSettings
 import selfgemma.talk.domain.roleplay.model.StCharacterCard
+import selfgemma.talk.domain.roleplay.usecase.CompileRuntimeRoleProfileUseCase
 import selfgemma.talk.domain.roleplay.usecase.ExportStRoleCardToUriUseCase
 import selfgemma.talk.domain.roleplay.usecase.ImportStRoleCardFromUriUseCase
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
@@ -78,6 +79,7 @@ constructor(
   @ApplicationContext private val appContext: Context,
   private val roleRepository: RoleRepository,
   private val importStRoleCardFromUriUseCase: ImportStRoleCardFromUriUseCase,
+  private val compileRuntimeRoleProfileUseCase: CompileRuntimeRoleProfileUseCase,
   private val exportStRoleCardToUriUseCase: ExportStRoleCardToUriUseCase,
 ) : ViewModel() {
   private val editingRoleId: String? = savedStateHandle.get<String?>("roleId")?.takeIf { it.isNotBlank() }
@@ -395,8 +397,9 @@ constructor(
     val role = buildRoleSnapshot() ?: return
 
     viewModelScope.launch {
-      roleRepository.saveRole(role)
-      onSaved(role.id)
+      val compiledRole = compileRuntimeRoleProfileUseCase(role)
+      roleRepository.saveRole(compiledRole)
+      onSaved(compiledRole.id)
     }
   }
 

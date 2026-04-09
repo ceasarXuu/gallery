@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import selfgemma.talk.R
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
+import selfgemma.talk.domain.roleplay.usecase.CompileRuntimeRoleProfileUseCase
 import selfgemma.talk.domain.roleplay.usecase.CreateRoleplaySessionUseCase
 import selfgemma.talk.domain.roleplay.usecase.ImportStRoleCardFromUriUseCase
 
@@ -37,6 +38,7 @@ constructor(
   private val roleRepository: RoleRepository,
   private val createRoleplaySessionUseCase: CreateRoleplaySessionUseCase,
   private val importStRoleCardFromUriUseCase: ImportStRoleCardFromUriUseCase,
+  private val compileRuntimeRoleProfileUseCase: CompileRuntimeRoleProfileUseCase,
 ) : ViewModel() {
   private val feedbackState = MutableStateFlow(RoleCatalogUiState(loading = false))
 
@@ -72,7 +74,7 @@ constructor(
         importStRoleCardFromUriUseCase.importFromUri(uri = uri)
       }
         .onSuccess { importedRole ->
-          roleRepository.saveRole(importedRole)
+          roleRepository.saveRole(compileRuntimeRoleProfileUseCase(importedRole))
           feedbackState.update {
             it.copy(
               statusMessage = appString(R.string.role_catalog_status_st_imported),
