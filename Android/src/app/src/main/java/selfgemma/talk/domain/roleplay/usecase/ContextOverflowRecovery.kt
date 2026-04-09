@@ -1,6 +1,7 @@
 package selfgemma.talk.domain.roleplay.usecase
 
-private const val ERROR_CODE_3 = "error code 3"
+import selfgemma.talk.runtime.isContextOverflowError
+import selfgemma.talk.runtime.toUserFacingContextOverflowMessage
 
 internal object ContextOverflowRecovery {
   const val MAX_OVERFLOW_RETRIES = 1
@@ -10,16 +11,10 @@ internal object ContextOverflowRecovery {
   }
 
   fun isContextOverflow(message: String?): Boolean {
-    val normalized = message.orEmpty().lowercase()
-    if (normalized.isBlank()) {
-      return false
-    }
-    return normalized.contains(ERROR_CODE_3) ||
-      normalized.contains("input token") ||
-      normalized.contains("tokens exceed") ||
-      normalized.contains("token exceeds") ||
-      normalized.contains("context window") ||
-      (normalized.contains("token") && normalized.contains("limit")) ||
-      (normalized.contains("input") && normalized.contains("exceed"))
+    return isContextOverflowError(message)
+  }
+
+  fun toUserFacingError(message: String?): String {
+    return toUserFacingContextOverflowMessage(message)
   }
 }

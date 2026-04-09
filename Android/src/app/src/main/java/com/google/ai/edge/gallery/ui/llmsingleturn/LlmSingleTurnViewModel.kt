@@ -71,11 +71,18 @@ class LlmSingleTurnViewModel @Inject constructor() : ViewModel() {
       val supportAudio =
         model.llmSupportAudio &&
           task.id == selfgemma.talk.data.BuiltInTaskId.LLM_ASK_AUDIO
-      model.runtimeHelper.resetConversation(
-        model = model,
-        supportImage = supportImage,
-        supportAudio = supportAudio,
-      )
+      try {
+        model.runtimeHelper.resetConversation(
+          model = model,
+          supportImage = supportImage,
+          supportAudio = supportAudio,
+        )
+      } catch (e: Exception) {
+        Log.e(TAG, "Failed to reset conversation", e)
+        setInProgress(false)
+        setPreparing(false)
+        return@launch
+      }
       delay(500)
 
       // Run inference.

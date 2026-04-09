@@ -38,7 +38,6 @@ import selfgemma.talk.AnalyticsEvent
 import selfgemma.talk.R
 import selfgemma.talk.data.BuiltInTaskId
 import selfgemma.talk.data.Model
-import selfgemma.talk.data.RuntimeType
 import selfgemma.talk.data.Task
 import selfgemma.talk.firebaseAnalytics
 import selfgemma.talk.ui.common.chat.ChatMessageAudioClip
@@ -49,8 +48,7 @@ import selfgemma.talk.ui.common.chat.SendMessageTrigger
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import selfgemma.talk.ui.theme.emptyStateContent
 import selfgemma.talk.ui.theme.emptyStateTitle
-
-private const val TAG = "AGLlmChatScreen"
+import com.google.ai.edge.litertlm.Contents
 
 @Composable
 fun LlmChatScreen(
@@ -222,6 +220,8 @@ fun ChatViewWrapper(
           input = text,
           images = images,
           audioMessages = audioMessages,
+          currentTurnMessages = messages,
+          currentSystemPrompt = curSystemPrompt,
           onFirstToken = onFirstToken,
           onDone = { onGenerateResponseDone(model) },
           onError = { errorMessage ->
@@ -234,6 +234,8 @@ fun ChatViewWrapper(
             )
           },
           allowThinking = allowThinking,
+          supportImage = showImagePicker,
+          supportAudio = showAudioPicker,
         )
 
         firebaseAnalytics?.logEvent(
@@ -247,6 +249,7 @@ fun ChatViewWrapper(
         viewModel.runAgain(
           model = model,
           message = message,
+          currentSystemPrompt = curSystemPrompt,
           onError = { errorMessage ->
             viewModel.handleError(
               context = context,
@@ -257,6 +260,8 @@ fun ChatViewWrapper(
             )
           },
           allowThinking = allowThinking,
+          supportImage = showImagePicker,
+          supportAudio = showAudioPicker,
         )
       }
     },
@@ -268,6 +273,7 @@ fun ChatViewWrapper(
         viewModel.resetSession(
           task = task,
           model = model,
+          systemInstruction = curSystemPrompt.takeIf(String::isNotBlank)?.let(Contents::of),
           supportImage = showImagePicker,
           supportAudio = showAudioPicker,
         )

@@ -352,7 +352,7 @@ constructor(
         )
       appendBudgetEventIfNeeded(sessionId = sessionId, report = promptAssembly.budgetReport)
     }
-    finalMessage = checkNotNull(finalMessage)
+    finalMessage = normalizeFinalMessage(checkNotNull(finalMessage))
     conversationRepository.updateMessage(finalMessage)
 
     if (finalMessage.status == MessageStatus.COMPLETED) {
@@ -447,6 +447,13 @@ constructor(
     )
   }
 
+  private fun normalizeFinalMessage(message: Message): Message {
+    if (message.status != MessageStatus.FAILED || !ContextOverflowRecovery.isContextOverflow(message.errorMessage)) {
+      return message
+    }
+    return message.copy(errorMessage = ContextOverflowRecovery.toUserFacingError(message.errorMessage))
+  }
+
   private fun prepareConversation(
     assistantSeed: Message,
     model: Model,
@@ -478,7 +485,7 @@ constructor(
         failureMessage =
           assistantSeed.copy(
             status = MessageStatus.FAILED,
-            errorMessage = errorMessage,
+            errorMessage = ContextOverflowRecovery.toUserFacingError(errorMessage),
             updatedAt = System.currentTimeMillis(),
           ),
         overflowDetected = ContextOverflowRecovery.isContextOverflow(errorMessage),

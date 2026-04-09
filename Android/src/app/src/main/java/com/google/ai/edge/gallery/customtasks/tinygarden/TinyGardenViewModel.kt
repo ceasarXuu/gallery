@@ -207,14 +207,18 @@ constructor(
           prevAction = prevAction,
         )
       Log.d(TAG, "Current system prompt:\n$curSystemPrompt")
-      LlmChatModelHelper.resetConversation(
-        model = model,
-        supportImage = false,
-        supportAudio = false,
-        systemInstruction = Contents.of(curSystemPrompt),
-        tools = tools,
-        enableConversationConstrainedDecoding = true,
-      )
+      try {
+        LlmChatModelHelper.resetConversation(
+          model = model,
+          supportImage = false,
+          supportAudio = false,
+          systemInstruction = Contents.of(curSystemPrompt),
+          tools = tools,
+          enableConversationConstrainedDecoding = true,
+        )
+      } catch (e: Exception) {
+        Log.e(TAG, "Failed to reset tiny garden conversation", e)
+      }
       _isResettingConversation.value = false
       addMessage(
         message =

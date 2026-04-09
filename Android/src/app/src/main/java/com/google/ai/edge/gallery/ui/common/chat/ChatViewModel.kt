@@ -105,6 +105,20 @@ abstract class ChatViewModel() : ViewModel() {
     _uiState.update { _uiState.value.copy(messagesByModel = newMessagesByModel) }
   }
 
+  fun truncateMessages(model: Model, size: Int) {
+    val newMessagesByModel = _uiState.value.messagesByModel.toMutableMap()
+    val currentMessages = newMessagesByModel[model.name]?.toMutableList() ?: mutableListOf()
+    if (currentMessages.size > size) {
+      currentMessages.subList(size, currentMessages.size).clear()
+    }
+    newMessagesByModel[model.name] = currentMessages
+    _uiState.update { _uiState.value.copy(messagesByModel = newMessagesByModel) }
+  }
+
+  fun getMessages(model: Model): List<ChatMessage> {
+    return _uiState.value.messagesByModel[model.name]?.toList().orEmpty()
+  }
+
   fun getLastMessage(model: Model): ChatMessage? {
     return (_uiState.value.messagesByModel[model.name] ?: listOf()).lastOrNull()
   }

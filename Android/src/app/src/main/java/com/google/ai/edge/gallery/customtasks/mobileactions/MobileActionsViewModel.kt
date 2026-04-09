@@ -181,13 +181,17 @@ constructor(@ApplicationContext private val appContext: Context) : ViewModel() {
 
   fun resetConversation(model: Model, tools: List<ToolProvider>) {
     _isResettingConversation.value = true
-    LlmChatModelHelper.resetConversation(
-      model = model,
-      supportImage = false,
-      supportAudio = false,
-      systemInstruction = getSystemPrompt(),
-      tools = tools,
-    )
+    try {
+      LlmChatModelHelper.resetConversation(
+        model = model,
+        supportImage = false,
+        supportAudio = false,
+        systemInstruction = getSystemPrompt(),
+        tools = tools,
+      )
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to reset conversation", e)
+    }
     _isResettingConversation.value = false
   }
 
