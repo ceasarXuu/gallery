@@ -81,11 +81,6 @@ private data class RoleEditorTextFieldSpec(
   val maxChars: Int? = null,
 )
 
-private fun roleEditorTextStyle(baseStyle: androidx.compose.ui.text.TextStyle) =
-  baseStyle.copy(
-    platformStyle = PlatformTextStyle(includeFontPadding = true),
-  )
-
 private enum class RoleEditorHelpTopic(val titleRes: Int, val bodyRes: Int) {
   ROLE_NAME(R.string.role_editor_name_label, R.string.role_editor_help_role_name_body),
   DESCRIPTION(R.string.role_editor_summary_label, R.string.role_editor_help_description_body),
@@ -300,14 +295,11 @@ fun RoleEditorScreen(
           ) {
             Text(
               text = title,
-              modifier =
-                Modifier
-                  .heightIn(min = 52.dp)
-                  .padding(horizontal = 16.dp, vertical = 14.dp),
+              modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis,
-              style = roleEditorTextStyle(MaterialTheme.typography.titleSmall),
+              style = MaterialTheme.typography.titleSmall,
             )
           }
         }
@@ -1227,7 +1219,7 @@ private fun RequiredFieldsHintCard() {
     Text(
       text = stringResource(R.string.role_editor_required_hint),
       modifier = Modifier.fillMaxWidth().padding(16.dp),
-      style = roleEditorTextStyle(MaterialTheme.typography.bodySmall),
+      style = MaterialTheme.typography.bodySmall,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
   }
@@ -1242,14 +1234,14 @@ private fun FieldHeader(
   onShowHelp: ((RoleEditorHelpTopic) -> Unit)? = null,
 ) {
   Row(
-    modifier = modifier.fillMaxWidth().heightIn(min = 34.dp),
+    modifier = modifier.fillMaxWidth(),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(8.dp),
   ) {
     Text(
       text = title,
-      style = roleEditorTextStyle(MaterialTheme.typography.titleSmall),
-      modifier = Modifier.weight(1f).padding(vertical = 2.dp),
+      style = MaterialTheme.typography.titleSmall,
+      modifier = Modifier.weight(1f),
     )
     if (required) {
       RequiredBadge()
@@ -1280,7 +1272,7 @@ private fun RequiredBadge() {
     Text(
       text = stringResource(R.string.role_editor_required_badge),
       modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-      style = roleEditorTextStyle(MaterialTheme.typography.labelSmall),
+      style = MaterialTheme.typography.labelSmall,
     )
   }
 }
@@ -1293,14 +1285,14 @@ private fun RoleEditorHelpDialog(
   val paragraphs = stringResource(topic.bodyRes).split("\n\n")
   AlertDialog(
     onDismissRequest = onDismiss,
-    title = { Text(stringResource(topic.titleRes), style = roleEditorTextStyle(MaterialTheme.typography.headlineSmall)) },
+    title = { Text(stringResource(topic.titleRes)) },
     text = {
       LazyColumn(
         modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
         items(paragraphs) { paragraph ->
-          Text(paragraph, style = roleEditorTextStyle(MaterialTheme.typography.bodyMedium))
+          Text(paragraph, style = MaterialTheme.typography.bodyMedium)
         }
       }
     },
@@ -1367,6 +1359,10 @@ private fun RoleEditorOutlinedTextField(
     maxLines = maxLines,
     singleLine = maxLines == 1,
     isError = isOverLimit,
+    textStyle =
+      MaterialTheme.typography.bodyLarge.copy(
+        platformStyle = PlatformTextStyle(includeFontPadding = true),
+      ),
     supportingText = {
       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         Text(
