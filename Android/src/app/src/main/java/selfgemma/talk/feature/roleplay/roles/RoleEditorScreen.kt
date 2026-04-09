@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
@@ -51,6 +52,11 @@ import selfgemma.talk.data.AppBarActionType
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 
 private const val TAG = "RoleEditorScreen"
+private const val ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES = 8
+private const val ROLE_EDITOR_LARGE_TEXT_MAX_LINES = 12
+private const val ROLE_EDITOR_XL_TEXT_MAX_LINES = 14
+private const val ROLE_EDITOR_TEXTFIELD_BASE_HEIGHT_DP = 64
+private const val ROLE_EDITOR_TEXTFIELD_LINE_STEP_DP = 24
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -181,6 +187,7 @@ fun RoleEditorScreen(
               value = uiState.description,
               onValueChange = viewModel::updateDescription,
               minLines = 3,
+              maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
               testTag = "role_editor_description",
             )
           }
@@ -190,6 +197,7 @@ fun RoleEditorScreen(
               value = uiState.personality,
               onValueChange = viewModel::updatePersonality,
               minLines = 4,
+              maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
               testTag = "role_editor_personality",
             )
           }
@@ -199,6 +207,7 @@ fun RoleEditorScreen(
               value = uiState.scenario,
               onValueChange = viewModel::updateScenario,
               minLines = 4,
+              maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
               testTag = "role_editor_scenario",
             )
           }
@@ -208,6 +217,7 @@ fun RoleEditorScreen(
               value = uiState.firstMessage,
               onValueChange = viewModel::updateFirstMessage,
               minLines = 3,
+              maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
               testTag = "role_editor_first_message",
             )
           }
@@ -217,6 +227,7 @@ fun RoleEditorScreen(
               value = uiState.messageExample,
               onValueChange = viewModel::updateMessageExample,
               minLines = 8,
+              maxLines = ROLE_EDITOR_XL_TEXT_MAX_LINES,
               testTag = "role_editor_message_example",
             )
           }
@@ -228,6 +239,7 @@ fun RoleEditorScreen(
               value = uiState.systemPrompt,
               onValueChange = viewModel::updateSystemPrompt,
               minLines = 6,
+              maxLines = ROLE_EDITOR_XL_TEXT_MAX_LINES,
               testTag = "role_editor_system_prompt",
             )
           }
@@ -237,6 +249,7 @@ fun RoleEditorScreen(
               value = uiState.postHistoryInstructions,
               onValueChange = viewModel::updatePostHistoryInstructions,
               minLines = 4,
+              maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
               testTag = "role_editor_post_history",
             )
           }
@@ -247,6 +260,7 @@ fun RoleEditorScreen(
               value = uiState.alternateGreetingsText,
               onValueChange = viewModel::updateAlternateGreetingsText,
               minLines = 4,
+              maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
               testTag = "role_editor_alternate_greetings",
             )
           }
@@ -267,6 +281,7 @@ fun RoleEditorScreen(
               value = uiState.characterBook.description,
               onValueChange = viewModel::updateCharacterBookDescription,
               minLines = 3,
+              maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
               testTag = "role_editor_lorebook_description",
             )
           }
@@ -343,6 +358,7 @@ fun RoleEditorScreen(
               value = uiState.creatorNotes,
               onValueChange = viewModel::updateCreatorNotes,
               minLines = 4,
+              maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
               testTag = "role_editor_creator_notes",
             )
           }
@@ -361,6 +377,7 @@ fun RoleEditorScreen(
               value = uiState.tagsText,
               onValueChange = viewModel::updateTagsText,
               minLines = 2,
+              maxLines = 4,
               testTag = "role_editor_tags",
             )
           }
@@ -386,6 +403,7 @@ fun RoleEditorScreen(
               value = uiState.safetyPolicy,
               onValueChange = viewModel::updateSafetyPolicy,
               minLines = 3,
+              maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
               testTag = "role_editor_safety_policy",
             )
           }
@@ -559,6 +577,7 @@ private fun EditorTextCard(
   value: String,
   onValueChange: (String) -> Unit,
   minLines: Int,
+  maxLines: Int = minLines,
   testTag: String,
   subtitle: String? = null,
 ) {
@@ -574,8 +593,13 @@ private fun EditorTextCard(
       OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth().testTag(testTag),
+        modifier =
+          Modifier
+            .fillMaxWidth()
+            .heightIn(max = editorTextFieldMaxHeight(maxLines))
+            .testTag(testTag),
         minLines = minLines,
+        maxLines = maxLines,
       )
     }
   }
@@ -672,16 +696,18 @@ private fun LorebookEntryCard(
       OutlinedTextField(
         value = entry.comment,
         onValueChange = { onUpdateComment(entry.editorId, it) },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().heightIn(max = editorTextFieldMaxHeight(ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES)),
         label = { Text(stringResource(R.string.role_editor_lorebook_entry_comment_label)) },
         minLines = 2,
+        maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
       )
       OutlinedTextField(
         value = entry.content,
         onValueChange = { onUpdateContent(entry.editorId, it) },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().heightIn(max = editorTextFieldMaxHeight(ROLE_EDITOR_LARGE_TEXT_MAX_LINES)),
         label = { Text(stringResource(R.string.role_editor_lorebook_entry_content_label)) },
         minLines = 4,
+        maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
       )
       OutlinedTextField(
         value = entry.insertionOrderText,
@@ -721,6 +747,9 @@ private fun LorebookEntryCard(
     }
   }
 }
+
+private fun editorTextFieldMaxHeight(maxLines: Int) =
+  (ROLE_EDITOR_TEXTFIELD_BASE_HEIGHT_DP + ((maxLines - 1).coerceAtLeast(0) * ROLE_EDITOR_TEXTFIELD_LINE_STEP_DP)).dp
 
 private fun takeReadPermission(context: android.content.Context, uri: Uri) {
   runCatching {

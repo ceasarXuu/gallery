@@ -28,6 +28,7 @@ Notes:
 - After importing an ST card, verify `Lorebook` exposes entry-level fields directly instead of hiding them behind runtime-only compilation.
 - Keep the editor draft as an ST-shaped form state and only compile `runtimeProfile` on save; do not let the UI round-trip through simplified canonical text buckets.
 - Log `source format`, `lore entry count`, and `tag count` on import/save. These are high-signal diagnostics when users report "the editor still doesn't look like ST".
+- For long-card verification, cap multiline editor fields with `maxLines` plus `heightIn(max=...)`. In Compose Material 3 this keeps the field internally scrollable and prevents description/prompt fields from stretching the entire page.
 
 ## 2026-04-10 LiteRT-LM single-session reset failure
 
