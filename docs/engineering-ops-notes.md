@@ -1,3 +1,28 @@
+## 2026-04-10 LiteRT-LM single-session reset failure
+
+- Symptom on device: roleplay chat shows `Failed to create conversation: FAILED_PRECONDITION: A session already exists. Only one session is supported at a time.`
+- Root cause: LiteRT-LM only allows one live conversation session per engine. If `resetConversation()` tries to `createConversation()` before closing the previous one, the reset path fails deterministically.
+
+Verification commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.ui.llmchat.LlmChatModelHelperTest"
+.\gradlew.bat :app:installDebug
+adb -s ONNZ95CAEMMZSKTS shell am force-stop selfgemma.talk
+adb -s ONNZ95CAEMMZSKTS shell am start -n selfgemma.talk/.MainActivity
+adb -s ONNZ95CAEMMZSKTS shell uiautomator dump
+adb -s ONNZ95CAEMMZSKTS shell cat /sdcard/window_dump.xml | Select-String -Pattern 'A session already exists|FAILED_PRECONDITION|黑木 智子'
+adb -s ONNZ95CAEMMZSKTS logcat -d -v time | Select-String -Pattern 'AGLlmChatModelHelper|SendRoleplayMessage|FAILED_PRECONDITION|AndroidRuntime'
+```
+
+Notes:
+
+- `resetConversation()` must close the previous conversation before creating the replacement session.
+- Because closing first can still leave the engine without a usable conversation if replacement creation fails, keep a best-effort fallback restore path so the runtime does not remain in an unrecoverable half-reset state.
+- When reproducing with `uiautomator dump`, use the dumped text as ground truth for user-visible backend errors; this is faster than relying on screenshot inspection alone.
+
 ## 2026-04-09 Roleplay chat UX regression verification
 
 - Goal: verify the roleplay chat fixes for send-time auto-scroll, tap-outside keyboard dismissal, and role avatar top alignment on a real device.

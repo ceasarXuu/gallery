@@ -138,12 +138,18 @@ object LlmChatModelHelper : LlmModelHelper {
       engine = Engine(engineConfig)
       engine.initialize()
 
+      val sessionConfig =
+        buildSessionConfig(
+          systemInstruction = systemInstruction,
+          tools = tools,
+          enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
+        )
       val conversation =
         createConversation(
           engine = engine,
           enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
           config =
-            ConversationConfig(
+            buildConversationConfig(
               samplerConfig =
                 if (preferredBackend is Backend.NPU) {
                   null
@@ -162,12 +168,7 @@ object LlmChatModelHelper : LlmModelHelper {
         LlmModelInstance(
           engine = engine,
           conversation = conversation,
-          sessionConfig =
-            buildSessionConfig(
-              systemInstruction = systemInstruction,
-              tools = tools,
-              enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
-            ),
+          sessionConfig = sessionConfig,
         )
     } catch (e: Exception) {
       try {
@@ -195,6 +196,7 @@ object LlmChatModelHelper : LlmModelHelper {
 
       val instance = model.instance as LlmModelInstance? ?: return
       val previousConversation = instance.conversation
+      val previousSessionConfig = instance.sessionConfig
 
       val engine = instance.engine
       val topK = model.getIntConfigValue(key = ConfigKeys.TOPK, defaultValue = DEFAULT_TOPK)
@@ -210,47 +212,57 @@ object LlmChatModelHelper : LlmModelHelper {
           key = ConfigKeys.ACCELERATOR,
           defaultValue = Accelerator.GPU.label,
         )
-      val newConversation =
-        createConversation(
-          engine = engine,
-          enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
-          config =
-            ConversationConfig(
-              samplerConfig =
-                if (accelerator == Accelerator.NPU.label) {
-                  null
-                } else {
-                  SamplerConfig(
-                    topK = topK,
-                    topP = topP.toDouble(),
-                    temperature = temperature.toDouble(),
-                  )
-                },
-              systemInstruction = systemInstruction,
-              tools = tools,
-            ),
-        )
-      try {
-        previousConversation.close()
-      } catch (closeException: Exception) {
-        try {
-          newConversation.close()
-        } catch (newConversationCloseException: Exception) {
-          Log.w(
-            TAG,
-            "Failed to close replacement conversation after previous close failure",
-            newConversationCloseException,
+      val samplerConfig =
+        if (accelerator == Accelerator.NPU.label) {
+          null
+        } else {
+          SamplerConfig(
+            topK = topK,
+            topP = topP.toDouble(),
+            temperature = temperature.toDouble(),
           )
         }
-        throw closeException
-      }
-      instance.conversation = newConversation
-      instance.sessionConfig =
+      val targetSessionConfig =
         buildSessionConfig(
           systemInstruction = systemInstruction,
           tools = tools,
           enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
         )
+
+      previousConversation.close()
+
+      try {
+        val newConversation =
+          createConversation(
+            engine = engine,
+            enableConversationConstrainedDecoding = enableConversationConstrainedDecoding,
+            config =
+              buildConversationConfig(
+                samplerConfig = samplerConfig,
+                systemInstruction = systemInstruction,
+                tools = tools,
+              ),
+          )
+        instance.conversation = newConversation
+        instance.sessionConfig = targetSessionConfig
+      } catch (createException: Exception) {
+        Log.w(
+          TAG,
+          "Failed to create replacement conversation after closing the previous session. Trying to restore a fallback conversation.",
+          createException,
+        )
+        val restoredConversation =
+          restoreConversationAfterResetFailure(
+            engine = engine,
+            samplerConfig = samplerConfig,
+            previousSessionConfig = previousSessionConfig,
+          )
+        if (restoredConversation != null) {
+          instance.conversation = restoredConversation
+          instance.sessionConfig = previousSessionConfig
+        }
+        throw createException
+      }
 
       Log.d(TAG, "Resetting done")
     } catch (e: Exception) {
@@ -433,4 +445,79 @@ private fun purgeImportedCpuWeightCacheIfPresent(
   } else {
     Log.w(TAG, "Failed to purge imported CPU weight cache before init: ${cacheFile.absolutePath}")
   }
+}
+
+private fun buildConversationConfig(
+  samplerConfig: SamplerConfig?,
+  systemInstruction: Contents?,
+  tools: List<ToolProvider>,
+): ConversationConfig {
+  return ConversationConfig(
+    samplerConfig = samplerConfig,
+    systemInstruction = systemInstruction,
+    tools = tools,
+  )
+}
+
+@OptIn(ExperimentalApi::class)
+private fun restoreConversationAfterResetFailure(
+  engine: Engine,
+  samplerConfig: SamplerConfig?,
+  previousSessionConfig: LlmConversationSessionConfig,
+): Conversation? {
+  val fallbackConfigs =
+    listOf(
+      previousSessionConfig,
+      LlmConversationSessionConfig(),
+    ).distinct()
+
+  for (fallbackConfig in fallbackConfigs) {
+    try {
+      val restoredConversation =
+        createConversationWithConstrainedDecoding(
+          engine = engine,
+          enableConversationConstrainedDecoding =
+            fallbackConfig.enableConversationConstrainedDecoding,
+          config =
+            buildConversationConfig(
+              samplerConfig = samplerConfig,
+              systemInstruction = fallbackConfig.toSystemInstructionContents(),
+              tools = fallbackConfig.tools,
+            ),
+        )
+      Log.w(
+        TAG,
+        "Restored fallback conversation after reset failure systemPromptChars=${fallbackConfig.systemInstructionText.length} tools=${fallbackConfig.tools.size} constrained=${fallbackConfig.enableConversationConstrainedDecoding}",
+      )
+      return restoredConversation
+    } catch (restoreException: Exception) {
+      Log.w(
+        TAG,
+        "Failed to restore fallback conversation systemPromptChars=${fallbackConfig.systemInstructionText.length} tools=${fallbackConfig.tools.size} constrained=${fallbackConfig.enableConversationConstrainedDecoding}",
+        restoreException,
+      )
+    }
+  }
+
+  return null
+}
+
+@OptIn(ExperimentalApi::class)
+private fun createConversationWithConstrainedDecoding(
+  engine: Engine,
+  enableConversationConstrainedDecoding: Boolean,
+  config: ConversationConfig,
+): Conversation {
+  return withConversationConstrainedDecoding(
+    enableConversationConstrainedDecoding = enableConversationConstrainedDecoding
+  ) {
+    engine.createConversation(config)
+  }
+}
+
+internal fun LlmConversationSessionConfig.toSystemInstructionContents(): Contents? {
+  if (systemInstructionText.isBlank()) {
+    return null
+  }
+  return Contents.of(systemInstructionText)
 }

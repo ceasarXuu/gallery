@@ -11,6 +11,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 
 class LlmChatModelHelperTest {
@@ -85,5 +86,24 @@ class LlmChatModelHelperTest {
     }
 
     assertFalse(ExperimentalFlags.enableConversationConstrainedDecoding)
+  }
+
+  @Test
+  fun toSystemInstructionContents_returnsNullForBlankPrompt() {
+    val sessionConfig = LlmConversationSessionConfig(systemInstructionText = "   ")
+
+    val contents = sessionConfig.toSystemInstructionContents()
+
+    assertNull(contents)
+  }
+
+  @Test
+  fun toSystemInstructionContents_restoresStoredPromptText() {
+    val sessionConfig = LlmConversationSessionConfig(systemInstructionText = "Roleplay system prompt")
+
+    val contents = sessionConfig.toSystemInstructionContents()
+
+    assertNotNull(contents)
+    assertTrue(contents.toString().contains("Roleplay system prompt"))
   }
 }
