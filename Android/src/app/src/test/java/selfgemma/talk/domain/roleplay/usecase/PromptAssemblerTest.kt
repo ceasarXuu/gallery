@@ -1014,4 +1014,70 @@ class PromptAssemblerTest {
 
     assertFalse(prompt.contains("should not activate from app memory"))
   }
+
+  @Test
+  fun assemble_respects_max_recursion_steps() {
+    val now = System.currentTimeMillis()
+    val prompt =
+      assembler.assemble(
+        role =
+          RoleCard(
+            id = "role-13",
+            name = "Recursion Limit Tester",
+            summary = "Recursion limit test.",
+            systemPrompt = "",
+            cardCore =
+              StCharacterCard(
+                name = "Recursion Limit Tester",
+                data =
+                  StCharacterCardData(
+                    character_book =
+                      StCharacterBook(
+                        recursive_scanning = true,
+                        extensions =
+                          JsonObject().apply {
+                            addProperty("max_recursion_steps", 1)
+                          },
+                        entries =
+                          listOf(
+                            StCharacterBookEntry(
+                              id = 1,
+                              keys = listOf("seed"),
+                              content = "recursive-one",
+                              position = "before_char",
+                            ),
+                            StCharacterBookEntry(
+                              id = 2,
+                              keys = listOf("recursive-one"),
+                              content = "recursive-two",
+                              position = "before_char",
+                            ),
+                          ),
+                      ),
+                  ),
+              ),
+            createdAt = now,
+            updatedAt = now,
+          ),
+        summary = null,
+        memories = emptyList(),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-19",
+              sessionId = "session-13",
+              seq = 1,
+              side = MessageSide.USER,
+              content = "seed",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            )
+          ),
+        pendingUserInput = "",
+      )
+
+    assertTrue(prompt.contains("recursive-one"))
+    assertFalse(prompt.contains("recursive-two"))
+  }
 }

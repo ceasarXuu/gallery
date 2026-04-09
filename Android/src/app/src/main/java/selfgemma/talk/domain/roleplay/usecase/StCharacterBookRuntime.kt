@@ -98,6 +98,7 @@ private data class StWorldRuntimeSettings(
   val defaultScanDepth: Int = 2,
   val minActivations: Int = 0,
   val minActivationsDepthMax: Int = 0,
+  val maxRecursionSteps: Int = 0,
   val caseSensitive: Boolean = false,
   val matchWholeWords: Boolean = false,
   val useGroupScoring: Boolean = false,
@@ -185,7 +186,12 @@ internal class StCharacterBookRuntime(private val tokenEstimator: TokenEstimator
     var scanPhase = StScanPhase.INITIAL
     var scanDepthSkew = 0
 
+    var loopCount = 0
     while (true) {
+      loopCount += 1
+      if (runtimeSettings.maxRecursionSteps > 0 && loopCount > runtimeSettings.maxRecursionSteps) {
+        break
+      }
       val candidates =
         entries.mapNotNull { runtimeEntry ->
           if (activated.containsKey(runtimeEntry.stableKey)) {
@@ -613,6 +619,10 @@ private fun StCharacterBook.toRuntimeSettings(): StWorldRuntimeSettings {
     minActivationsDepthMax =
       runtimeExtensions.intOrNull("min_activations_depth_max")
         ?: runtimeExtensions.intOrNull("world_info_min_activations_depth_max")
+        ?: 0,
+    maxRecursionSteps =
+      runtimeExtensions.intOrNull("max_recursion_steps")
+        ?: runtimeExtensions.intOrNull("world_info_max_recursion_steps")
         ?: 0,
     caseSensitive = runtimeExtensions.booleanOrNull("case_sensitive") ?: false,
     matchWholeWords = runtimeExtensions.booleanOrNull("match_whole_words") ?: false,

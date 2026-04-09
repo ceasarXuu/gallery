@@ -468,3 +468,8 @@ Notes:
 
 - ST `min activations` is a separate scan phase, not just more recursion. When the runtime deepens scanning to satisfy minimum activations, it should increase chat depth without pulling in the recursion buffer.
 - Lore activation should scan ST-style sources only: recent chat plus explicitly opted-in character fields. App-local session summaries and memory items are useful prompt context, but they should not secretly participate in ST world-info keyword activation.
+- If `max_recursion_steps` is present in ST world-info settings, enforce it as a hard cap on evaluation loops. Otherwise a rolebook that chains recursive activations can still drift from ST even when individual entry semantics look correct.
+- When focused unit tests suddenly fail in `:app:kaptGenerateStubsDebugUnitTestKotlin` with `lookups.tab is already registered` or `Could not delete ... caches-jvm`, treat it as the known Kotlin/KAPT cache lock issue in this workspace. The fastest recovery path here is:
+  - `.\gradlew.bat --stop`
+  - delete `app\build\kotlin\kaptGenerateStubsDebugUnitTestKotlin\cacheable\caches-jvm`
+  - rerun the focused test command
