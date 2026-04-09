@@ -51,6 +51,7 @@
   <string name="test">Test</string>
   <string name="try_it">Try it</string>
   <string name="undo">Undo</string>
+  <string name="redo">Redo</string>
   <string name="view">View</string>
   <string name="error">Error</string>
   <string name="disabled">Disabled</string>
@@ -185,6 +186,10 @@
   <!-- Settings Screen -->
   <string name="settings_model_library_title">Model Library</string>
   <string name="settings_model_library_summary">Download, import and manage local models</string>
+  <string name="settings_role_editor_assistant_model_title">Editor assistant model</string>
+  <string name="settings_role_editor_assistant_model_none">Default: first available model</string>
+  <string name="settings_role_editor_assistant_model_empty">No local model is available yet. Add a model before using AI compression in the role editor.</string>
+  <string name="settings_role_editor_assistant_model_reset_default">Use default</string>
 
   <!-- Model Manager -->
   <string name="model_manager">Model Manager</string>
@@ -615,6 +620,13 @@
   <string name="role_editor_export_png_missing_avatar_content">This role does not currently have a primary avatar. You can export with the default image, or pick one now and use it for the role and this export.</string>
   <string name="role_editor_export_png_use_default">Use default image</string>
   <string name="role_editor_export_png_upload_image">Upload image</string>
+  <string name="role_editor_ai_compress_action">AI Compress</string>
+  <string name="role_editor_ai_compress_running">Compressing...</string>
+  <string name="role_editor_ai_compress_success">Compressed to %1$d/%2$d characters.</string>
+  <string name="role_editor_ai_compress_failed_generic">AI compression failed. Try again after checking the selected model.</string>
+  <string name="role_editor_ai_compress_failed_blank">AI compression returned empty content. Original text was kept.</string>
+  <string name="role_editor_ai_compress_failed_limit">AI compression did not reach the target length of %1$d characters. Original text was kept.</string>
+  <string name="role_editor_ai_compress_missing_model">No local model is available. Add a model first, or choose the editor assistant model in Settings.</string>
   <string name="role_editor_media_export_summary_title">Media export summary</string>
   <string name="role_editor_media_export_summary_body">ST PNG exports the current primary avatar only. Cover, gallery, and sprite images stay project-only for now.</string>
   <string name="role_editor_media_export_st_png_ready">ST PNG avatar ready</string>

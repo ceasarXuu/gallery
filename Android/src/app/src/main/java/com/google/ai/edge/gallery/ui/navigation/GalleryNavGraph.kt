@@ -318,6 +318,7 @@ composable(route = RoleplayRoutes.ROLE_CATALOG, enterTransition = { slideEnter()
 
     composable(route = RoleplayRoutes.SETTINGS, enterTransition = { slideUpEnter() }, exitTransition = { slideDownExit() }) {
       RoleplaySettingsScreen(
+        modelManagerViewModel = modelManagerViewModel,
         navigateUp = { navController.navigateUp() },
         onOpenModelLibrary = { navController.navigate(ROUTE_MODEL_MANAGER) },
         showNavigateUp = true,

@@ -41,10 +41,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -65,11 +68,20 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import selfgemma.talk.AppTopBar
 import selfgemma.talk.R
+import selfgemma.talk.common.processLlmResponse
 import selfgemma.talk.data.AppBarAction
 import selfgemma.talk.data.AppBarActionType
 import selfgemma.talk.data.Model
 import selfgemma.talk.domain.roleplay.model.RoleMediaUsage
+import selfgemma.talk.runtime.runtimeHelper
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeout
 
 private const val TAG = "RoleEditorScreen"
 private const val ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES = 8
@@ -78,10 +90,21 @@ private const val ROLE_EDITOR_XL_TEXT_MAX_LINES = 14
 private const val ROLE_EDITOR_SINGLE_LINE_TEXTFIELD_MIN_HEIGHT_DP = 80
 private const val ROLE_EDITOR_TEXTFIELD_BASE_HEIGHT_DP = 64
 private const val ROLE_EDITOR_TEXTFIELD_LINE_STEP_DP = 24
+private const val ROLE_EDITOR_COMPRESSION_INIT_TIMEOUT_MS = 60_000L
 
 private data class RoleEditorTextFieldSpec(
   val maxChars: Int? = null,
+  val supportsAiCompress: Boolean = false,
 )
+
+private class ActiveRoleEditorCompression(
+  val fieldKey: String,
+  val originalValue: String,
+  val restoreValue: (String) -> Unit,
+  val job: Job,
+) {
+  var completed: Boolean = false
+}
 
 private enum class RoleEditorHelpTopic(val titleRes: Int, val bodyRes: Int) {
   ROLE_NAME(R.string.role_editor_name_label, R.string.role_editor_help_role_name_body),
@@ -122,32 +145,32 @@ private enum class RoleEditorHelpTopic(val titleRes: Int, val bodyRes: Int) {
 
 private fun roleEditorTextFieldSpec(topic: RoleEditorHelpTopic?): RoleEditorTextFieldSpec? =
   when (topic) {
-    RoleEditorHelpTopic.ROLE_NAME -> RoleEditorTextFieldSpec(maxChars = 120)
-    RoleEditorHelpTopic.DESCRIPTION -> RoleEditorTextFieldSpec(maxChars = 400)
-    RoleEditorHelpTopic.PERSONALITY -> RoleEditorTextFieldSpec(maxChars = 600)
-    RoleEditorHelpTopic.SCENARIO -> RoleEditorTextFieldSpec(maxChars = 500)
-    RoleEditorHelpTopic.FIRST_MESSAGE -> RoleEditorTextFieldSpec(maxChars = 800)
-    RoleEditorHelpTopic.EXAMPLE_DIALOGUE -> RoleEditorTextFieldSpec(maxChars = 2400)
-    RoleEditorHelpTopic.SYSTEM_PROMPT -> RoleEditorTextFieldSpec(maxChars = 1200)
-    RoleEditorHelpTopic.POST_HISTORY -> RoleEditorTextFieldSpec(maxChars = 500)
-    RoleEditorHelpTopic.ALTERNATE_GREETINGS -> RoleEditorTextFieldSpec(maxChars = 600)
-    RoleEditorHelpTopic.LOREBOOK_NAME -> RoleEditorTextFieldSpec(maxChars = 120)
-    RoleEditorHelpTopic.LOREBOOK_DESCRIPTION -> RoleEditorTextFieldSpec(maxChars = 400)
+    RoleEditorHelpTopic.ROLE_NAME -> RoleEditorTextFieldSpec(maxChars = 120, supportsAiCompress = true)
+    RoleEditorHelpTopic.DESCRIPTION -> RoleEditorTextFieldSpec(maxChars = 400, supportsAiCompress = true)
+    RoleEditorHelpTopic.PERSONALITY -> RoleEditorTextFieldSpec(maxChars = 600, supportsAiCompress = true)
+    RoleEditorHelpTopic.SCENARIO -> RoleEditorTextFieldSpec(maxChars = 500, supportsAiCompress = true)
+    RoleEditorHelpTopic.FIRST_MESSAGE -> RoleEditorTextFieldSpec(maxChars = 800, supportsAiCompress = true)
+    RoleEditorHelpTopic.EXAMPLE_DIALOGUE -> RoleEditorTextFieldSpec(maxChars = 2400, supportsAiCompress = true)
+    RoleEditorHelpTopic.SYSTEM_PROMPT -> RoleEditorTextFieldSpec(maxChars = 1200, supportsAiCompress = true)
+    RoleEditorHelpTopic.POST_HISTORY -> RoleEditorTextFieldSpec(maxChars = 500, supportsAiCompress = true)
+    RoleEditorHelpTopic.ALTERNATE_GREETINGS -> RoleEditorTextFieldSpec(maxChars = 600, supportsAiCompress = true)
+    RoleEditorHelpTopic.LOREBOOK_NAME -> RoleEditorTextFieldSpec(maxChars = 120, supportsAiCompress = true)
+    RoleEditorHelpTopic.LOREBOOK_DESCRIPTION -> RoleEditorTextFieldSpec(maxChars = 400, supportsAiCompress = true)
     RoleEditorHelpTopic.LOREBOOK_SCAN_DEPTH -> RoleEditorTextFieldSpec(maxChars = 4)
     RoleEditorHelpTopic.LOREBOOK_TOKEN_BUDGET -> RoleEditorTextFieldSpec(maxChars = 4)
     RoleEditorHelpTopic.LORE_ENTRY_ID -> RoleEditorTextFieldSpec(maxChars = 8)
     RoleEditorHelpTopic.LORE_ENTRY_KEYS -> RoleEditorTextFieldSpec(maxChars = 240)
     RoleEditorHelpTopic.LORE_ENTRY_SECONDARY_KEYS -> RoleEditorTextFieldSpec(maxChars = 240)
-    RoleEditorHelpTopic.LORE_ENTRY_COMMENT -> RoleEditorTextFieldSpec(maxChars = 240)
-    RoleEditorHelpTopic.LORE_ENTRY_CONTENT -> RoleEditorTextFieldSpec(maxChars = 800)
+    RoleEditorHelpTopic.LORE_ENTRY_COMMENT -> RoleEditorTextFieldSpec(maxChars = 240, supportsAiCompress = true)
+    RoleEditorHelpTopic.LORE_ENTRY_CONTENT -> RoleEditorTextFieldSpec(maxChars = 800, supportsAiCompress = true)
     RoleEditorHelpTopic.LORE_ENTRY_ORDER -> RoleEditorTextFieldSpec(maxChars = 6)
     RoleEditorHelpTopic.LORE_ENTRY_POSITION -> RoleEditorTextFieldSpec(maxChars = 24)
-    RoleEditorHelpTopic.CREATOR -> RoleEditorTextFieldSpec(maxChars = 120)
-    RoleEditorHelpTopic.CREATOR_NOTES -> RoleEditorTextFieldSpec(maxChars = 600)
+    RoleEditorHelpTopic.CREATOR -> RoleEditorTextFieldSpec(maxChars = 120, supportsAiCompress = true)
+    RoleEditorHelpTopic.CREATOR_NOTES -> RoleEditorTextFieldSpec(maxChars = 600, supportsAiCompress = true)
     RoleEditorHelpTopic.CHARACTER_VERSION -> RoleEditorTextFieldSpec(maxChars = 32)
-    RoleEditorHelpTopic.TAGS -> RoleEditorTextFieldSpec(maxChars = 200)
+    RoleEditorHelpTopic.TAGS -> RoleEditorTextFieldSpec(maxChars = 200, supportsAiCompress = true)
     RoleEditorHelpTopic.TALKATIVENESS -> RoleEditorTextFieldSpec(maxChars = 4)
-    RoleEditorHelpTopic.SAFETY_POLICY -> RoleEditorTextFieldSpec(maxChars = 400)
+    RoleEditorHelpTopic.SAFETY_POLICY -> RoleEditorTextFieldSpec(maxChars = 400, supportsAiCompress = true)
     else -> null
   }
 
@@ -161,11 +184,117 @@ fun RoleEditorScreen(
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val downloadedModels = modelManagerViewModel.getAllDownloadedModels()
+  val compressionScope = rememberCoroutineScope()
+  val activeCompressions = remember { mutableStateMapOf<String, ActiveRoleEditorCompression>() }
   var modelMenuExpanded by remember { mutableStateOf(false) }
   var showMissingAvatarExportDialog by remember { mutableStateOf(false) }
   var exportPngAfterAvatarPick by remember { mutableStateOf(false) }
   var activeHelpTopic by remember { mutableStateOf<RoleEditorHelpTopic?>(null) }
   val context = LocalContext.current
+  val configuredAssistantModelId = modelManagerViewModel.dataStoreRepository.getRoleEditorAssistantModelId()
+  val assistantModel =
+    downloadedModels.firstOrNull { it.name == configuredAssistantModelId }
+      ?: downloadedModels.firstOrNull()
+
+  fun cancelAllFieldCompressions() {
+    val sessions = activeCompressions.values.toList()
+    sessions.forEach { session ->
+      if (!session.completed) {
+        Log.i(TAG, "Cancelling role editor compression field=${session.fieldKey} and restoring original content")
+        session.job.cancel()
+        session.restoreValue(session.originalValue)
+      }
+    }
+    activeCompressions.clear()
+  }
+
+  fun launchCompression(
+    fieldKey: String,
+    fieldTitle: String,
+    maxChars: Int,
+    currentValue: String,
+    onValueChange: (String) -> Unit,
+  ) {
+    if (fieldKey in activeCompressions || activeCompressions.isNotEmpty()) {
+      return
+    }
+    val resolvedModel = assistantModel
+    if (resolvedModel == null) {
+      viewModel.showErrorMessage(context.getString(R.string.role_editor_ai_compress_missing_model))
+      Log.w(TAG, "Role editor AI compression requested without any local model")
+      return
+    }
+
+    val job =
+      compressionScope.launch {
+        try {
+          Log.d(
+            TAG,
+            "Starting role editor AI compression field=$fieldKey model=${resolvedModel.name} sourceLength=${currentValue.length} targetLength=$maxChars",
+          )
+          ensureRoleEditorCompressionModelReady(
+            context = context,
+            model = resolvedModel,
+            coroutineScope = compressionScope,
+          )
+          resolvedModel.runtimeHelper.resetConversation(model = resolvedModel)
+          val compressed =
+            runRoleEditorCompressionInference(
+              model = resolvedModel,
+              input = buildRoleEditorCompressionPrompt(fieldTitle, maxChars, currentValue),
+              coroutineScope = compressionScope,
+            )
+          val cleanedResult = compressed.trim()
+          when {
+            cleanedResult.isBlank() -> {
+              viewModel.showErrorMessage(context.getString(R.string.role_editor_ai_compress_failed_blank))
+              Log.w(TAG, "Role editor AI compression returned blank result field=$fieldKey")
+            }
+            cleanedResult.length > maxChars -> {
+              viewModel.showErrorMessage(
+                context.getString(R.string.role_editor_ai_compress_failed_limit, maxChars),
+              )
+              Log.w(
+                TAG,
+                "Role editor AI compression exceeded target field=$fieldKey resultLength=${cleanedResult.length} targetLength=$maxChars",
+              )
+            }
+            else -> {
+              onValueChange(cleanedResult)
+              viewModel.showStatusMessage(
+                context.getString(
+                  R.string.role_editor_ai_compress_success,
+                  cleanedResult.length,
+                  maxChars,
+                ),
+              )
+              Log.i(
+                TAG,
+                "Role editor AI compression completed field=$fieldKey resultLength=${cleanedResult.length} targetLength=$maxChars",
+              )
+            }
+          }
+        } catch (_: kotlinx.coroutines.CancellationException) {
+          Log.i(TAG, "Role editor AI compression cancelled field=$fieldKey")
+        } catch (error: Exception) {
+          viewModel.showErrorMessage(
+            error.message ?: context.getString(R.string.role_editor_ai_compress_failed_generic),
+          )
+          Log.e(TAG, "Role editor AI compression failed field=$fieldKey", error)
+        } finally {
+          activeCompressions[fieldKey]?.completed = true
+          activeCompressions.remove(fieldKey)
+        }
+      }
+
+    activeCompressions[fieldKey] =
+      ActiveRoleEditorCompression(
+        fieldKey = fieldKey,
+        originalValue = currentValue,
+        restoreValue = onValueChange,
+        job = job,
+      )
+  }
 
   val importLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -206,7 +335,14 @@ fun RoleEditorScreen(
       modelMenuExpanded = false
       Log.d(TAG, "dismiss model picker before navigating up")
     } else {
+      cancelAllFieldCompressions()
       navigateUp()
+    }
+  }
+
+  DisposableEffect(Unit) {
+    onDispose {
+      cancelAllFieldCompressions()
     }
   }
 
@@ -221,7 +357,10 @@ fun RoleEditorScreen(
         rightAction =
           AppBarAction(
             actionType = AppBarActionType.NAVIGATE_UP,
-            actionFn = { viewModel.saveRole { handleNavigateUp() } },
+            actionFn = {
+              cancelAllFieldCompressions()
+              viewModel.saveRole { handleNavigateUp() }
+            },
             label = stringResource(R.string.save),
           ),
       )
@@ -268,6 +407,25 @@ fun RoleEditorScreen(
     Column(
       modifier = Modifier.fillMaxSize().padding(innerPadding),
     ) {
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+      ) {
+        OutlinedButton(
+          onClick = viewModel::undo,
+          enabled = uiState.canUndo,
+          modifier = Modifier.weight(1f),
+        ) {
+          Text(stringResource(R.string.undo))
+        }
+        OutlinedButton(
+          onClick = viewModel::redo,
+          enabled = uiState.canRedo,
+          modifier = Modifier.weight(1f),
+        ) {
+          Text(stringResource(R.string.redo))
+        }
+      }
       LazyRow(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -349,6 +507,8 @@ fun RoleEditorScreen(
               onUpdateScenario = viewModel::updateScenario,
               onUpdateFirstMessage = viewModel::updateFirstMessage,
               onUpdateMessageExample = viewModel::updateMessageExample,
+              isFieldCompressing = { it in activeCompressions },
+              onCompressField = ::launchCompression,
             )
           RoleEditorTab.PROMPT ->
             RoleEditorPromptPage(
@@ -357,6 +517,8 @@ fun RoleEditorScreen(
               onUpdateSystemPrompt = viewModel::updateSystemPrompt,
               onUpdatePostHistoryInstructions = viewModel::updatePostHistoryInstructions,
               onUpdateAlternateGreetingsText = viewModel::updateAlternateGreetingsText,
+              isFieldCompressing = { it in activeCompressions },
+              onCompressField = ::launchCompression,
             )
           RoleEditorTab.LOREBOOK ->
             RoleEditorLorebookPage(
@@ -380,6 +542,8 @@ fun RoleEditorScreen(
               onUpdateEntryPosition = viewModel::updateCharacterBookEntryPosition,
               onUpdateEntryUseRegex = viewModel::updateCharacterBookEntryUseRegex,
               onRemoveEntry = viewModel::removeCharacterBookEntry,
+              isFieldCompressing = { it in activeCompressions },
+              onCompressField = ::launchCompression,
             )
           RoleEditorTab.METADATA ->
             RoleEditorMetadataPage(
@@ -396,6 +560,8 @@ fun RoleEditorScreen(
               onUpdateFav = viewModel::updateFav,
               onUpdateSafetyPolicy = viewModel::updateSafetyPolicy,
               onUpdateDefaultModelId = viewModel::updateDefaultModelId,
+              isFieldCompressing = { it in activeCompressions },
+              onCompressField = ::launchCompression,
             )
           RoleEditorTab.MEDIA ->
             RoleEditorMediaPage(
@@ -493,6 +659,8 @@ private fun RoleEditorCardPage(
   onUpdateScenario: (String) -> Unit,
   onUpdateFirstMessage: (String) -> Unit,
   onUpdateMessageExample: (String) -> Unit,
+  isFieldCompressing: (String) -> Boolean,
+  onCompressField: (String, String, Int, String, (String) -> Unit) -> Unit,
 ) {
   LazyColumn(
     modifier = Modifier.fillMaxSize(),
@@ -512,6 +680,9 @@ private fun RoleEditorCardPage(
         required = true,
         helpTopic = RoleEditorHelpTopic.ROLE_NAME,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_name",
+        isCompressing = isFieldCompressing("role_editor_name"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -524,6 +695,9 @@ private fun RoleEditorCardPage(
         testTag = "role_editor_description",
         helpTopic = RoleEditorHelpTopic.DESCRIPTION,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_description",
+        isCompressing = isFieldCompressing("role_editor_description"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -536,6 +710,9 @@ private fun RoleEditorCardPage(
         testTag = "role_editor_personality",
         helpTopic = RoleEditorHelpTopic.PERSONALITY,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_personality",
+        isCompressing = isFieldCompressing("role_editor_personality"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -548,6 +725,9 @@ private fun RoleEditorCardPage(
         testTag = "role_editor_scenario",
         helpTopic = RoleEditorHelpTopic.SCENARIO,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_scenario",
+        isCompressing = isFieldCompressing("role_editor_scenario"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -560,6 +740,9 @@ private fun RoleEditorCardPage(
         testTag = "role_editor_first_message",
         helpTopic = RoleEditorHelpTopic.FIRST_MESSAGE,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_first_message",
+        isCompressing = isFieldCompressing("role_editor_first_message"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -572,6 +755,9 @@ private fun RoleEditorCardPage(
         testTag = "role_editor_message_example",
         helpTopic = RoleEditorHelpTopic.EXAMPLE_DIALOGUE,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_message_example",
+        isCompressing = isFieldCompressing("role_editor_message_example"),
+        onCompressField = onCompressField,
       )
     }
     roleEditorStatusItems(uiState)
@@ -585,6 +771,8 @@ private fun RoleEditorPromptPage(
   onUpdateSystemPrompt: (String) -> Unit,
   onUpdatePostHistoryInstructions: (String) -> Unit,
   onUpdateAlternateGreetingsText: (String) -> Unit,
+  isFieldCompressing: (String) -> Boolean,
+  onCompressField: (String, String, Int, String, (String) -> Unit) -> Unit,
 ) {
   LazyColumn(
     modifier = Modifier.fillMaxSize(),
@@ -601,6 +789,9 @@ private fun RoleEditorPromptPage(
         testTag = "role_editor_system_prompt",
         helpTopic = RoleEditorHelpTopic.SYSTEM_PROMPT,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_system_prompt",
+        isCompressing = isFieldCompressing("role_editor_system_prompt"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -613,6 +804,9 @@ private fun RoleEditorPromptPage(
         testTag = "role_editor_post_history",
         helpTopic = RoleEditorHelpTopic.POST_HISTORY,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_post_history",
+        isCompressing = isFieldCompressing("role_editor_post_history"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -626,6 +820,9 @@ private fun RoleEditorPromptPage(
         testTag = "role_editor_alternate_greetings",
         helpTopic = RoleEditorHelpTopic.ALTERNATE_GREETINGS,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_alternate_greetings",
+        isCompressing = isFieldCompressing("role_editor_alternate_greetings"),
+        onCompressField = onCompressField,
       )
     }
     roleEditorStatusItems(uiState)
@@ -654,6 +851,8 @@ private fun RoleEditorLorebookPage(
   onUpdateEntryPosition: (String, String) -> Unit,
   onUpdateEntryUseRegex: (String, Boolean) -> Unit,
   onRemoveEntry: (String) -> Unit,
+  isFieldCompressing: (String) -> Boolean,
+  onCompressField: (String, String, Int, String, (String) -> Unit) -> Unit,
 ) {
   LazyColumn(
     modifier = Modifier.fillMaxSize(),
@@ -669,6 +868,9 @@ private fun RoleEditorLorebookPage(
         testTag = "role_editor_lorebook_name",
         helpTopic = RoleEditorHelpTopic.LOREBOOK_NAME,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_lorebook_name",
+        isCompressing = isFieldCompressing("role_editor_lorebook_name"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -681,6 +883,9 @@ private fun RoleEditorLorebookPage(
         testTag = "role_editor_lorebook_description",
         helpTopic = RoleEditorHelpTopic.LOREBOOK_DESCRIPTION,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_lorebook_description",
+        isCompressing = isFieldCompressing("role_editor_lorebook_description"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -743,6 +948,8 @@ private fun RoleEditorLorebookPage(
           onUpdateUseRegex = onUpdateEntryUseRegex,
           onRemove = onRemoveEntry,
           onShowHelp = onShowHelp,
+          isFieldCompressing = isFieldCompressing,
+          onCompressField = onCompressField,
         )
       }
     }
@@ -765,6 +972,8 @@ private fun RoleEditorMetadataPage(
   onUpdateFav: (Boolean) -> Unit,
   onUpdateSafetyPolicy: (String) -> Unit,
   onUpdateDefaultModelId: (String?) -> Unit,
+  isFieldCompressing: (String) -> Boolean,
+  onCompressField: (String, String, Int, String, (String) -> Unit) -> Unit,
 ) {
   LazyColumn(
     modifier = Modifier.fillMaxSize(),
@@ -780,6 +989,9 @@ private fun RoleEditorMetadataPage(
         testTag = "role_editor_creator",
         helpTopic = RoleEditorHelpTopic.CREATOR,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_creator",
+        isCompressing = isFieldCompressing("role_editor_creator"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -792,6 +1004,9 @@ private fun RoleEditorMetadataPage(
         testTag = "role_editor_creator_notes",
         helpTopic = RoleEditorHelpTopic.CREATOR_NOTES,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_creator_notes",
+        isCompressing = isFieldCompressing("role_editor_creator_notes"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -803,6 +1018,9 @@ private fun RoleEditorMetadataPage(
         testTag = "role_editor_character_version",
         helpTopic = RoleEditorHelpTopic.CHARACTER_VERSION,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_character_version",
+        isCompressing = isFieldCompressing("role_editor_character_version"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -815,6 +1033,9 @@ private fun RoleEditorMetadataPage(
         testTag = "role_editor_tags",
         helpTopic = RoleEditorHelpTopic.TAGS,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_tags",
+        isCompressing = isFieldCompressing("role_editor_tags"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -826,6 +1047,9 @@ private fun RoleEditorMetadataPage(
         testTag = "role_editor_talkativeness",
         helpTopic = RoleEditorHelpTopic.TALKATIVENESS,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_talkativeness",
+        isCompressing = isFieldCompressing("role_editor_talkativeness"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -847,6 +1071,9 @@ private fun RoleEditorMetadataPage(
         testTag = "role_editor_safety_policy",
         helpTopic = RoleEditorHelpTopic.SAFETY_POLICY,
         onShowHelp = onShowHelp,
+        compressionFieldKey = "role_editor_safety_policy",
+        isCompressing = isFieldCompressing("role_editor_safety_policy"),
+        onCompressField = onCompressField,
       )
     }
     item {
@@ -1006,8 +1233,12 @@ private fun EditorTextCard(
   required: Boolean = false,
   helpTopic: RoleEditorHelpTopic? = null,
   onShowHelp: ((RoleEditorHelpTopic) -> Unit)? = null,
+  compressionFieldKey: String? = null,
+  isCompressing: Boolean = false,
+  onCompressField: ((String, String, Int, String, (String) -> Unit) -> Unit)? = null,
 ) {
   val fieldSpec = roleEditorTextFieldSpec(helpTopic)
+  val maxChars = fieldSpec?.maxChars
   Card {
     Column(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -1022,6 +1253,35 @@ private fun EditorTextCard(
       subtitle?.let {
         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
+      if (
+        compressionFieldKey != null &&
+          onCompressField != null &&
+          fieldSpec?.supportsAiCompress == true &&
+          maxChars != null
+      ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+          TextButton(
+            onClick = {
+              onCompressField(
+                compressionFieldKey,
+                title,
+                maxChars,
+                value,
+                onValueChange,
+              )
+            },
+            enabled = !isCompressing && value.isNotBlank(),
+          ) {
+            Text(
+              if (isCompressing) {
+                stringResource(R.string.role_editor_ai_compress_running)
+              } else {
+                stringResource(R.string.role_editor_ai_compress_action)
+              },
+            )
+          }
+        }
+      }
       RoleEditorOutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -1034,6 +1294,7 @@ private fun EditorTextCard(
         maxLines = maxLines,
         fieldSpec = fieldSpec,
         helpTopic = helpTopic,
+        enabled = !isCompressing,
       )
     }
   }
@@ -1117,6 +1378,8 @@ private fun LorebookEntryCard(
   onUpdateUseRegex: (String, Boolean) -> Unit,
   onRemove: (String) -> Unit,
   onShowHelp: (RoleEditorHelpTopic) -> Unit,
+  isFieldCompressing: (String) -> Boolean,
+  onCompressField: (String, String, Int, String, (String) -> Unit) -> Unit,
 ) {
   Card {
     Column(
@@ -1153,6 +1416,9 @@ private fun LorebookEntryCard(
         onValueChange = { onUpdateComment(entry.editorId, it) },
         minLines = 2,
         maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
+        compressionFieldKey = "role_editor_lore_entry_comment_${entry.editorId}",
+        isCompressing = isFieldCompressing("role_editor_lore_entry_comment_${entry.editorId}"),
+        onCompressField = onCompressField,
       )
       LabeledTextField(
         title = stringResource(R.string.role_editor_lorebook_entry_content_label),
@@ -1162,6 +1428,9 @@ private fun LorebookEntryCard(
         onValueChange = { onUpdateContent(entry.editorId, it) },
         minLines = 4,
         maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
+        compressionFieldKey = "role_editor_lore_entry_content_${entry.editorId}",
+        isCompressing = isFieldCompressing("role_editor_lore_entry_content_${entry.editorId}"),
+        onCompressField = onCompressField,
       )
       LabeledTextField(
         title = stringResource(R.string.role_editor_lorebook_entry_order_label),
@@ -1322,14 +1591,47 @@ private fun LabeledTextField(
   onValueChange: (String) -> Unit,
   minLines: Int = 1,
   maxLines: Int = minLines,
+  compressionFieldKey: String? = null,
+  isCompressing: Boolean = false,
+  onCompressField: ((String, String, Int, String, (String) -> Unit) -> Unit)? = null,
 ) {
   val fieldSpec = roleEditorTextFieldSpec(helpTopic)
+  val maxChars = fieldSpec?.maxChars
   Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
     FieldHeader(
       title = title,
       helpTopic = helpTopic,
       onShowHelp = onShowHelp,
     )
+    if (
+      compressionFieldKey != null &&
+        onCompressField != null &&
+        fieldSpec?.supportsAiCompress == true &&
+        maxChars != null
+    ) {
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        TextButton(
+          onClick = {
+            onCompressField(
+              compressionFieldKey,
+              title,
+              maxChars,
+              value,
+              onValueChange,
+            )
+          },
+          enabled = !isCompressing && value.isNotBlank(),
+        ) {
+          Text(
+            if (isCompressing) {
+              stringResource(R.string.role_editor_ai_compress_running)
+            } else {
+              stringResource(R.string.role_editor_ai_compress_action)
+            },
+          )
+        }
+      }
+    }
     RoleEditorOutlinedTextField(
       value = value,
       onValueChange = onValueChange,
@@ -1338,6 +1640,7 @@ private fun LabeledTextField(
       maxLines = maxLines,
       fieldSpec = fieldSpec,
       helpTopic = helpTopic,
+      enabled = !isCompressing,
     )
   }
 }
@@ -1351,6 +1654,7 @@ private fun RoleEditorOutlinedTextField(
   maxLines: Int = minLines,
   fieldSpec: RoleEditorTextFieldSpec? = null,
   helpTopic: RoleEditorHelpTopic? = null,
+  enabled: Boolean = true,
 ) {
   val currentCount = value.length
   val maxChars = fieldSpec?.maxChars
@@ -1364,6 +1668,7 @@ private fun RoleEditorOutlinedTextField(
     value = value,
     onValueChange = onValueChange,
     modifier = modifier,
+    enabled = enabled,
     minLines = minLines,
     maxLines = maxLines,
     singleLine = maxLines == 1,
@@ -1392,6 +1697,95 @@ private fun RoleEditorOutlinedTextField(
       }
     },
   )
+}
+
+private fun buildRoleEditorCompressionPrompt(
+  fieldTitle: String,
+  maxChars: Int,
+  content: String,
+): String {
+  return """
+    You are helping edit a role card field.
+    Rewrite the field below so the final result is at or under $maxChars characters.
+    Preserve the original meaning, tone, and roleplay intent.
+    Keep useful line breaks or list structure when they matter.
+    Remove redundancy first. If needed, aggressively shorten until the limit is satisfied.
+    Return only the rewritten field text with no explanation, no markdown, and no quotes.
+
+    Field: $fieldTitle
+    Target max characters: $maxChars
+
+    Original content:
+    $content
+  """.trimIndent()
+}
+
+private suspend fun ensureRoleEditorCompressionModelReady(
+  context: android.content.Context,
+  model: Model,
+  coroutineScope: CoroutineScope,
+) {
+  if (model.instance != null) {
+    return
+  }
+
+  suspendCancellableCoroutine { continuation ->
+    model.runtimeHelper.initialize(
+      context = context,
+      model = model,
+      supportImage = false,
+      supportAudio = false,
+      onDone = { error ->
+        if (!continuation.isActive) {
+          return@initialize
+        }
+        if (model.instance != null) {
+          continuation.resume(Unit)
+        } else {
+          continuation.resumeWithException(
+            IllegalStateException(error.ifBlank { "Failed to initialize editor assistant model." }),
+          )
+        }
+      },
+      coroutineScope = coroutineScope,
+    )
+  }
+
+  withTimeout(ROLE_EDITOR_COMPRESSION_INIT_TIMEOUT_MS) {
+    while (model.instance == null) {
+      delay(100)
+    }
+  }
+}
+
+private suspend fun runRoleEditorCompressionInference(
+  model: Model,
+  input: String,
+  coroutineScope: CoroutineScope,
+): String {
+  return suspendCancellableCoroutine { continuation ->
+    var response = ""
+    model.runtimeHelper.runInference(
+      model = model,
+      input = input,
+      resultListener = { partialResult, done, _ ->
+        response = processLlmResponse(response = "$response$partialResult")
+        if (done && continuation.isActive) {
+          continuation.resume(response)
+        }
+      },
+      cleanUpListener = {},
+      onError = { message ->
+        if (continuation.isActive) {
+          continuation.resumeWithException(IllegalStateException(message))
+        }
+      },
+      coroutineScope = coroutineScope,
+    )
+    continuation.invokeOnCancellation {
+      model.runtimeHelper.stopResponse(model)
+    }
+  }
 }
 
 private fun takeReadPermission(context: android.content.Context, uri: Uri) {

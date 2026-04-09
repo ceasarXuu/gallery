@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -39,12 +41,15 @@ import selfgemma.talk.AppTopBar
 import selfgemma.talk.data.AppBarAction
 import selfgemma.talk.data.AppBarActionType
 import selfgemma.talk.R
+import selfgemma.talk.data.Model
+import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 
 private const val TAG = "RoleplaySettingsScreen"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoleplaySettingsScreen(
+  modelManagerViewModel: ModelManagerViewModel,
   navigateUp: () -> Unit,
   onOpenModelLibrary: () -> Unit,
   showNavigateUp: Boolean = false,
@@ -53,19 +58,27 @@ fun RoleplaySettingsScreen(
   viewModel: RoleplaySettingsViewModel = hiltViewModel(),
 ) {
   var showLanguageDialog by remember { mutableStateOf(false) }
+  var showAssistantModelDialog by remember { mutableStateOf(false) }
   val currentLocaleTag = AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore(',')
   val uiState by viewModel.uiState.collectAsState()
+  val downloadedModels = modelManagerViewModel.getAllDownloadedModels()
+  val resolvedAssistantModel =
+    downloadedModels.firstOrNull { it.name == uiState.roleEditorAssistantModelId }
+      ?: downloadedModels.firstOrNull()
   val handleNavigateUp: () -> Unit = {
     if (showLanguageDialog) {
       showLanguageDialog = false
       Log.d(TAG, "dismiss language dialog before navigating up")
+    } else if (showAssistantModelDialog) {
+      showAssistantModelDialog = false
+      Log.d(TAG, "dismiss assistant model dialog before navigating up")
     } else {
       Log.d(TAG, "navigate up from settings")
       navigateUp()
     }
   }
 
-  BackHandler(enabled = showNavigateUp || showLanguageDialog) { handleNavigateUp() }
+  BackHandler(enabled = showNavigateUp || showLanguageDialog || showAssistantModelDialog) { handleNavigateUp() }
 
   Scaffold(
     modifier = modifier,
@@ -109,6 +122,13 @@ fun RoleplaySettingsScreen(
         summary = stringResource(R.string.settings_model_library_summary),
         onClick = onOpenModelLibrary,
       )
+      SettingsCard(
+        title = stringResource(R.string.settings_role_editor_assistant_model_title),
+        summary =
+          resolvedAssistantModel?.displayName?.ifEmpty { resolvedAssistantModel.name }
+            ?: stringResource(R.string.settings_role_editor_assistant_model_none),
+        onClick = { showAssistantModelDialog = true },
+      )
     }
   }
 
@@ -127,6 +147,102 @@ fun RoleplaySettingsScreen(
       },
     )
   }
+
+  if (showAssistantModelDialog) {
+    AssistantModelSelectionDialog(
+      downloadedModels = downloadedModels,
+      currentModelId = resolvedAssistantModel?.name,
+      onDismiss = { showAssistantModelDialog = false },
+      onOpenModelLibrary = {
+        showAssistantModelDialog = false
+        onOpenModelLibrary()
+      },
+      onModelSelected = { modelId ->
+        viewModel.setRoleEditorAssistantModelId(modelId)
+        showAssistantModelDialog = false
+      },
+      onResetToDefault = {
+        viewModel.setRoleEditorAssistantModelId(null)
+        showAssistantModelDialog = false
+      },
+    )
+  }
+}
+
+@Composable
+private fun AssistantModelSelectionDialog(
+  downloadedModels: List<Model>,
+  currentModelId: String?,
+  onDismiss: () -> Unit,
+  onOpenModelLibrary: () -> Unit,
+  onModelSelected: (String) -> Unit,
+  onResetToDefault: () -> Unit,
+) {
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    properties = DialogProperties(usePlatformDefaultWidth = false),
+    title = { Text(stringResource(R.string.settings_role_editor_assistant_model_title)) },
+    text = {
+      if (downloadedModels.isEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+          Text(stringResource(R.string.settings_role_editor_assistant_model_empty))
+          TextButton(onClick = onOpenModelLibrary) {
+            Text(stringResource(R.string.settings_model_library_title))
+          }
+        }
+      } else {
+        Column(
+          modifier = Modifier.verticalScroll(rememberScrollState()).selectableGroup(),
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+          downloadedModels.forEach { model ->
+            val modelLabel = model.displayName.ifEmpty { model.name }
+            Row(
+              modifier =
+                Modifier
+                  .fillMaxWidth()
+                  .selectable(
+                    selected = model.name == currentModelId,
+                    onClick = { onModelSelected(model.name) },
+                  )
+                  .padding(vertical = 12.dp),
+              verticalAlignment = Alignment.CenterVertically,
+            ) {
+              RadioButton(
+                selected = model.name == currentModelId,
+                onClick = { onModelSelected(model.name) },
+              )
+              Column(
+                modifier = Modifier.padding(start = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+              ) {
+                Text(modelLabel, style = MaterialTheme.typography.bodyLarge)
+                if (model.name != modelLabel) {
+                  Text(
+                    model.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    confirmButton = {
+      if (downloadedModels.isNotEmpty()) {
+        TextButton(onClick = onResetToDefault) {
+          Text(stringResource(R.string.settings_role_editor_assistant_model_reset_default))
+        }
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) {
+        Text(stringResource(R.string.cancel))
+      }
+    },
+  )
 }
 
 @Composable

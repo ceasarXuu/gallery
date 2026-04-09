@@ -1,3 +1,37 @@
+## 2026-04-10 Role editor AI compression and undo/redo verification
+
+- Goal: verify role editor fields with length budgets can be AI-compressed under the target limit, and top-level `undo` / `redo` actions work during editing.
+- Page: role editor
+- Related logs: `RoleEditorScreen`, `RoleEditorViewModel`
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat --no-daemon :app:testDebugUnitTest --tests "selfgemma.talk.feature.roleplay.roles.RoleEditorViewModelTest"
+.\gradlew.bat :app:installDebug
+adb -s ONNZ95CAEMMZSKTS shell am force-stop selfgemma.talk
+adb -s ONNZ95CAEMMZSKTS shell am start -n selfgemma.talk/.MainActivity
+adb -s ONNZ95CAEMMZSKTS logcat -c
+adb -s ONNZ95CAEMMZSKTS logcat -v time | Select-String -Pattern 'RoleEditorScreen|RoleEditorViewModel|AndroidRuntime'
+```
+
+Manual verification flow:
+
+- Open role editor and confirm the top area exposes `Undo` and `Redo` buttons.
+- Edit at least one text field such as `Description`, tap `Undo`, then tap `Redo`, and confirm content rolls back and reapplies without leaving the current tab.
+- With at least one local model installed, tap `AI Compress` on an over-limit field and confirm the field becomes non-editable until compression completes.
+- Confirm compression success logs include source length, target length, and result length.
+- Start a compression, then leave the editor before it finishes; confirm logs print cancellation plus original-content restore and the unfinished result is not applied.
+- Remove or disable all local models, tap `AI Compress`, and confirm the editor shows a user-facing reminder to add a model or pick the editor assistant model in Settings.
+
+Notes:
+
+- Reuse the roleplay settings page to choose a dedicated editor assistant model. If no explicit model is configured, fall back to the first available local model.
+- Keep compression failure behavior honest: if the model returns blank text or still exceeds the target length, keep the original field content and surface a clear error instead of silently truncating.
+- Treat role editor compression as a single in-flight task. LiteRT-LM conversation state is simpler and more predictable when the editor does not attempt multiple parallel compressions against the same model session.
+
 ## 2026-04-10 Role editor ST-native rewrite verification
 
 - Goal: verify the role editor no longer presents a project-only `Basic / Persona / World / Other` abstraction after ST runtime alignment work.

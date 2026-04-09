@@ -51,6 +51,7 @@
   <string name="test">테스트</string>
   <string name="try_it">사용해 보기</string>
   <string name="undo">실행 취소</string>
+  <string name="redo">다시 실행</string>
   <string name="view">보기</string>
   <string name="error">오류</string>
   <string name="disabled">비활성화됨</string>
@@ -185,6 +186,17 @@
   <!-- Settings Screen -->
   <string name="settings_model_library_title">모델 라이브러리</string>
   <string name="settings_model_library_summary">로컬 모델 다운로드, 가져오기 및 관리</string>
+  <string name="settings_role_editor_assistant_model_title">편집 도우미 모델</string>
+  <string name="settings_role_editor_assistant_model_none">기본값: 첫 번째 사용 가능한 모델</string>
+  <string name="settings_role_editor_assistant_model_empty">아직 로컬 모델이 없습니다. 역할 편집기에서 AI 압축을 쓰기 전에 모델을 추가하세요.</string>
+  <string name="settings_role_editor_assistant_model_reset_default">기본값 사용</string>
+  <string name="role_editor_ai_compress_action">AI 압축</string>
+  <string name="role_editor_ai_compress_running">압축 중...</string>
+  <string name="role_editor_ai_compress_success">%1$d/%2$d자로 압축했습니다.</string>
+  <string name="role_editor_ai_compress_failed_generic">AI 압축에 실패했습니다. 선택한 모델을 확인한 뒤 다시 시도하세요.</string>
+  <string name="role_editor_ai_compress_failed_blank">AI 압축 결과가 비어 있습니다. 원본 텍스트를 유지했습니다.</string>
+  <string name="role_editor_ai_compress_failed_limit">%1$d자 이하 목표를 맞추지 못했습니다. 원본 텍스트를 유지했습니다.</string>
+  <string name="role_editor_ai_compress_missing_model">사용 가능한 로컬 모델이 없습니다. 먼저 모델을 추가하거나 설정에서 편집 도우미 모델을 선택하세요.</string>
 
   <!-- Model Manager -->
   <string name="model_manager">모델 관리자</string>

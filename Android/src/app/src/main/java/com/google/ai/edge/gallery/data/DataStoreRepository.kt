@@ -85,6 +85,10 @@ interface DataStoreRepository {
 
   fun areMessageSoundsEnabled(): Boolean
 
+  fun setRoleEditorAssistantModelId(modelId: String?)
+
+  fun getRoleEditorAssistantModelId(): String?
+
   fun addBenchmarkResult(result: BenchmarkResult)
 
   fun getAllBenchmarkResults(): List<BenchmarkResult>
@@ -328,6 +332,29 @@ class DefaultDataStoreRepository(
     return runBlocking {
       val settings = dataStore.data.first()
       !settings.disableMessageSounds
+    }
+  }
+
+  override fun setRoleEditorAssistantModelId(modelId: String?) {
+    runBlocking {
+      dataStore.updateData { settings ->
+        settings
+          .toBuilder()
+          .apply {
+            if (modelId.isNullOrBlank()) {
+              clearRoleEditorAssistantModelId()
+            } else {
+              roleEditorAssistantModelId = modelId
+            }
+          }
+          .build()
+      }
+    }
+  }
+
+  override fun getRoleEditorAssistantModelId(): String? {
+    return runBlocking {
+      dataStore.data.first().roleEditorAssistantModelId.takeIf { it.isNotBlank() }
     }
   }
 

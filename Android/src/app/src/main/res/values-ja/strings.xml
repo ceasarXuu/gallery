@@ -51,6 +51,7 @@
   <string name="test">テスト</string>
   <string name="try_it">試す</string>
   <string name="undo">元に戻す</string>
+  <string name="redo">やり直す</string>
   <string name="view">表示</string>
   <string name="error">エラー</string>
   <string name="disabled">無効</string>
@@ -185,6 +186,17 @@
   <!-- Settings Screen -->
   <string name="settings_model_library_title">モデルライブラリ</string>
   <string name="settings_model_library_summary">ローカルモデルのダウンロード、インポート、管理</string>
+  <string name="settings_role_editor_assistant_model_title">編集アシスタントモデル</string>
+  <string name="settings_role_editor_assistant_model_none">既定: 最初に利用可能なモデル</string>
+  <string name="settings_role_editor_assistant_model_empty">まだローカルモデルがありません。ロールエディタで AI 圧縮を使う前にモデルを追加してください。</string>
+  <string name="settings_role_editor_assistant_model_reset_default">既定を使う</string>
+  <string name="role_editor_ai_compress_action">AI 圧縮</string>
+  <string name="role_editor_ai_compress_running">圧縮中...</string>
+  <string name="role_editor_ai_compress_success">%1$d/%2$d 文字まで圧縮しました。</string>
+  <string name="role_editor_ai_compress_failed_generic">AI 圧縮に失敗しました。選択中のモデルを確認してから再試行してください。</string>
+  <string name="role_editor_ai_compress_failed_blank">AI 圧縮の結果が空でした。元のテキストを保持しました。</string>
+  <string name="role_editor_ai_compress_failed_limit">%1$d 文字以内に収まりませんでした。元のテキストを保持しました。</string>
+  <string name="role_editor_ai_compress_missing_model">利用可能なローカルモデルがありません。先にモデルを追加するか、設定で編集アシスタントモデルを選んでください。</string>
 
   <!-- Model Manager -->
   <string name="model_manager">モデルマネージャー</string>

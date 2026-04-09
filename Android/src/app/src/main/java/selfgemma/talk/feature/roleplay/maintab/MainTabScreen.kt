@@ -203,6 +203,7 @@ fun MainTabScreen(
         }
         2 -> {
           selfgemma.talk.feature.roleplay.settings.RoleplaySettingsScreen(
+            modelManagerViewModel = modelManagerViewModel,
             navigateUp = handleNavigateUp,
             onOpenModelLibrary = onOpenModelLibrary,
             showNavigateUp = false,

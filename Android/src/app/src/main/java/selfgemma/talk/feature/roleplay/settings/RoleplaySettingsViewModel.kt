@@ -13,6 +13,7 @@ private const val TAG = "RoleplaySettingsViewModel"
 
 data class RoleplaySettingsUiState(
   val messageSoundsEnabled: Boolean = true,
+  val roleEditorAssistantModelId: String? = null,
 )
 
 @HiltViewModel
@@ -25,6 +26,7 @@ constructor(
     MutableStateFlow(
       RoleplaySettingsUiState(
         messageSoundsEnabled = dataStoreRepository.areMessageSoundsEnabled(),
+        roleEditorAssistantModelId = dataStoreRepository.getRoleEditorAssistantModelId(),
       )
     )
   val uiState: StateFlow<RoleplaySettingsUiState> = _uiState.asStateFlow()
@@ -33,5 +35,11 @@ constructor(
     dataStoreRepository.setMessageSoundsEnabled(enabled)
     _uiState.value = _uiState.value.copy(messageSoundsEnabled = enabled)
     Log.d(TAG, "message sounds updated enabled=$enabled")
+  }
+
+  fun setRoleEditorAssistantModelId(modelId: String?) {
+    dataStoreRepository.setRoleEditorAssistantModelId(modelId)
+    _uiState.value = _uiState.value.copy(roleEditorAssistantModelId = modelId)
+    Log.d(TAG, "role editor assistant model updated modelId=$modelId")
   }
 }

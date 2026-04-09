@@ -9,6 +9,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.ArrayDeque
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -127,6 +128,8 @@ data class RoleEditorUiState(
   val compatibilityWarnings: List<String> = emptyList(),
   val statusMessage: String? = null,
   val errorMessage: String? = null,
+  val canUndo: Boolean = false,
+  val canRedo: Boolean = false,
 )
 
 @HiltViewModel
@@ -140,6 +143,8 @@ constructor(
   private val compileRuntimeRoleProfileUseCase: CompileRuntimeRoleProfileUseCase,
   private val exportStRoleCardToUriUseCase: ExportStRoleCardToUriUseCase,
 ) : ViewModel() {
+  private val undoHistory = ArrayDeque<RoleEditorUiState>()
+  private val redoHistory = ArrayDeque<RoleEditorUiState>()
   private val editingRoleId: String? = savedStateHandle.get<String?>("roleId")?.takeIf { it.isNotBlank() }
   private val _uiState = MutableStateFlow(RoleEditorUiState())
   val uiState: StateFlow<RoleEditorUiState> = _uiState.asStateFlow()
@@ -151,6 +156,40 @@ constructor(
 
   fun selectTab(tab: RoleEditorTab) {
     _uiState.update { it.copy(selectedTab = tab) }
+  }
+
+  fun undo() {
+    val currentSnapshot = _uiState.value.toHistorySnapshot()
+    val previousSnapshot = undoHistory.pollLast() ?: return
+    redoHistory.addLast(currentSnapshot)
+    applyHistorySnapshot(previousSnapshot)
+    Log.d(TAG, "Role editor undo applied roleId=${_uiState.value.roleId}")
+  }
+
+  fun redo() {
+    val currentSnapshot = _uiState.value.toHistorySnapshot()
+    val nextSnapshot = redoHistory.pollLast() ?: return
+    undoHistory.addLast(currentSnapshot)
+    applyHistorySnapshot(nextSnapshot)
+    Log.d(TAG, "Role editor redo applied roleId=${_uiState.value.roleId}")
+  }
+
+  fun showErrorMessage(message: String) {
+    _uiState.update { current ->
+      current.copy(
+        errorMessage = message,
+        statusMessage = null,
+      )
+    }
+  }
+
+  fun showStatusMessage(message: String) {
+    _uiState.update { current ->
+      current.copy(
+        statusMessage = message,
+        errorMessage = null,
+      )
+    }
   }
 
   fun updateName(value: String) = updateDraft { it.copy(name = value) }
@@ -263,7 +302,7 @@ constructor(
 
   fun updateAvatarUri(value: String?) {
     val now = System.currentTimeMillis()
-    _uiState.update {
+    mutateEditorState {
       it.copy(
         avatarUri = value,
         avatarSource = if (value.isNullOrBlank()) null else RoleMediaSource.LOCAL_PICKER,
@@ -282,7 +321,7 @@ constructor(
 
   fun updateCoverUri(value: String?) {
     val now = System.currentTimeMillis()
-    _uiState.update {
+    mutateEditorState {
       it.copy(
         coverUri = value,
         coverSource = if (value.isNullOrBlank()) null else RoleMediaSource.LOCAL_PICKER,
@@ -315,7 +354,7 @@ constructor(
           updatedAt = now,
         )
       }
-    _uiState.update {
+    mutateEditorState {
       it.copy(
         galleryAssets = it.galleryAssets + newAssets,
         statusMessage = appContext.getString(R.string.role_editor_status_gallery_added, newAssets.size),
@@ -325,7 +364,7 @@ constructor(
   }
 
   fun removeGalleryAsset(assetId: String) {
-    _uiState.update {
+    mutateEditorState {
       val removedAsset = it.galleryAssets.firstOrNull { asset -> asset.id == assetId }
       it.copy(
         galleryAssets = it.galleryAssets.filterNot { asset -> asset.id == assetId },
@@ -355,7 +394,7 @@ constructor(
   fun setGalleryAssetAsAvatar(assetId: String) {
     val asset = _uiState.value.galleryAssets.firstOrNull { it.id == assetId } ?: return
     val now = System.currentTimeMillis()
-    _uiState.update {
+    mutateEditorState {
       it.copy(
         avatarUri = asset.uri,
         avatarSource = asset.source,
@@ -370,7 +409,7 @@ constructor(
   fun setGalleryAssetAsCover(assetId: String) {
     val asset = _uiState.value.galleryAssets.firstOrNull { it.id == assetId } ?: return
     val now = System.currentTimeMillis()
-    _uiState.update {
+    mutateEditorState {
       it.copy(
         coverUri = asset.uri,
         coverSource = asset.source,
@@ -399,7 +438,7 @@ constructor(
           updatedAt = now,
         )
       }
-    _uiState.update {
+    mutateEditorState {
       it.copy(
         spriteAssets = it.spriteAssets + newAssets,
         statusMessage = appContext.getString(R.string.role_editor_status_sprite_added, newAssets.size),
@@ -409,7 +448,7 @@ constructor(
   }
 
   fun removeSpriteAsset(assetId: String) {
-    _uiState.update {
+    mutateEditorState {
       it.copy(
         spriteAssets = it.spriteAssets.filterNot { asset -> asset.id == assetId },
         statusMessage = appContext.getString(R.string.role_editor_status_sprite_removed),
@@ -419,7 +458,7 @@ constructor(
   }
 
   fun updateSpriteAssetName(assetId: String, value: String) {
-    _uiState.update {
+    mutateEditorState {
       it.copy(
         spriteAssets =
           it.spriteAssets.map { asset ->
@@ -435,7 +474,7 @@ constructor(
   }
 
   fun updateSpriteStateTag(assetId: String, value: String) {
-    _uiState.update {
+    mutateEditorState {
       it.copy(
         spriteAssets =
           it.spriteAssets.map { asset ->
@@ -470,6 +509,7 @@ constructor(
               isNewRole = editingRoleId == null,
               statusMessage = appContext.getString(R.string.role_editor_status_st_imported),
             )
+          resetHistory(_uiState.value)
         }
         .onFailure { error ->
           _uiState.update {
@@ -754,6 +794,7 @@ constructor(
           emptyEditorRoleUiState(
             systemPrompt = appContext.getString(R.string.role_editor_default_system_prompt),
           )
+        resetHistory(_uiState.value)
         return@launch
       }
 
@@ -763,6 +804,7 @@ constructor(
         "Loaded role editor roleId=${role.id} source=${role.interopState?.sourceFormat} loreEntries=${role.stCard.cardDataOrEmpty().character_book?.entries?.size ?: 0}",
       )
       _uiState.value = role.toEditorUiState(isNewRole = false)
+      resetHistory(_uiState.value)
     }
   }
 
@@ -788,7 +830,7 @@ constructor(
   }
 
   private fun updateGalleryAsset(assetId: String, transformer: (RoleMediaAsset) -> RoleMediaAsset) {
-    _uiState.update {
+    mutateEditorState {
       it.copy(
         galleryAssets =
           it.galleryAssets.map { asset ->
@@ -804,8 +846,49 @@ constructor(
   }
 
   private fun updateDraft(transformer: (RoleEditorUiState) -> RoleEditorUiState) {
-    _uiState.update { current ->
+    mutateEditorState { current ->
       transformer(current).copy(errorMessage = null, statusMessage = null)
+    }
+  }
+
+  private fun mutateEditorState(
+    recordHistory: Boolean = true,
+    transformer: (RoleEditorUiState) -> RoleEditorUiState,
+  ) {
+    _uiState.update { current ->
+      val currentSnapshot = current.toHistorySnapshot()
+      val updated = transformer(current)
+      val updatedSnapshot = updated.toHistorySnapshot()
+      if (recordHistory && currentSnapshot != updatedSnapshot) {
+        undoHistory.addLast(currentSnapshot)
+        trimHistory(undoHistory)
+        redoHistory.clear()
+      }
+      updated.copy(canUndo = undoHistory.isNotEmpty(), canRedo = redoHistory.isNotEmpty())
+    }
+  }
+
+  private fun applyHistorySnapshot(snapshot: RoleEditorUiState) {
+    val currentTab = _uiState.value.selectedTab
+    _uiState.value =
+      snapshot.copy(
+        selectedTab = currentTab,
+        statusMessage = null,
+        errorMessage = null,
+        canUndo = undoHistory.isNotEmpty(),
+        canRedo = redoHistory.isNotEmpty(),
+      )
+  }
+
+  private fun resetHistory(state: RoleEditorUiState) {
+    undoHistory.clear()
+    redoHistory.clear()
+    _uiState.value = state.copy(canUndo = false, canRedo = false)
+  }
+
+  private fun trimHistory(history: ArrayDeque<RoleEditorUiState>) {
+    while (history.size > 100) {
+      history.removeFirst()
     }
   }
 
@@ -901,6 +984,16 @@ private fun emptyEditorRoleUiState(systemPrompt: String): RoleEditorUiState {
     isNewRole = true,
     stCard = emptyEditorStCard(systemPrompt),
     systemPrompt = systemPrompt,
+  )
+}
+
+private fun RoleEditorUiState.toHistorySnapshot(): RoleEditorUiState {
+  return copy(
+    selectedTab = RoleEditorTab.CARD,
+    statusMessage = null,
+    errorMessage = null,
+    canUndo = false,
+    canRedo = false,
   )
 }
 
