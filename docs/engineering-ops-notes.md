@@ -1,3 +1,34 @@
+## 2026-04-10 Role editor ST-native rewrite verification
+
+- Goal: verify the role editor no longer presents a project-only `Basic / Persona / World / Other` abstraction after ST runtime alignment work.
+- The rewritten editor is organized around ST-native sections:
+  - `Card`
+  - `Prompt`
+  - `Lorebook`
+  - `Metadata`
+  - `Media`
+  - `Interop`
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.feature.roleplay.roles.RoleEditorViewModelTest"
+.\gradlew.bat :app:installDebug
+adb -s ONNZ95CAEMMZSKTS shell am force-stop selfgemma.talk
+adb -s ONNZ95CAEMMZSKTS shell am start -n selfgemma.talk/.MainActivity
+adb -s ONNZ95CAEMMZSKTS shell uiautomator dump /sdcard/role_editor_dump.xml
+adb -s ONNZ95CAEMMZSKTS shell cat /sdcard/role_editor_dump.xml | Select-String -Pattern 'Card|Prompt|Lorebook|Metadata|Interop|Example dialogue|Post-history instructions'
+adb -s ONNZ95CAEMMZSKTS logcat -d -v time | Select-String -Pattern 'RoleEditorViewModel|AndroidRuntime'
+```
+
+Notes:
+
+- After importing an ST card, verify `Lorebook` exposes entry-level fields directly instead of hiding them behind runtime-only compilation.
+- Keep the editor draft as an ST-shaped form state and only compile `runtimeProfile` on save; do not let the UI round-trip through simplified canonical text buckets.
+- Log `source format`, `lore entry count`, and `tag count` on import/save. These are high-signal diagnostics when users report "the editor still doesn't look like ST".
+
 ## 2026-04-10 LiteRT-LM single-session reset failure
 
 - Symptom on device: roleplay chat shows `Failed to create conversation: FAILED_PRECONDITION: A session already exists. Only one session is supported at a time.`

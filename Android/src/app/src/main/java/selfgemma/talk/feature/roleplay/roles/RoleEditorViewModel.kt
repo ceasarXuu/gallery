@@ -1,9 +1,12 @@
 package selfgemma.talk.feature.roleplay.roles
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.UUID
@@ -16,6 +19,7 @@ import kotlinx.coroutines.launch
 import selfgemma.talk.R
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.RoleCardSourceFormat
+import selfgemma.talk.domain.roleplay.model.RoleInteropState
 import selfgemma.talk.domain.roleplay.model.RoleMediaAsset
 import selfgemma.talk.domain.roleplay.model.RoleMediaExportPolicy
 import selfgemma.talk.domain.roleplay.model.RoleMediaImportState
@@ -24,41 +28,91 @@ import selfgemma.talk.domain.roleplay.model.RoleMediaProfile
 import selfgemma.talk.domain.roleplay.model.RoleMediaSource
 import selfgemma.talk.domain.roleplay.model.RoleMediaUsage
 import selfgemma.talk.domain.roleplay.model.RoleSpriteAsset
+import selfgemma.talk.domain.roleplay.model.StCharacterBook
+import selfgemma.talk.domain.roleplay.model.StCharacterBookEntry
+import selfgemma.talk.domain.roleplay.model.StCharacterCard
 import selfgemma.talk.domain.roleplay.model.StCharacterCardData
+import selfgemma.talk.domain.roleplay.model.cardDataOrEmpty
 import selfgemma.talk.domain.roleplay.model.coverImageUri
 import selfgemma.talk.domain.roleplay.model.primaryAvatarUri
-import selfgemma.talk.domain.roleplay.model.resolvedDescription
-import selfgemma.talk.domain.roleplay.model.resolvedFirstMessage
-import selfgemma.talk.domain.roleplay.model.resolvedName
+import selfgemma.talk.domain.roleplay.model.resolvedMessageExample
 import selfgemma.talk.domain.roleplay.model.resolvedOpeningLine
-import selfgemma.talk.domain.roleplay.model.resolvedPersonality
 import selfgemma.talk.domain.roleplay.model.resolvedPersonaDescription
-import selfgemma.talk.domain.roleplay.model.resolvedScenario
 import selfgemma.talk.domain.roleplay.model.resolvedSummary
 import selfgemma.talk.domain.roleplay.model.resolvedSystemPrompt
 import selfgemma.talk.domain.roleplay.model.resolvedTags
 import selfgemma.talk.domain.roleplay.model.resolvedWorldSettings
-import selfgemma.talk.domain.roleplay.model.StCharacterCard
 import selfgemma.talk.domain.roleplay.usecase.CompileRuntimeRoleProfileUseCase
 import selfgemma.talk.domain.roleplay.usecase.ExportStRoleCardToUriUseCase
 import selfgemma.talk.domain.roleplay.usecase.ImportStRoleCardFromUriUseCase
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
-import selfgemma.talk.domain.roleplay.model.withUpdatedCoreFields
+
+private const val TAG = "RoleEditorViewModel"
+
+private data class ParseResult<T>(
+  val value: T? = null,
+  val valid: Boolean = true,
+)
+
+enum class RoleEditorTab {
+  CARD,
+  PROMPT,
+  LOREBOOK,
+  METADATA,
+  MEDIA,
+  INTEROP,
+}
+
+data class RoleEditorCharacterBookEntryState(
+  val editorId: String = UUID.randomUUID().toString(),
+  val idText: String = "",
+  val keysText: String = "",
+  val secondaryKeysText: String = "",
+  val comment: String = "",
+  val content: String = "",
+  val constant: Boolean = false,
+  val selective: Boolean = false,
+  val insertionOrderText: String = "",
+  val enabled: Boolean = true,
+  val position: String = "",
+  val useRegex: Boolean = false,
+  val preservedCharacterFilterJson: String? = null,
+  val preservedExtensionsJson: String? = null,
+)
+
+data class RoleEditorCharacterBookState(
+  val name: String = "",
+  val description: String = "",
+  val scanDepthText: String = "",
+  val tokenBudgetText: String = "",
+  val recursiveScanning: Boolean = false,
+  val entries: List<RoleEditorCharacterBookEntryState> = emptyList(),
+)
 
 data class RoleEditorUiState(
   val loading: Boolean = true,
   val roleId: String? = null,
   val isNewRole: Boolean = true,
   val builtIn: Boolean = false,
+  val selectedTab: RoleEditorTab = RoleEditorTab.CARD,
   val stCard: StCharacterCard = emptyEditorStCard(),
   val name: String = "",
-  val summary: String = "",
+  val description: String = "",
+  val personality: String = "",
+  val scenario: String = "",
+  val firstMessage: String = "",
+  val messageExample: String = "",
   val systemPrompt: String = "",
-  val personaDescription: String = "",
-  val worldSettings: String = "",
-  val openingLine: String = "",
-  val safetyPolicy: String = "",
+  val postHistoryInstructions: String = "",
+  val alternateGreetingsText: String = "",
+  val creatorNotes: String = "",
+  val creator: String = "",
+  val characterVersion: String = "",
   val tagsText: String = "",
+  val talkativenessText: String = "",
+  val fav: Boolean = false,
+  val characterBook: RoleEditorCharacterBookState = RoleEditorCharacterBookState(),
+  val safetyPolicy: String = "",
   val defaultModelId: String? = null,
   val avatarUri: String? = null,
   val coverUri: String? = null,
@@ -67,6 +121,10 @@ data class RoleEditorUiState(
   val galleryAssets: List<RoleMediaAsset> = emptyList(),
   val spriteAssets: List<RoleSpriteAsset> = emptyList(),
   val importedFromStPng: Boolean = false,
+  val sourceFormat: RoleCardSourceFormat = RoleCardSourceFormat.INTERNAL,
+  val sourceSpec: String? = null,
+  val sourceSpecVersion: String? = null,
+  val compatibilityWarnings: List<String> = emptyList(),
   val statusMessage: String? = null,
   val errorMessage: String? = null,
 )
@@ -91,62 +149,117 @@ constructor(
     loadRole()
   }
 
-  fun updateName(value: String) {
-    updateCanonicalCard { card ->
-      card.withUpdatedCoreFields(name = value, systemPrompt = card.resolvedSystemPrompt())
-    }
+  fun selectTab(tab: RoleEditorTab) {
+    _uiState.update { it.copy(selectedTab = tab) }
   }
 
-  fun updateSummary(value: String) {
-    updateCanonicalCard { card ->
-      card.withUpdatedCoreFields(description = value, systemPrompt = card.resolvedSystemPrompt())
-    }
-  }
+  fun updateName(value: String) = updateDraft { it.copy(name = value) }
 
-  fun updateSystemPrompt(value: String) {
-    updateCanonicalCard { card ->
-      card.withUpdatedCoreFields(systemPrompt = value)
-    }
-  }
+  fun updateDescription(value: String) = updateDraft { it.copy(description = value) }
 
-  fun updatePersonaDescription(value: String) {
-    updateCanonicalCard { card ->
-      card.withUpdatedCoreFields(personality = value, systemPrompt = card.resolvedSystemPrompt())
-    }
-  }
+  fun updatePersonality(value: String) = updateDraft { it.copy(personality = value) }
 
-  fun updateWorldSettings(value: String) {
-    updateCanonicalCard { card ->
-      card.withUpdatedCoreFields(scenario = value, systemPrompt = card.resolvedSystemPrompt())
-    }
-  }
+  fun updateScenario(value: String) = updateDraft { it.copy(scenario = value) }
 
-  fun updateOpeningLine(value: String) {
-    updateCanonicalCard { card ->
-      card.withUpdatedCoreFields(firstMessage = value, systemPrompt = card.resolvedSystemPrompt())
-    }
-  }
+  fun updateFirstMessage(value: String) = updateDraft { it.copy(firstMessage = value) }
 
-  fun updateSafetyPolicy(value: String) {
-    _uiState.update { it.copy(safetyPolicy = value, errorMessage = null, statusMessage = null) }
-  }
+  fun updateMessageExample(value: String) = updateDraft { it.copy(messageExample = value) }
 
-  fun updateTagsText(value: String) {
-    val updatedTags = value.toTagList()
-    _uiState.update {
-      val nextCard = it.stCard.withUpdatedCoreFields(tags = updatedTags, systemPrompt = it.stCard.resolvedSystemPrompt())
+  fun updateSystemPrompt(value: String) = updateDraft { it.copy(systemPrompt = value) }
+
+  fun updatePostHistoryInstructions(value: String) =
+    updateDraft { it.copy(postHistoryInstructions = value) }
+
+  fun updateAlternateGreetingsText(value: String) =
+    updateDraft { it.copy(alternateGreetingsText = value) }
+
+  fun updateCreatorNotes(value: String) = updateDraft { it.copy(creatorNotes = value) }
+
+  fun updateCreator(value: String) = updateDraft { it.copy(creator = value) }
+
+  fun updateCharacterVersion(value: String) = updateDraft { it.copy(characterVersion = value) }
+
+  fun updateTagsText(value: String) = updateDraft { it.copy(tagsText = value) }
+
+  fun updateTalkativenessText(value: String) = updateDraft { it.copy(talkativenessText = value) }
+
+  fun updateFav(value: Boolean) = updateDraft { it.copy(fav = value) }
+
+  fun updateSafetyPolicy(value: String) = updateDraft { it.copy(safetyPolicy = value) }
+
+  fun updateDefaultModelId(value: String?) = updateDraft { it.copy(defaultModelId = value) }
+
+  fun updateCharacterBookName(value: String) =
+    updateDraft { it.copy(characterBook = it.characterBook.copy(name = value)) }
+
+  fun updateCharacterBookDescription(value: String) =
+    updateDraft { it.copy(characterBook = it.characterBook.copy(description = value)) }
+
+  fun updateCharacterBookScanDepth(value: String) =
+    updateDraft { it.copy(characterBook = it.characterBook.copy(scanDepthText = value)) }
+
+  fun updateCharacterBookTokenBudget(value: String) =
+    updateDraft { it.copy(characterBook = it.characterBook.copy(tokenBudgetText = value)) }
+
+  fun updateCharacterBookRecursiveScanning(value: Boolean) =
+    updateDraft { it.copy(characterBook = it.characterBook.copy(recursiveScanning = value)) }
+
+  fun addCharacterBookEntry() {
+    updateDraft {
       it.copy(
-        stCard = nextCard,
-        tagsText = value,
-        errorMessage = null,
-        statusMessage = null,
+        characterBook =
+          it.characterBook.copy(
+            entries =
+              it.characterBook.entries +
+                RoleEditorCharacterBookEntryState(insertionOrderText = it.characterBook.entries.size.toString()),
+          ),
       )
     }
   }
 
-  fun updateDefaultModelId(value: String?) {
-    _uiState.update { it.copy(defaultModelId = value, errorMessage = null, statusMessage = null) }
+  fun removeCharacterBookEntry(editorId: String) {
+    updateDraft {
+      it.copy(
+        characterBook =
+          it.characterBook.copy(
+            entries = it.characterBook.entries.filterNot { entry -> entry.editorId == editorId },
+          ),
+      )
+    }
   }
+
+  fun updateCharacterBookEntryId(editorId: String, value: String) =
+    updateCharacterBookEntry(editorId) { it.copy(idText = value) }
+
+  fun updateCharacterBookEntryKeys(editorId: String, value: String) =
+    updateCharacterBookEntry(editorId) { it.copy(keysText = value) }
+
+  fun updateCharacterBookEntrySecondaryKeys(editorId: String, value: String) =
+    updateCharacterBookEntry(editorId) { it.copy(secondaryKeysText = value) }
+
+  fun updateCharacterBookEntryComment(editorId: String, value: String) =
+    updateCharacterBookEntry(editorId) { it.copy(comment = value) }
+
+  fun updateCharacterBookEntryContent(editorId: String, value: String) =
+    updateCharacterBookEntry(editorId) { it.copy(content = value) }
+
+  fun updateCharacterBookEntryConstant(editorId: String, value: Boolean) =
+    updateCharacterBookEntry(editorId) { it.copy(constant = value) }
+
+  fun updateCharacterBookEntrySelective(editorId: String, value: Boolean) =
+    updateCharacterBookEntry(editorId) { it.copy(selective = value) }
+
+  fun updateCharacterBookEntryInsertionOrder(editorId: String, value: String) =
+    updateCharacterBookEntry(editorId) { it.copy(insertionOrderText = value) }
+
+  fun updateCharacterBookEntryEnabled(editorId: String, value: Boolean) =
+    updateCharacterBookEntry(editorId) { it.copy(enabled = value) }
+
+  fun updateCharacterBookEntryPosition(editorId: String, value: String) =
+    updateCharacterBookEntry(editorId) { it.copy(position = value) }
+
+  fun updateCharacterBookEntryUseRegex(editorId: String, value: Boolean) =
+    updateCharacterBookEntry(editorId) { it.copy(useRegex = value) }
 
   fun updateAvatarUri(value: String?) {
     val now = System.currentTimeMillis()
@@ -348,6 +461,10 @@ constructor(
       }
         .onSuccess { importedRole ->
           loadedRole = importedRole
+          Log.i(
+            TAG,
+            "Imported ST role card roleId=${importedRole.id} source=${importedRole.interopState?.sourceFormat} loreEntries=${importedRole.stCard.cardDataOrEmpty().character_book?.entries?.size ?: 0}",
+          )
           _uiState.value =
             importedRole.toEditorUiState(
               isNewRole = editingRoleId == null,
@@ -397,6 +514,10 @@ constructor(
     val role = buildRoleSnapshot() ?: return
 
     viewModelScope.launch {
+      Log.i(
+        TAG,
+        "Saving role editor draft roleId=${role.id} source=${role.interopState?.sourceFormat} loreEntries=${role.stCard.cardDataOrEmpty().character_book?.entries?.size ?: 0} tags=${role.stCard.cardDataOrEmpty().tags?.size ?: 0}",
+      )
       val compiledRole = compileRuntimeRoleProfileUseCase(role)
       roleRepository.saveRole(compiledRole)
       onSaved(compiledRole.id)
@@ -421,12 +542,89 @@ constructor(
       return null
     }
 
-    val now = System.currentTimeMillis()
+    val talkativeness = parseOptionalDouble(snapshot.talkativenessText, R.string.role_editor_talkativeness_label)
+    if (!talkativeness.valid) {
+      return null
+    }
+    val scanDepth = parseOptionalInt(snapshot.characterBook.scanDepthText, R.string.role_editor_lorebook_scan_depth_label)
+    if (!scanDepth.valid) {
+      return null
+    }
+    val tokenBudget = parseOptionalInt(snapshot.characterBook.tokenBudgetText, R.string.role_editor_lorebook_token_budget_label)
+    if (!tokenBudget.valid) {
+      return null
+    }
+    val characterBookEntries =
+      snapshot.characterBook.entries.mapNotNull { entry ->
+        buildCharacterBookEntry(entry) ?: return null
+      }
+
+    val alternateGreetings = snapshot.alternateGreetingsText.toLineList()
+    val tags = snapshot.tagsText.toTagList()
     val existingRole = loadedRole
+    val baseCard = snapshot.stCard
+    val baseData = baseCard.cardDataOrEmpty()
+    val characterBook =
+      if (
+        snapshot.characterBook.name.isBlank() &&
+          snapshot.characterBook.description.isBlank() &&
+          snapshot.characterBook.scanDepthText.isBlank() &&
+          snapshot.characterBook.tokenBudgetText.isBlank() &&
+          characterBookEntries.isEmpty()
+      ) {
+        null
+      } else {
+        (baseData.character_book ?: StCharacterBook()).copy(
+          name = snapshot.characterBook.name.trim().ifBlank { null },
+          description = snapshot.characterBook.description.trim().ifBlank { null },
+          scan_depth = scanDepth.value,
+          token_budget = tokenBudget.value,
+          recursive_scanning = snapshot.characterBook.recursiveScanning,
+          entries = characterBookEntries,
+        )
+      }
+
+    val data =
+      baseData.copy(
+        name = roleName,
+        description = snapshot.description.trim().ifBlank { null },
+        personality = snapshot.personality.trim().ifBlank { null },
+        scenario = snapshot.scenario.trim().ifBlank { null },
+        first_mes = snapshot.firstMessage.trim().ifBlank { null },
+        mes_example = snapshot.messageExample.trim().ifBlank { null },
+        creator_notes = snapshot.creatorNotes.trim().ifBlank { null },
+        system_prompt = snapshot.systemPrompt.trim().ifBlank { null },
+        post_history_instructions = snapshot.postHistoryInstructions.trim().ifBlank { null },
+        alternate_greetings = alternateGreetings.ifEmpty { null },
+        tags = tags.ifEmpty { null },
+        creator = snapshot.creator.trim().ifBlank { null },
+        character_version = snapshot.characterVersion.trim().ifBlank { null },
+        character_book = characterBook,
+      )
+
+    val stCard =
+      baseCard.copy(
+        spec = baseCard.spec ?: "chara_card_v2",
+        spec_version = baseCard.spec_version ?: "2.0",
+        name = roleName,
+        description = snapshot.description.trim().ifBlank { null },
+        personality = snapshot.personality.trim().ifBlank { null },
+        scenario = snapshot.scenario.trim().ifBlank { null },
+        first_mes = snapshot.firstMessage.trim().ifBlank { null },
+        mes_example = snapshot.messageExample.trim().ifBlank { null },
+        creatorcomment = snapshot.creatorNotes.trim().ifBlank { null },
+        talkativeness = talkativeness.value,
+        fav = snapshot.fav,
+        creator = snapshot.creator.trim().ifBlank { null },
+        tags = tags.ifEmpty { null },
+        data = data,
+      )
+
+    val now = System.currentTimeMillis()
     val roleId = editingRoleId ?: UUID.randomUUID().toString()
     return RoleCard(
       id = roleId,
-      stCard = snapshot.stCard,
+      stCard = stCard,
       safetyPolicy = snapshot.safetyPolicy.trim(),
       defaultModelId = snapshot.defaultModelId,
       builtIn = snapshot.builtIn,
@@ -447,7 +645,7 @@ constructor(
           primaryAvatar =
             snapshot.avatarUri?.let { uri ->
               RoleMediaAsset(
-              id = existingRole?.mediaProfile?.primaryAvatar?.id ?: UUID.randomUUID().toString(),
+                id = existingRole?.mediaProfile?.primaryAvatar?.id ?: UUID.randomUUID().toString(),
                 kind = RoleMediaKind.PRIMARY_AVATAR,
                 uri = uri,
                 source =
@@ -479,24 +677,121 @@ constructor(
     )
   }
 
+  private fun buildCharacterBookEntry(
+    entry: RoleEditorCharacterBookEntryState,
+  ): StCharacterBookEntry? {
+    val entryId = parseOptionalInt(entry.idText, R.string.role_editor_lorebook_entry_id_label)
+    if (!entryId.valid) {
+      return null
+    }
+    val insertionOrder = parseOptionalInt(entry.insertionOrderText, R.string.role_editor_lorebook_entry_order_label)
+    if (!insertionOrder.valid) {
+      return null
+    }
+    val keys = entry.keysText.toCommaSeparatedList()
+    val secondaryKeys = entry.secondaryKeysText.toCommaSeparatedList()
+    val content = entry.content.trim()
+    if (keys.isEmpty() && content.isBlank() && entry.comment.isBlank()) {
+      return null
+    }
+    return StCharacterBookEntry(
+      id = entryId.value,
+      keys = keys.ifEmpty { null },
+      secondary_keys = secondaryKeys.ifEmpty { null },
+      character_filter = entry.preservedCharacterFilterJson.toJsonObjectOrNull(),
+      comment = entry.comment.trim().ifBlank { null },
+      content = content.ifBlank { null },
+      constant = entry.constant,
+      selective = entry.selective,
+      insertion_order = insertionOrder.value,
+      enabled = entry.enabled,
+      position = entry.position.trim().ifBlank { null },
+      use_regex = entry.useRegex,
+      extensions = entry.preservedExtensionsJson.toJsonObjectOrNull(),
+    )
+  }
+
+  private fun parseOptionalInt(value: String, labelRes: Int): ParseResult<Int> {
+    val trimmed = value.trim()
+    if (trimmed.isBlank()) {
+      return ParseResult(value = null, valid = true)
+    }
+    val parsed = trimmed.toIntOrNull()
+    if (parsed == null) {
+      _uiState.update {
+        it.copy(
+          errorMessage =
+            appContext.getString(
+              R.string.role_editor_error_invalid_integer,
+              appContext.getString(labelRes),
+            ),
+        )
+      }
+      return ParseResult(value = null, valid = false)
+    }
+    return ParseResult(value = parsed, valid = true)
+  }
+
+  private fun parseOptionalDouble(value: String, labelRes: Int): ParseResult<Double> {
+    val trimmed = value.trim()
+    if (trimmed.isBlank()) {
+      return ParseResult(value = null, valid = true)
+    }
+    val parsed = trimmed.toDoubleOrNull()
+    if (parsed == null) {
+      _uiState.update {
+        it.copy(
+          errorMessage =
+            appContext.getString(
+              R.string.role_editor_error_invalid_decimal,
+              appContext.getString(labelRes),
+            ),
+        )
+      }
+      return ParseResult(value = null, valid = false)
+    }
+    return ParseResult(value = parsed, valid = true)
+  }
+
   private fun loadRole() {
     viewModelScope.launch {
       val role: RoleCard? = editingRoleId?.let { roleId -> roleRepository.getRole(roleId) }
       if (role == null) {
         loadedRole = null
         _uiState.value =
-          RoleEditorUiState(
-            loading = false,
-            roleId = null,
-            isNewRole = true,
-            stCard = emptyEditorStCard(appContext.getString(R.string.role_editor_default_system_prompt)),
+          emptyEditorRoleUiState(
             systemPrompt = appContext.getString(R.string.role_editor_default_system_prompt),
           )
         return@launch
       }
 
       loadedRole = role
+      Log.d(
+        TAG,
+        "Loaded role editor roleId=${role.id} source=${role.interopState?.sourceFormat} loreEntries=${role.stCard.cardDataOrEmpty().character_book?.entries?.size ?: 0}",
+      )
       _uiState.value = role.toEditorUiState(isNewRole = false)
+    }
+  }
+
+  private fun updateCharacterBookEntry(
+    editorId: String,
+    transformer: (RoleEditorCharacterBookEntryState) -> RoleEditorCharacterBookEntryState,
+  ) {
+    updateDraft {
+      it.copy(
+        characterBook =
+          it.characterBook.copy(
+            entries =
+              it.characterBook.entries.map { entry ->
+                if (entry.editorId == editorId) {
+                  transformer(entry)
+                } else {
+                  entry
+                }
+              },
+          ),
+      )
     }
   }
 
@@ -516,21 +811,9 @@ constructor(
     }
   }
 
-  private fun updateCanonicalCard(transformer: (StCharacterCard) -> StCharacterCard) {
+  private fun updateDraft(transformer: (RoleEditorUiState) -> RoleEditorUiState) {
     _uiState.update { current ->
-      val nextCard = transformer(current.stCard)
-      current.copy(
-        stCard = nextCard,
-        name = nextCard.resolvedName(),
-        summary = nextCard.resolvedDescription(),
-        systemPrompt = nextCard.resolvedSystemPrompt(),
-        personaDescription = nextCard.resolvedPersonality(),
-        worldSettings = nextCard.resolvedScenario(),
-        openingLine = nextCard.resolvedFirstMessage(),
-        tagsText = nextCard.resolvedTags().joinToString(", "),
-        errorMessage = null,
-        statusMessage = null,
-      )
+      transformer(current).copy(errorMessage = null, statusMessage = null)
     }
   }
 
@@ -594,6 +877,23 @@ private fun String.toTagList(): List<String> {
     .distinct()
 }
 
+private fun String.toCommaSeparatedList(): List<String> {
+  return split(",")
+    .map { it.trim() }
+    .filter { it.isNotBlank() }
+}
+
+private fun String.toLineList(): List<String> {
+  return lines().map { it.trim() }.filter { it.isNotBlank() }
+}
+
+private fun String?.toJsonObjectOrNull(): JsonObject? {
+  if (this.isNullOrBlank()) {
+    return null
+  }
+  return runCatching { JsonParser.parseString(this).asJsonObject }.getOrNull()
+}
+
 private fun emptyEditorStCard(systemPrompt: String = ""): StCharacterCard {
   return StCharacterCard(
     spec = "chara_card_v2",
@@ -602,10 +902,54 @@ private fun emptyEditorStCard(systemPrompt: String = ""): StCharacterCard {
   )
 }
 
+private fun emptyEditorRoleUiState(systemPrompt: String): RoleEditorUiState {
+  return RoleEditorUiState(
+    loading = false,
+    roleId = null,
+    isNewRole = true,
+    stCard = emptyEditorStCard(systemPrompt),
+    systemPrompt = systemPrompt,
+  )
+}
+
+private fun StCharacterBook?.toEditorState(): RoleEditorCharacterBookState {
+  if (this == null) {
+    return RoleEditorCharacterBookState()
+  }
+  return RoleEditorCharacterBookState(
+    name = name.orEmpty(),
+    description = description.orEmpty(),
+    scanDepthText = scan_depth?.toString().orEmpty(),
+    tokenBudgetText = token_budget?.toString().orEmpty(),
+    recursiveScanning = recursive_scanning ?: false,
+    entries = entries.orEmpty().map { it.toEditorState() },
+  )
+}
+
+private fun StCharacterBookEntry.toEditorState(): RoleEditorCharacterBookEntryState {
+  return RoleEditorCharacterBookEntryState(
+    idText = id?.toString().orEmpty(),
+    keysText = keys.orEmpty().joinToString(", "),
+    secondaryKeysText = secondary_keys.orEmpty().joinToString(", "),
+    comment = comment.orEmpty(),
+    content = content.orEmpty(),
+    constant = constant ?: false,
+    selective = selective ?: false,
+    insertionOrderText = insertion_order?.toString().orEmpty(),
+    enabled = enabled ?: true,
+    position = position.orEmpty(),
+    useRegex = use_regex ?: false,
+    preservedCharacterFilterJson = character_filter?.toString(),
+    preservedExtensionsJson = extensions?.toString(),
+  )
+}
+
 internal fun RoleCard.toEditorUiState(
   isNewRole: Boolean,
   statusMessage: String? = null,
 ): RoleEditorUiState {
+  val data = stCard.cardDataOrEmpty()
+  val interopState = interopState ?: RoleInteropState()
   return RoleEditorUiState(
     loading = false,
     roleId = id,
@@ -613,13 +957,22 @@ internal fun RoleCard.toEditorUiState(
     builtIn = builtIn,
     stCard = stCard,
     name = name,
-    summary = resolvedSummary(),
+    description = resolvedSummary(),
+    personality = resolvedPersonaDescription(),
+    scenario = resolvedWorldSettings(),
+    firstMessage = resolvedOpeningLine(),
+    messageExample = stCard.resolvedMessageExample(),
     systemPrompt = resolvedSystemPrompt(),
-    personaDescription = resolvedPersonaDescription(),
-    worldSettings = resolvedWorldSettings(),
-    openingLine = resolvedOpeningLine(),
-    safetyPolicy = safetyPolicy,
+    postHistoryInstructions = data.post_history_instructions.orEmpty(),
+    alternateGreetingsText = data.alternate_greetings.orEmpty().joinToString("\n"),
+    creatorNotes = data.creator_notes ?: stCard.creatorcomment.orEmpty(),
+    creator = data.creator ?: stCard.creator.orEmpty(),
+    characterVersion = data.character_version.orEmpty(),
     tagsText = resolvedTags().joinToString(", "),
+    talkativenessText = stCard.talkativeness?.toString().orEmpty(),
+    fav = stCard.fav ?: false,
+    characterBook = data.character_book.toEditorState(),
+    safetyPolicy = safetyPolicy,
     defaultModelId = defaultModelId,
     avatarUri = primaryAvatarUri(),
     coverUri = coverImageUri(),
@@ -629,7 +982,11 @@ internal fun RoleCard.toEditorUiState(
     spriteAssets = mediaProfile?.spriteAssets.orEmpty(),
     importedFromStPng =
       mediaProfile?.importState?.importedFromStPng
-        ?: (interopState?.sourceFormat == RoleCardSourceFormat.ST_PNG),
+        ?: (interopState.sourceFormat == RoleCardSourceFormat.ST_PNG),
+    sourceFormat = interopState.sourceFormat,
+    sourceSpec = interopState.sourceSpec ?: stCard.spec,
+    sourceSpecVersion = interopState.sourceSpecVersion ?: stCard.spec_version,
+    compatibilityWarnings = interopState.compatibilityWarnings,
     statusMessage = statusMessage,
   )
 }
