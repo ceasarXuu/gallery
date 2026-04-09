@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import selfgemma.talk.AppTopBar
@@ -168,7 +169,14 @@ fun RoleEditorScreen(
             Tab(
               selected = uiState.selectedTab == tab,
               onClick = { viewModel.selectTab(tab) },
-              text = { Text(title) },
+              text = {
+                Text(
+                  text = title,
+                  maxLines = 1,
+                  softWrap = false,
+                  overflow = TextOverflow.Ellipsis,
+                )
+              },
             )
           }
         }
