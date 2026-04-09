@@ -17,9 +17,9 @@
 
 <resources>
   <!-- App Info -->
-  <string name="app_name">SelfGemma Talk</string>
-  <string name="app_name_first_part">SelfGemma</string>
-  <string name="app_name_second_part">Talk</string>
+  <string name="app_name">Gemma Tavern</string>
+  <string name="app_name_first_part">Gemma</string>
+  <string name="app_name_second_part">Tavern</string>
   <string name="app_intro">素晴らしいオンデバイスモデルの世界を探索</string>
 
   <!-- Common Actions -->
@@ -287,7 +287,7 @@
   <string name="logs_viewer_no_matching_logs">フィルタに一致するログがありません</string>
 
   <!-- Terms of Service -->
-  <string name="tos_dialog_title_app">SelfGemma Talkへようこそ</string>
+  <string name="tos_dialog_title_app">Gemma Tavernへようこそ</string>
   <string name="tos_dialog_title_gemma">Gemma利用規約</string>
   <string name="tos_dialog_accept_and_continue_button_label">同意して続行</string>
   <string name="tos_dialog_agree_and_continue_button_label">同意して続行</string>
@@ -296,7 +296,7 @@
   <string name="settings_dialog_gemma_prohibited_use_policy">Gemma禁止使用ポリシー</string>
 
   <!-- Notifications -->
-  <string name="gallery_news_notification_title">SelfGemma Talkニュース</string>
+  <string name="gallery_news_notification_title">Gemma Tavernニュース</string>
   <string name="notification_title_fail">モデルのダウンロードに失敗</string>
   <string name="notification_title_success">モデルのダウンロードに成功</string>
   <string name="notification_content_fail">モデル「%s」のダウンロードに失敗しました</string>

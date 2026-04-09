@@ -17,9 +17,9 @@
 
 <resources>
   <!-- App Info -->
-  <string name="app_name">SelfGemma Talk</string>
-  <string name="app_name_first_part">SelfGemma</string>
-  <string name="app_name_second_part">Talk</string>
+  <string name="app_name">Gemma Tavern</string>
+  <string name="app_name_first_part">Gemma</string>
+  <string name="app_name_second_part">Tavern</string>
   <string name="app_intro">Explore a world of amazing on-device models from</string>
 
   <!-- Common Actions -->
@@ -315,7 +315,7 @@
   <string name="logs_viewer_no_matching_logs">No logs match the filter</string>
 
   <!-- Terms of Service -->
-  <string name="tos_dialog_title_app">Welcome to SelfGemma Talk</string>
+  <string name="tos_dialog_title_app">Welcome to Gemma Tavern</string>
   <string name="tos_dialog_title_gemma">Gemma Terms of Use</string>
   <string name="tos_dialog_accept_and_continue_button_label">Accept &amp; continue</string>
   <string name="tos_dialog_agree_and_continue_button_label">Agree &amp; continue</string>
@@ -324,7 +324,7 @@
   <string name="settings_dialog_gemma_prohibited_use_policy">Gemma Prohibited Use Policy</string>
 
   <!-- Notifications -->
-  <string name="gallery_news_notification_title">SelfGemma Talk News</string>
+  <string name="gallery_news_notification_title">Gemma Tavern News</string>
   <string name="notification_title_fail">Model download failed</string>
   <string name="notification_title_success">Model download succeeded</string>
   <string name="notification_content_fail">Failed to download model \"%s\"</string>

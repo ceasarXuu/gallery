@@ -17,9 +17,9 @@
 
 <resources>
   <!-- App Info -->
-  <string name="app_name">SelfGemma Talk</string>
-  <string name="app_name_first_part">SelfGemma</string>
-  <string name="app_name_second_part">Talk</string>
+  <string name="app_name">杰伊玛酒馆</string>
+  <string name="app_name_first_part">杰伊玛</string>
+  <string name="app_name_second_part">酒馆</string>
   <string name="app_intro">探索来自的精彩端侧模型世界</string>
 
   <!-- Common Actions -->
@@ -291,7 +291,7 @@
   <string name="logs_viewer_no_matching_logs">没有匹配的日志</string>
 
   <!-- Terms of Service -->
-  <string name="tos_dialog_title_app">欢迎使用SelfGemma Talk</string>
+  <string name="tos_dialog_title_app">欢迎使用杰伊玛酒馆</string>
   <string name="tos_dialog_title_gemma">Gemma使用条款</string>
   <string name="tos_dialog_accept_and_continue_button_label">接受并继续</string>
   <string name="tos_dialog_agree_and_continue_button_label">同意并继续</string>
@@ -300,7 +300,7 @@
   <string name="settings_dialog_gemma_prohibited_use_policy">Gemma禁止使用政策</string>
 
   <!-- Notifications -->
-  <string name="gallery_news_notification_title">SelfGemma Talk新闻</string>
+  <string name="gallery_news_notification_title">杰伊玛酒馆新闻</string>
   <string name="notification_title_fail">模型下载失败</string>
   <string name="notification_title_success">模型下载成功</string>
   <string name="notification_content_fail">下载模型"%s"失败</string>

@@ -17,9 +17,9 @@
 
 <resources>
   <!-- App Info -->
-  <string name="app_name">SelfGemma Talk</string>
-  <string name="app_name_first_part">SelfGemma</string>
-  <string name="app_name_second_part">Talk</string>
+  <string name="app_name">Gemma Tavern</string>
+  <string name="app_name_first_part">Gemma</string>
+  <string name="app_name_second_part">Tavern</string>
   <string name="app_intro">놀라운 온디바이스 모델의 세계를 탐험하세요</string>
 
   <!-- Common Actions -->
@@ -287,7 +287,7 @@
   <string name="logs_viewer_no_matching_logs">필터와 일치하는 로그가 없습니다</string>
 
   <!-- Terms of Service -->
-  <string name="tos_dialog_title_app">SelfGemma Talk에 오신 것을 환영합니다</string>
+  <string name="tos_dialog_title_app">Gemma Tavern에 오신 것을 환영합니다</string>
   <string name="tos_dialog_title_gemma">Gemma 이용 약관</string>
   <string name="tos_dialog_accept_and_continue_button_label">수락 및 계속</string>
   <string name="tos_dialog_agree_and_continue_button_label">동의 및 계속</string>
@@ -296,7 +296,7 @@
   <string name="settings_dialog_gemma_prohibited_use_policy">Gemma 금지 사용 정책</string>
 
   <!-- Notifications -->
-  <string name="gallery_news_notification_title">SelfGemma Talk 뉴스</string>
+  <string name="gallery_news_notification_title">Gemma Tavern 뉴스</string>
   <string name="notification_title_fail">모델 다운로드 실패</string>
   <string name="notification_title_success">모델 다운로드 성공</string>
   <string name="notification_content_fail">모델 \"%s\" 다운로드에 실패했습니다</string>
