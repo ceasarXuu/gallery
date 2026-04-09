@@ -1,5 +1,26 @@
 # Android Debug Install Notes
 
+## 2026-04-10
+
+### Rename build overwrite install check
+
+Verified after app display-name rename on device `ONNZ95CAEMMZSKTS`.
+
+Run from `D:\gallery\Android\src`:
+
+```powershell
+.\gradlew.bat :app:assembleDebug
+.\gradlew.bat :app:installDebug
+adb -s ONNZ95CAEMMZSKTS shell monkey -p selfgemma.talk -c android.intent.category.LAUNCHER 1
+adb -s ONNZ95CAEMMZSKTS shell dumpsys package selfgemma.talk | findstr /I "MainActivity"
+```
+
+### Notes
+
+- `:app:installDebug` is enough for overwrite install on the connected device; no uninstall step was needed.
+- After rename-only resource changes, still launch the app once on device instead of assuming the launcher label/resource merge is correct.
+- For this workspace, package name remains `selfgemma.talk` even though the user-facing app name is now `Gemma Tavern` / `杰伊玛酒馆`.
+
 ## 2026-04-07
 
 ### Stable command sequence
