@@ -478,3 +478,8 @@ Notes:
 
 - If the product definition is "ST chat layer integrated natively", the chat pipeline should not read app projection fields directly. Build a dedicated ST runtime role/session object first, then let opener seeding, macro substitution, prompt assembly, and chat export all consume that same object.
 - `RoleCard` can keep app-level policy and media fields, but ST chat semantics should resolve from `StChatRuntimeRole(card=stCard, ...)` plus session-side ST metadata/trigger state. This avoids drifting back to mixed source-of-truth behavior as the app evolves.
+
+## 2026-04-09 Android regex note
+
+- Android's regex engine is less forgiving than the desktop/JVM path for malformed escaped braces. For ST macro matching, use `\{\{ ... \}\}` explicitly on both sides; leaving the trailing `}}` unescaped can pass some local checks but crash at class initialization on device with `PatternSyntaxException`.
+- When a roleplay action crashes immediately on tap before any repository or network work, always grab `AndroidRuntime` first. In this case the failure surfaced as `ExceptionInInitializerError` on `StMacroSubstitutionKt.<clinit>`, which pointed straight to a bad top-level `Regex(...)` initializer rather than session creation logic.

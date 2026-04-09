@@ -3,13 +3,6 @@ package selfgemma.talk.domain.roleplay.usecase
 import com.google.gson.JsonObject
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.StChatRuntimeRole
-import selfgemma.talk.domain.roleplay.model.cardDataOrEmpty
-import selfgemma.talk.domain.roleplay.model.resolvedMessageExample
-import selfgemma.talk.domain.roleplay.model.resolvedName
-import selfgemma.talk.domain.roleplay.model.resolvedPersonaDescription
-import selfgemma.talk.domain.roleplay.model.resolvedSummary
-import selfgemma.talk.domain.roleplay.model.resolvedSystemPrompt
-import selfgemma.talk.domain.roleplay.model.resolvedWorldSettings
 import selfgemma.talk.domain.roleplay.model.cardData
 import selfgemma.talk.domain.roleplay.model.exampleDialoguesRaw
 import selfgemma.talk.domain.roleplay.model.name
@@ -27,7 +20,7 @@ private val LEGACY_ST_NAME_MACROS =
     "<BOT>" to "{{char}}",
     "<CHAR>" to "{{char}}",
   )
-private val ST_MACRO_REGEX = Regex("""\{\{\s*([a-zA-Z0-9_]+)\s*}}""")
+private val ST_MACRO_REGEX = Regex("""\{\{\s*([a-zA-Z0-9_]+)\s*\}\}""")
 
 data class StMacroContext(
   val values: Map<String, String>,
