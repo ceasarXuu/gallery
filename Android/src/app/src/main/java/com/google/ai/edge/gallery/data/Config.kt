@@ -46,6 +46,11 @@ data class ConfigKey(val id: String, val label: String)
 
 object ConfigKeys {
   val MAX_TOKENS = ConfigKey("max_tokens", "Max tokens")
+  val CONTEXT_WINDOW_TOKENS = ConfigKey("context_window_tokens", "Context window tokens")
+  val RESERVED_THINKING_TOKENS =
+    ConfigKey("reserved_thinking_tokens", "Reserved thinking tokens")
+  val CONTEXT_SAFETY_MARGIN_TOKENS =
+    ConfigKey("context_safety_margin_tokens", "Context safety margin tokens")
   val TOPK = ConfigKey("topk", "TopK")
   val TOPP = ConfigKey("topp", "TopP")
   val TEMPERATURE = ConfigKey("temperature", "Temperature")
