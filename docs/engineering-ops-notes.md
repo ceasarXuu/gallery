@@ -612,3 +612,11 @@ Notes:
 - The per-turn budgeted prompt is runtime-only material. Do not persist it back as the session's base system prompt, or the next turn will treat compressed history as part of the permanent instruction set and recursively summarize a summary.
 - Budget planners for 4k-class on-device models need a final invariant check on the fully assembled prompt, not only on section budgets. Header text and first-line allowances can otherwise push the final prompt back over the available token budget.
 - If LiteRT engine init succeeds but conversation creation fails, close the engine in the same error path. Otherwise the failure never reaches normal cleanup because `model.instance` was never assigned, and native resources leak across retries.
+
+## 2026-04-10 Role editor field-help and counter note
+
+- For role-editor text inputs, centralize counters in one shared composable instead of attaching per-field helper labels. This keeps `Card`, `Prompt`, `Lorebook`, and metadata inputs visually consistent and avoids missing nested lore-entry fields.
+- On-device role editing benefits from showing editor budgets even when they are not yet hard save-time validators. A red `current/max` counter is enough to surface prompt-pressure risk without breaking imported cards that already exceed the suggested budget.
+- Detailed field help should explain four things, not just one sentence: what the field does, what happens if it is empty or disabled, what value ranges mean, and what content/length is recommended for a 4k-class local model.
+- The help dialog body can outgrow `AlertDialog` quickly once field docs become useful. Make the dialog text area scrollable, or long multi-paragraph help will clip on smaller phones.
+- Add explicit logs for `help opened` and `field exceeds budget` in the role editor. These two events are enough to diagnose whether users are discovering the guidance and which fields most often drift beyond the intended editor budgets.

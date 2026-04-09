@@ -76,6 +76,10 @@ private const val ROLE_EDITOR_XL_TEXT_MAX_LINES = 14
 private const val ROLE_EDITOR_TEXTFIELD_BASE_HEIGHT_DP = 64
 private const val ROLE_EDITOR_TEXTFIELD_LINE_STEP_DP = 24
 
+private data class RoleEditorTextFieldSpec(
+  val maxChars: Int? = null,
+)
+
 private enum class RoleEditorHelpTopic(val titleRes: Int, val bodyRes: Int) {
   ROLE_NAME(R.string.role_editor_name_label, R.string.role_editor_help_role_name_body),
   DESCRIPTION(R.string.role_editor_summary_label, R.string.role_editor_help_description_body),
@@ -112,6 +116,37 @@ private enum class RoleEditorHelpTopic(val titleRes: Int, val bodyRes: Int) {
   DEFAULT_MODEL(R.string.role_editor_default_model_label, R.string.role_editor_help_default_model_body),
   INTEROP(R.string.role_editor_interop_title, R.string.role_editor_help_interop_body),
 }
+
+private fun roleEditorTextFieldSpec(topic: RoleEditorHelpTopic?): RoleEditorTextFieldSpec? =
+  when (topic) {
+    RoleEditorHelpTopic.ROLE_NAME -> RoleEditorTextFieldSpec(maxChars = 120)
+    RoleEditorHelpTopic.DESCRIPTION -> RoleEditorTextFieldSpec(maxChars = 400)
+    RoleEditorHelpTopic.PERSONALITY -> RoleEditorTextFieldSpec(maxChars = 600)
+    RoleEditorHelpTopic.SCENARIO -> RoleEditorTextFieldSpec(maxChars = 500)
+    RoleEditorHelpTopic.FIRST_MESSAGE -> RoleEditorTextFieldSpec(maxChars = 800)
+    RoleEditorHelpTopic.EXAMPLE_DIALOGUE -> RoleEditorTextFieldSpec(maxChars = 2400)
+    RoleEditorHelpTopic.SYSTEM_PROMPT -> RoleEditorTextFieldSpec(maxChars = 1200)
+    RoleEditorHelpTopic.POST_HISTORY -> RoleEditorTextFieldSpec(maxChars = 500)
+    RoleEditorHelpTopic.ALTERNATE_GREETINGS -> RoleEditorTextFieldSpec(maxChars = 600)
+    RoleEditorHelpTopic.LOREBOOK_NAME -> RoleEditorTextFieldSpec(maxChars = 120)
+    RoleEditorHelpTopic.LOREBOOK_DESCRIPTION -> RoleEditorTextFieldSpec(maxChars = 400)
+    RoleEditorHelpTopic.LOREBOOK_SCAN_DEPTH -> RoleEditorTextFieldSpec(maxChars = 4)
+    RoleEditorHelpTopic.LOREBOOK_TOKEN_BUDGET -> RoleEditorTextFieldSpec(maxChars = 4)
+    RoleEditorHelpTopic.LORE_ENTRY_ID -> RoleEditorTextFieldSpec(maxChars = 8)
+    RoleEditorHelpTopic.LORE_ENTRY_KEYS -> RoleEditorTextFieldSpec(maxChars = 240)
+    RoleEditorHelpTopic.LORE_ENTRY_SECONDARY_KEYS -> RoleEditorTextFieldSpec(maxChars = 240)
+    RoleEditorHelpTopic.LORE_ENTRY_COMMENT -> RoleEditorTextFieldSpec(maxChars = 240)
+    RoleEditorHelpTopic.LORE_ENTRY_CONTENT -> RoleEditorTextFieldSpec(maxChars = 800)
+    RoleEditorHelpTopic.LORE_ENTRY_ORDER -> RoleEditorTextFieldSpec(maxChars = 6)
+    RoleEditorHelpTopic.LORE_ENTRY_POSITION -> RoleEditorTextFieldSpec(maxChars = 24)
+    RoleEditorHelpTopic.CREATOR -> RoleEditorTextFieldSpec(maxChars = 120)
+    RoleEditorHelpTopic.CREATOR_NOTES -> RoleEditorTextFieldSpec(maxChars = 600)
+    RoleEditorHelpTopic.CHARACTER_VERSION -> RoleEditorTextFieldSpec(maxChars = 32)
+    RoleEditorHelpTopic.TAGS -> RoleEditorTextFieldSpec(maxChars = 200)
+    RoleEditorHelpTopic.TALKATIVENESS -> RoleEditorTextFieldSpec(maxChars = 4)
+    RoleEditorHelpTopic.SAFETY_POLICY -> RoleEditorTextFieldSpec(maxChars = 400)
+    else -> null
+  }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -969,6 +1004,7 @@ private fun EditorTextCard(
   helpTopic: RoleEditorHelpTopic? = null,
   onShowHelp: ((RoleEditorHelpTopic) -> Unit)? = null,
 ) {
+  val fieldSpec = roleEditorTextFieldSpec(helpTopic)
   Card {
     Column(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -983,7 +1019,7 @@ private fun EditorTextCard(
       subtitle?.let {
         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
-      OutlinedTextField(
+      RoleEditorOutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier =
@@ -993,6 +1029,8 @@ private fun EditorTextCard(
             .testTag(testTag),
         minLines = minLines,
         maxLines = maxLines,
+        fieldSpec = fieldSpec,
+        helpTopic = helpTopic,
       )
     }
   }
@@ -1087,83 +1125,55 @@ private fun LorebookEntryCard(
         title = stringResource(R.string.role_editor_lorebook_entry_id_label),
         helpTopic = RoleEditorHelpTopic.LORE_ENTRY_ID,
         onShowHelp = onShowHelp,
-      ) {
-        OutlinedTextField(
-          value = entry.idText,
-          onValueChange = { onUpdateId(entry.editorId, it) },
-          modifier = Modifier.fillMaxWidth(),
-        )
-      }
+        value = entry.idText,
+        onValueChange = { onUpdateId(entry.editorId, it) },
+      )
       LabeledTextField(
         title = stringResource(R.string.role_editor_lorebook_entry_keys_label),
         helpTopic = RoleEditorHelpTopic.LORE_ENTRY_KEYS,
         onShowHelp = onShowHelp,
-      ) {
-        OutlinedTextField(
-          value = entry.keysText,
-          onValueChange = { onUpdateKeys(entry.editorId, it) },
-          modifier = Modifier.fillMaxWidth(),
-        )
-      }
+        value = entry.keysText,
+        onValueChange = { onUpdateKeys(entry.editorId, it) },
+      )
       LabeledTextField(
         title = stringResource(R.string.role_editor_lorebook_entry_secondary_keys_label),
         helpTopic = RoleEditorHelpTopic.LORE_ENTRY_SECONDARY_KEYS,
         onShowHelp = onShowHelp,
-      ) {
-        OutlinedTextField(
-          value = entry.secondaryKeysText,
-          onValueChange = { onUpdateSecondaryKeys(entry.editorId, it) },
-          modifier = Modifier.fillMaxWidth(),
-        )
-      }
+        value = entry.secondaryKeysText,
+        onValueChange = { onUpdateSecondaryKeys(entry.editorId, it) },
+      )
       LabeledTextField(
         title = stringResource(R.string.role_editor_lorebook_entry_comment_label),
         helpTopic = RoleEditorHelpTopic.LORE_ENTRY_COMMENT,
         onShowHelp = onShowHelp,
-      ) {
-        OutlinedTextField(
-          value = entry.comment,
-          onValueChange = { onUpdateComment(entry.editorId, it) },
-          modifier = Modifier.fillMaxWidth().heightIn(max = editorTextFieldMaxHeight(ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES)),
-          minLines = 2,
-          maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
-        )
-      }
+        value = entry.comment,
+        onValueChange = { onUpdateComment(entry.editorId, it) },
+        minLines = 2,
+        maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
+      )
       LabeledTextField(
         title = stringResource(R.string.role_editor_lorebook_entry_content_label),
         helpTopic = RoleEditorHelpTopic.LORE_ENTRY_CONTENT,
         onShowHelp = onShowHelp,
-      ) {
-        OutlinedTextField(
-          value = entry.content,
-          onValueChange = { onUpdateContent(entry.editorId, it) },
-          modifier = Modifier.fillMaxWidth().heightIn(max = editorTextFieldMaxHeight(ROLE_EDITOR_LARGE_TEXT_MAX_LINES)),
-          minLines = 4,
-          maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
-        )
-      }
+        value = entry.content,
+        onValueChange = { onUpdateContent(entry.editorId, it) },
+        minLines = 4,
+        maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
+      )
       LabeledTextField(
         title = stringResource(R.string.role_editor_lorebook_entry_order_label),
         helpTopic = RoleEditorHelpTopic.LORE_ENTRY_ORDER,
         onShowHelp = onShowHelp,
-      ) {
-        OutlinedTextField(
-          value = entry.insertionOrderText,
-          onValueChange = { onUpdateInsertionOrder(entry.editorId, it) },
-          modifier = Modifier.fillMaxWidth(),
-        )
-      }
+        value = entry.insertionOrderText,
+        onValueChange = { onUpdateInsertionOrder(entry.editorId, it) },
+      )
       LabeledTextField(
         title = stringResource(R.string.role_editor_lorebook_entry_position_label),
         helpTopic = RoleEditorHelpTopic.LORE_ENTRY_POSITION,
         onShowHelp = onShowHelp,
-      ) {
-        OutlinedTextField(
-          value = entry.position,
-          onValueChange = { onUpdatePosition(entry.editorId, it) },
-          modifier = Modifier.fillMaxWidth(),
-        )
-      }
+        value = entry.position,
+        onValueChange = { onUpdatePosition(entry.editorId, it) },
+      )
       BooleanFieldCard(
         title = stringResource(R.string.role_editor_lorebook_entry_enabled_label),
         checked = entry.enabled,
@@ -1236,7 +1246,12 @@ private fun FieldHeader(
       RequiredBadge()
     }
     if (helpTopic != null && onShowHelp != null) {
-      IconButton(onClick = { onShowHelp(helpTopic) }) {
+      IconButton(
+        onClick = {
+          Log.d(TAG, "Role editor help opened topic=$helpTopic")
+          onShowHelp(helpTopic)
+        },
+      ) {
         Icon(
           imageVector = Icons.Outlined.HelpOutline,
           contentDescription = stringResource(R.string.cd_help),
@@ -1266,10 +1281,20 @@ private fun RoleEditorHelpDialog(
   topic: RoleEditorHelpTopic,
   onDismiss: () -> Unit,
 ) {
+  val paragraphs = stringResource(topic.bodyRes).split("\n\n")
   AlertDialog(
     onDismissRequest = onDismiss,
     title = { Text(stringResource(topic.titleRes)) },
-    text = { Text(stringResource(topic.bodyRes)) },
+    text = {
+      LazyColumn(
+        modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+      ) {
+        items(paragraphs) { paragraph ->
+          Text(paragraph, style = MaterialTheme.typography.bodyMedium)
+        }
+      }
+    },
     confirmButton = {
       FilledTonalButton(onClick = onDismiss) {
         Text(stringResource(R.string.ok))
@@ -1283,16 +1308,76 @@ private fun LabeledTextField(
   title: String,
   helpTopic: RoleEditorHelpTopic,
   onShowHelp: (RoleEditorHelpTopic) -> Unit,
-  content: @Composable () -> Unit,
+  value: String,
+  onValueChange: (String) -> Unit,
+  minLines: Int = 1,
+  maxLines: Int = minLines,
 ) {
+  val fieldSpec = roleEditorTextFieldSpec(helpTopic)
   Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
     FieldHeader(
       title = title,
       helpTopic = helpTopic,
       onShowHelp = onShowHelp,
     )
-    content()
+    RoleEditorOutlinedTextField(
+      value = value,
+      onValueChange = onValueChange,
+      modifier = Modifier.fillMaxWidth().heightIn(max = editorTextFieldMaxHeight(maxLines)),
+      minLines = minLines,
+      maxLines = maxLines,
+      fieldSpec = fieldSpec,
+      helpTopic = helpTopic,
+    )
   }
+}
+
+@Composable
+private fun RoleEditorOutlinedTextField(
+  value: String,
+  onValueChange: (String) -> Unit,
+  modifier: Modifier = Modifier,
+  minLines: Int = 1,
+  maxLines: Int = minLines,
+  fieldSpec: RoleEditorTextFieldSpec? = null,
+  helpTopic: RoleEditorHelpTopic? = null,
+) {
+  val currentCount = value.length
+  val maxChars = fieldSpec?.maxChars
+  val isOverLimit = maxChars != null && currentCount > maxChars
+  LaunchedEffect(isOverLimit, helpTopic) {
+    if (isOverLimit && helpTopic != null) {
+      Log.w(TAG, "Role editor field exceeds budget topic=$helpTopic count=$currentCount limit=$maxChars")
+    }
+  }
+  OutlinedTextField(
+    value = value,
+    onValueChange = onValueChange,
+    modifier = modifier,
+    minLines = minLines,
+    maxLines = maxLines,
+    singleLine = maxLines == 1,
+    isError = isOverLimit,
+    supportingText = {
+      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        Text(
+          text =
+            if (maxChars != null) {
+              stringResource(R.string.role_editor_character_count_with_limit, currentCount, maxChars)
+            } else {
+              stringResource(R.string.role_editor_character_count_without_limit, currentCount)
+            },
+          style = MaterialTheme.typography.labelSmall,
+          color =
+            if (isOverLimit) {
+              MaterialTheme.colorScheme.error
+            } else {
+              MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+      }
+    },
+  )
 }
 
 private fun takeReadPermission(context: android.content.Context, uri: Uri) {
