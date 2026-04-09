@@ -21,6 +21,22 @@ adb -s ONNZ95CAEMMZSKTS shell dumpsys package selfgemma.talk | findstr /I "MainA
 - After rename-only resource changes, still launch the app once on device instead of assuming the launcher label/resource merge is correct.
 - For this workspace, package name remains `selfgemma.talk` even though the user-facing app name is now `Gemma Tavern` / `杰伊玛酒馆`.
 
+### Splash intro verification
+
+For the Compose-based tavern sign intro overlay, screenshots taken too early will only capture the system splash icon. Use a later capture window after app launch:
+
+```powershell
+adb -s ONNZ95CAEMMZSKTS shell am force-stop selfgemma.talk
+adb -s ONNZ95CAEMMZSKTS shell am start -n selfgemma.talk/.MainActivity
+Start-Sleep -Milliseconds 1400
+adb -s ONNZ95CAEMMZSKTS exec-out screencap -p > D:\gallery\tmp_tavern_overlay.png
+adb -s ONNZ95CAEMMZSKTS logcat -d -s AGMainActivity
+```
+
+- Around `200ms` to `1000ms` after launch, this device still often shows only the system splash icon.
+- Around `1400ms` after launch, the app-level tavern sign animation is visible and can be validated by screenshot.
+- `AGMainActivity` now logs `tavern intro animation started/finished`, which is enough to distinguish "still in app intro" from "app did not render first content yet".
+
 ## 2026-04-07
 
 ### Stable command sequence
