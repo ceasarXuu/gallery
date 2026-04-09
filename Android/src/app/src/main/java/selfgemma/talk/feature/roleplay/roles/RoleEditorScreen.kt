@@ -145,7 +145,7 @@ private enum class RoleEditorHelpTopic(val titleRes: Int, val bodyRes: Int) {
 
 private fun roleEditorTextFieldSpec(topic: RoleEditorHelpTopic?): RoleEditorTextFieldSpec? =
   when (topic) {
-    RoleEditorHelpTopic.ROLE_NAME -> RoleEditorTextFieldSpec(maxChars = 120, supportsAiCompress = true)
+    RoleEditorHelpTopic.ROLE_NAME -> RoleEditorTextFieldSpec(maxChars = 120)
     RoleEditorHelpTopic.DESCRIPTION -> RoleEditorTextFieldSpec(maxChars = 400, supportsAiCompress = true)
     RoleEditorHelpTopic.PERSONALITY -> RoleEditorTextFieldSpec(maxChars = 600, supportsAiCompress = true)
     RoleEditorHelpTopic.SCENARIO -> RoleEditorTextFieldSpec(maxChars = 500, supportsAiCompress = true)
@@ -1249,38 +1249,41 @@ private fun EditorTextCard(
         required = required,
         helpTopic = helpTopic,
         onShowHelp = onShowHelp,
+        compressionAction =
+          if (
+            compressionFieldKey != null &&
+              onCompressField != null &&
+              fieldSpec?.supportsAiCompress == true &&
+              maxChars != null
+          ) {
+            {
+              TextButton(
+                onClick = {
+                  onCompressField(
+                    compressionFieldKey,
+                    title,
+                    maxChars,
+                    value,
+                    onValueChange,
+                  )
+                },
+                enabled = !isCompressing && value.isNotBlank(),
+              ) {
+                Text(
+                  if (isCompressing) {
+                    stringResource(R.string.role_editor_ai_compress_running)
+                  } else {
+                    stringResource(R.string.role_editor_ai_compress_action)
+                  },
+                )
+              }
+            }
+          } else {
+            null
+          },
       )
       subtitle?.let {
         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      }
-      if (
-        compressionFieldKey != null &&
-          onCompressField != null &&
-          fieldSpec?.supportsAiCompress == true &&
-          maxChars != null
-      ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-          TextButton(
-            onClick = {
-              onCompressField(
-                compressionFieldKey,
-                title,
-                maxChars,
-                value,
-                onValueChange,
-              )
-            },
-            enabled = !isCompressing && value.isNotBlank(),
-          ) {
-            Text(
-              if (isCompressing) {
-                stringResource(R.string.role_editor_ai_compress_running)
-              } else {
-                stringResource(R.string.role_editor_ai_compress_action)
-              },
-            )
-          }
-        }
       }
       RoleEditorOutlinedTextField(
         value = value,
@@ -1510,6 +1513,7 @@ private fun FieldHeader(
   required: Boolean = false,
   helpTopic: RoleEditorHelpTopic? = null,
   onShowHelp: ((RoleEditorHelpTopic) -> Unit)? = null,
+  compressionAction: (@Composable () -> Unit)? = null,
 ) {
   Row(
     modifier = modifier.fillMaxWidth(),
@@ -1524,6 +1528,7 @@ private fun FieldHeader(
     if (required) {
       RequiredBadge()
     }
+    compressionAction?.invoke()
     if (helpTopic != null && onShowHelp != null) {
       IconButton(
         onClick = {
@@ -1602,36 +1607,39 @@ private fun LabeledTextField(
       title = title,
       helpTopic = helpTopic,
       onShowHelp = onShowHelp,
-    )
-    if (
-      compressionFieldKey != null &&
-        onCompressField != null &&
-        fieldSpec?.supportsAiCompress == true &&
-        maxChars != null
-    ) {
-      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        TextButton(
-          onClick = {
-            onCompressField(
-              compressionFieldKey,
-              title,
-              maxChars,
-              value,
-              onValueChange,
-            )
-          },
-          enabled = !isCompressing && value.isNotBlank(),
+      compressionAction =
+        if (
+          compressionFieldKey != null &&
+            onCompressField != null &&
+            fieldSpec?.supportsAiCompress == true &&
+            maxChars != null
         ) {
-          Text(
-            if (isCompressing) {
-              stringResource(R.string.role_editor_ai_compress_running)
-            } else {
-              stringResource(R.string.role_editor_ai_compress_action)
-            },
-          )
-        }
-      }
-    }
+          {
+            TextButton(
+              onClick = {
+                onCompressField(
+                  compressionFieldKey,
+                  title,
+                  maxChars,
+                  value,
+                  onValueChange,
+                )
+              },
+              enabled = !isCompressing && value.isNotBlank(),
+            ) {
+              Text(
+                if (isCompressing) {
+                  stringResource(R.string.role_editor_ai_compress_running)
+                } else {
+                  stringResource(R.string.role_editor_ai_compress_action)
+                },
+              )
+            }
+          }
+        } else {
+          null
+        },
+    )
     RoleEditorOutlinedTextField(
       value = value,
       onValueChange = onValueChange,
