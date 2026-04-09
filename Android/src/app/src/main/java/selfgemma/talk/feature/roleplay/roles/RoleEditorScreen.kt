@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +23,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -29,6 +33,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -70,6 +76,43 @@ private const val ROLE_EDITOR_XL_TEXT_MAX_LINES = 14
 private const val ROLE_EDITOR_TEXTFIELD_BASE_HEIGHT_DP = 64
 private const val ROLE_EDITOR_TEXTFIELD_LINE_STEP_DP = 24
 
+private enum class RoleEditorHelpTopic(val titleRes: Int, val bodyRes: Int) {
+  ROLE_NAME(R.string.role_editor_name_label, R.string.role_editor_help_role_name_body),
+  DESCRIPTION(R.string.role_editor_summary_label, R.string.role_editor_help_description_body),
+  PERSONALITY(R.string.role_editor_persona_label, R.string.role_editor_help_personality_body),
+  SCENARIO(R.string.role_editor_world_settings_label, R.string.role_editor_help_scenario_body),
+  FIRST_MESSAGE(R.string.role_editor_opening_line_label, R.string.role_editor_help_first_message_body),
+  EXAMPLE_DIALOGUE(R.string.role_editor_message_example_label, R.string.role_editor_help_example_dialogue_body),
+  SYSTEM_PROMPT(R.string.role_editor_system_prompt_label, R.string.role_editor_help_system_prompt_body),
+  POST_HISTORY(R.string.role_editor_post_history_instructions_label, R.string.role_editor_help_post_history_body),
+  ALTERNATE_GREETINGS(R.string.role_editor_alternate_greetings_label, R.string.role_editor_help_alternate_greetings_body),
+  LOREBOOK_NAME(R.string.role_editor_lorebook_name_label, R.string.role_editor_help_lorebook_name_body),
+  LOREBOOK_DESCRIPTION(R.string.role_editor_lorebook_description_label, R.string.role_editor_help_lorebook_description_body),
+  LOREBOOK_SCAN_DEPTH(R.string.role_editor_lorebook_scan_depth_label, R.string.role_editor_help_lorebook_scan_depth_body),
+  LOREBOOK_TOKEN_BUDGET(R.string.role_editor_lorebook_token_budget_label, R.string.role_editor_help_lorebook_token_budget_body),
+  LOREBOOK_RECURSIVE(R.string.role_editor_lorebook_recursive_label, R.string.role_editor_help_lorebook_recursive_body),
+  LORE_ENTRY_ID(R.string.role_editor_lorebook_entry_id_label, R.string.role_editor_help_lore_entry_id_body),
+  LORE_ENTRY_KEYS(R.string.role_editor_lorebook_entry_keys_label, R.string.role_editor_help_lore_entry_keys_body),
+  LORE_ENTRY_SECONDARY_KEYS(R.string.role_editor_lorebook_entry_secondary_keys_label, R.string.role_editor_help_lore_entry_secondary_keys_body),
+  LORE_ENTRY_COMMENT(R.string.role_editor_lorebook_entry_comment_label, R.string.role_editor_help_lore_entry_comment_body),
+  LORE_ENTRY_CONTENT(R.string.role_editor_lorebook_entry_content_label, R.string.role_editor_help_lore_entry_content_body),
+  LORE_ENTRY_ORDER(R.string.role_editor_lorebook_entry_order_label, R.string.role_editor_help_lore_entry_order_body),
+  LORE_ENTRY_POSITION(R.string.role_editor_lorebook_entry_position_label, R.string.role_editor_help_lore_entry_position_body),
+  LORE_ENTRY_ENABLED(R.string.role_editor_lorebook_entry_enabled_label, R.string.role_editor_help_lore_entry_enabled_body),
+  LORE_ENTRY_CONSTANT(R.string.role_editor_lorebook_entry_constant_label, R.string.role_editor_help_lore_entry_constant_body),
+  LORE_ENTRY_SELECTIVE(R.string.role_editor_lorebook_entry_selective_label, R.string.role_editor_help_lore_entry_selective_body),
+  LORE_ENTRY_REGEX(R.string.role_editor_lorebook_entry_regex_label, R.string.role_editor_help_lore_entry_regex_body),
+  CREATOR(R.string.role_editor_creator_label, R.string.role_editor_help_creator_body),
+  CREATOR_NOTES(R.string.role_editor_creator_notes_label, R.string.role_editor_help_creator_notes_body),
+  CHARACTER_VERSION(R.string.role_editor_character_version_label, R.string.role_editor_help_character_version_body),
+  TAGS(R.string.role_editor_tags_label, R.string.role_editor_help_tags_body),
+  TALKATIVENESS(R.string.role_editor_talkativeness_label, R.string.role_editor_help_talkativeness_body),
+  FAVORITE(R.string.role_editor_favorite_label, R.string.role_editor_help_favorite_body),
+  SAFETY_POLICY(R.string.role_editor_safety_policy_label, R.string.role_editor_help_safety_policy_body),
+  DEFAULT_MODEL(R.string.role_editor_default_model_label, R.string.role_editor_help_default_model_body),
+  INTEROP(R.string.role_editor_interop_title, R.string.role_editor_help_interop_body),
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoleEditorScreen(
@@ -83,6 +126,7 @@ fun RoleEditorScreen(
   var modelMenuExpanded by remember { mutableStateOf(false) }
   var showMissingAvatarExportDialog by remember { mutableStateOf(false) }
   var exportPngAfterAvatarPick by remember { mutableStateOf(false) }
+  var activeHelpTopic by remember { mutableStateOf<RoleEditorHelpTopic?>(null) }
   val context = LocalContext.current
 
   val importLauncher =
@@ -260,6 +304,7 @@ fun RoleEditorScreen(
           RoleEditorTab.CARD ->
             RoleEditorCardPage(
               uiState = uiState,
+              onShowHelp = { activeHelpTopic = it },
               onUpdateName = viewModel::updateName,
               onUpdateDescription = viewModel::updateDescription,
               onUpdatePersonality = viewModel::updatePersonality,
@@ -270,6 +315,7 @@ fun RoleEditorScreen(
           RoleEditorTab.PROMPT ->
             RoleEditorPromptPage(
               uiState = uiState,
+              onShowHelp = { activeHelpTopic = it },
               onUpdateSystemPrompt = viewModel::updateSystemPrompt,
               onUpdatePostHistoryInstructions = viewModel::updatePostHistoryInstructions,
               onUpdateAlternateGreetingsText = viewModel::updateAlternateGreetingsText,
@@ -277,6 +323,7 @@ fun RoleEditorScreen(
           RoleEditorTab.LOREBOOK ->
             RoleEditorLorebookPage(
               uiState = uiState,
+              onShowHelp = { activeHelpTopic = it },
               onUpdateCharacterBookName = viewModel::updateCharacterBookName,
               onUpdateCharacterBookDescription = viewModel::updateCharacterBookDescription,
               onUpdateCharacterBookScanDepth = viewModel::updateCharacterBookScanDepth,
@@ -301,6 +348,7 @@ fun RoleEditorScreen(
               uiState = uiState,
               downloadedModels = downloadedModels,
               modelMenuExpanded = modelMenuExpanded,
+              onShowHelp = { activeHelpTopic = it },
               onModelMenuExpandedChange = { modelMenuExpanded = it },
               onUpdateCreator = viewModel::updateCreator,
               onUpdateCreatorNotes = viewModel::updateCreatorNotes,
@@ -326,6 +374,7 @@ fun RoleEditorScreen(
             RoleEditorInteropPage(
               uiState = uiState,
               context = context,
+              onShowHelp = { activeHelpTopic = it },
               onImportStCard = { importLauncher.launch("*/*") },
               onExportStJson = {
                 val fileName = uiState.name.ifBlank { "role-card" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
@@ -387,11 +436,19 @@ fun RoleEditorScreen(
       },
     )
   }
+
+  activeHelpTopic?.let { helpTopic ->
+    RoleEditorHelpDialog(
+      topic = helpTopic,
+      onDismiss = { activeHelpTopic = null },
+    )
+  }
 }
 
 @Composable
 private fun RoleEditorCardPage(
   uiState: RoleEditorUiState,
+  onShowHelp: (RoleEditorHelpTopic) -> Unit,
   onUpdateName: (String) -> Unit,
   onUpdateDescription: (String) -> Unit,
   onUpdatePersonality: (String) -> Unit,
@@ -405,12 +462,18 @@ private fun RoleEditorCardPage(
     verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {
     item {
+      RequiredFieldsHintCard()
+    }
+    item {
       EditorTextCard(
         title = stringResource(R.string.role_editor_name_label),
         value = uiState.name,
         onValueChange = onUpdateName,
         minLines = 1,
         testTag = "role_editor_name",
+        required = true,
+        helpTopic = RoleEditorHelpTopic.ROLE_NAME,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -421,6 +484,8 @@ private fun RoleEditorCardPage(
         minLines = 3,
         maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
         testTag = "role_editor_description",
+        helpTopic = RoleEditorHelpTopic.DESCRIPTION,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -431,6 +496,8 @@ private fun RoleEditorCardPage(
         minLines = 4,
         maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
         testTag = "role_editor_personality",
+        helpTopic = RoleEditorHelpTopic.PERSONALITY,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -441,6 +508,8 @@ private fun RoleEditorCardPage(
         minLines = 4,
         maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
         testTag = "role_editor_scenario",
+        helpTopic = RoleEditorHelpTopic.SCENARIO,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -451,6 +520,8 @@ private fun RoleEditorCardPage(
         minLines = 3,
         maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
         testTag = "role_editor_first_message",
+        helpTopic = RoleEditorHelpTopic.FIRST_MESSAGE,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -461,6 +532,8 @@ private fun RoleEditorCardPage(
         minLines = 8,
         maxLines = ROLE_EDITOR_XL_TEXT_MAX_LINES,
         testTag = "role_editor_message_example",
+        helpTopic = RoleEditorHelpTopic.EXAMPLE_DIALOGUE,
+        onShowHelp = onShowHelp,
       )
     }
     roleEditorStatusItems(uiState)
@@ -470,6 +543,7 @@ private fun RoleEditorCardPage(
 @Composable
 private fun RoleEditorPromptPage(
   uiState: RoleEditorUiState,
+  onShowHelp: (RoleEditorHelpTopic) -> Unit,
   onUpdateSystemPrompt: (String) -> Unit,
   onUpdatePostHistoryInstructions: (String) -> Unit,
   onUpdateAlternateGreetingsText: (String) -> Unit,
@@ -487,6 +561,8 @@ private fun RoleEditorPromptPage(
         minLines = 6,
         maxLines = ROLE_EDITOR_XL_TEXT_MAX_LINES,
         testTag = "role_editor_system_prompt",
+        helpTopic = RoleEditorHelpTopic.SYSTEM_PROMPT,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -497,6 +573,8 @@ private fun RoleEditorPromptPage(
         minLines = 4,
         maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
         testTag = "role_editor_post_history",
+        helpTopic = RoleEditorHelpTopic.POST_HISTORY,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -508,6 +586,8 @@ private fun RoleEditorPromptPage(
         minLines = 4,
         maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
         testTag = "role_editor_alternate_greetings",
+        helpTopic = RoleEditorHelpTopic.ALTERNATE_GREETINGS,
+        onShowHelp = onShowHelp,
       )
     }
     roleEditorStatusItems(uiState)
@@ -517,6 +597,7 @@ private fun RoleEditorPromptPage(
 @Composable
 private fun RoleEditorLorebookPage(
   uiState: RoleEditorUiState,
+  onShowHelp: (RoleEditorHelpTopic) -> Unit,
   onUpdateCharacterBookName: (String) -> Unit,
   onUpdateCharacterBookDescription: (String) -> Unit,
   onUpdateCharacterBookScanDepth: (String) -> Unit,
@@ -548,6 +629,8 @@ private fun RoleEditorLorebookPage(
         onValueChange = onUpdateCharacterBookName,
         minLines = 1,
         testTag = "role_editor_lorebook_name",
+        helpTopic = RoleEditorHelpTopic.LOREBOOK_NAME,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -558,6 +641,8 @@ private fun RoleEditorLorebookPage(
         minLines = 3,
         maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
         testTag = "role_editor_lorebook_description",
+        helpTopic = RoleEditorHelpTopic.LOREBOOK_DESCRIPTION,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -569,6 +654,8 @@ private fun RoleEditorLorebookPage(
             onValueChange = onUpdateCharacterBookScanDepth,
             minLines = 1,
             testTag = "role_editor_lorebook_scan_depth",
+            helpTopic = RoleEditorHelpTopic.LOREBOOK_SCAN_DEPTH,
+            onShowHelp = onShowHelp,
           )
         }
         Box(modifier = Modifier.weight(1f)) {
@@ -578,6 +665,8 @@ private fun RoleEditorLorebookPage(
             onValueChange = onUpdateCharacterBookTokenBudget,
             minLines = 1,
             testTag = "role_editor_lorebook_token_budget",
+            helpTopic = RoleEditorHelpTopic.LOREBOOK_TOKEN_BUDGET,
+            onShowHelp = onShowHelp,
           )
         }
       }
@@ -587,6 +676,8 @@ private fun RoleEditorLorebookPage(
         title = stringResource(R.string.role_editor_lorebook_recursive_label),
         checked = uiState.characterBook.recursiveScanning,
         onCheckedChange = onUpdateCharacterBookRecursiveScanning,
+        helpTopic = RoleEditorHelpTopic.LOREBOOK_RECURSIVE,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -613,6 +704,7 @@ private fun RoleEditorLorebookPage(
           onUpdatePosition = onUpdateEntryPosition,
           onUpdateUseRegex = onUpdateEntryUseRegex,
           onRemove = onRemoveEntry,
+          onShowHelp = onShowHelp,
         )
       }
     }
@@ -625,6 +717,7 @@ private fun RoleEditorMetadataPage(
   uiState: RoleEditorUiState,
   downloadedModels: List<Model>,
   modelMenuExpanded: Boolean,
+  onShowHelp: (RoleEditorHelpTopic) -> Unit,
   onModelMenuExpandedChange: (Boolean) -> Unit,
   onUpdateCreator: (String) -> Unit,
   onUpdateCreatorNotes: (String) -> Unit,
@@ -647,6 +740,8 @@ private fun RoleEditorMetadataPage(
         onValueChange = onUpdateCreator,
         minLines = 1,
         testTag = "role_editor_creator",
+        helpTopic = RoleEditorHelpTopic.CREATOR,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -657,6 +752,8 @@ private fun RoleEditorMetadataPage(
         minLines = 4,
         maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
         testTag = "role_editor_creator_notes",
+        helpTopic = RoleEditorHelpTopic.CREATOR_NOTES,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -666,6 +763,8 @@ private fun RoleEditorMetadataPage(
         onValueChange = onUpdateCharacterVersion,
         minLines = 1,
         testTag = "role_editor_character_version",
+        helpTopic = RoleEditorHelpTopic.CHARACTER_VERSION,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -676,6 +775,8 @@ private fun RoleEditorMetadataPage(
         minLines = 2,
         maxLines = 4,
         testTag = "role_editor_tags",
+        helpTopic = RoleEditorHelpTopic.TAGS,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -685,6 +786,8 @@ private fun RoleEditorMetadataPage(
         onValueChange = onUpdateTalkativenessText,
         minLines = 1,
         testTag = "role_editor_talkativeness",
+        helpTopic = RoleEditorHelpTopic.TALKATIVENESS,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -692,6 +795,8 @@ private fun RoleEditorMetadataPage(
         title = stringResource(R.string.role_editor_favorite_label),
         checked = uiState.fav,
         onCheckedChange = onUpdateFav,
+        helpTopic = RoleEditorHelpTopic.FAVORITE,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -702,6 +807,8 @@ private fun RoleEditorMetadataPage(
         minLines = 3,
         maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
         testTag = "role_editor_safety_policy",
+        helpTopic = RoleEditorHelpTopic.SAFETY_POLICY,
+        onShowHelp = onShowHelp,
       )
     }
     item {
@@ -710,7 +817,11 @@ private fun RoleEditorMetadataPage(
           modifier = Modifier.fillMaxWidth().padding(16.dp),
           verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-          Text(stringResource(R.string.role_editor_default_model_label), style = MaterialTheme.typography.titleSmall)
+          FieldHeader(
+            title = stringResource(R.string.role_editor_default_model_label),
+            helpTopic = RoleEditorHelpTopic.DEFAULT_MODEL,
+            onShowHelp = onShowHelp,
+          )
           Box {
             OutlinedButton(onClick = { onModelMenuExpandedChange(true) }) {
               Text(uiState.defaultModelId ?: stringResource(R.string.role_editor_no_default_model))
@@ -785,6 +896,7 @@ private fun RoleEditorMediaPage(
 private fun RoleEditorInteropPage(
   uiState: RoleEditorUiState,
   context: android.content.Context,
+  onShowHelp: (RoleEditorHelpTopic) -> Unit,
   onImportStCard: () -> Unit,
   onExportStJson: () -> Unit,
   onExportStPng: () -> Unit,
@@ -797,6 +909,8 @@ private fun RoleEditorInteropPage(
     item {
       ReadonlyInfoCard(
         title = stringResource(R.string.role_editor_interop_title),
+        helpTopic = RoleEditorHelpTopic.INTEROP,
+        onShowHelp = onShowHelp,
         lines =
           listOf(
             stringResource(R.string.role_editor_interop_source_format, uiState.sourceFormat.name),
@@ -851,13 +965,21 @@ private fun EditorTextCard(
   maxLines: Int = minLines,
   testTag: String,
   subtitle: String? = null,
+  required: Boolean = false,
+  helpTopic: RoleEditorHelpTopic? = null,
+  onShowHelp: ((RoleEditorHelpTopic) -> Unit)? = null,
 ) {
   Card {
     Column(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      Text(title, style = MaterialTheme.typography.titleSmall)
+      FieldHeader(
+        title = title,
+        required = required,
+        helpTopic = helpTopic,
+        onShowHelp = onShowHelp,
+      )
       subtitle?.let {
         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
@@ -881,6 +1003,8 @@ private fun BooleanFieldCard(
   title: String,
   checked: Boolean,
   onCheckedChange: (Boolean) -> Unit,
+  helpTopic: RoleEditorHelpTopic? = null,
+  onShowHelp: ((RoleEditorHelpTopic) -> Unit)? = null,
 ) {
   Card {
     Row(
@@ -888,7 +1012,13 @@ private fun BooleanFieldCard(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-      Text(title, style = MaterialTheme.typography.titleSmall)
+      FieldHeader(
+        title = title,
+        helpTopic = helpTopic,
+        onShowHelp = onShowHelp,
+        modifier = Modifier.weight(1f),
+      )
+      Spacer(modifier = Modifier.size(12.dp))
       Checkbox(checked = checked, onCheckedChange = onCheckedChange)
     }
   }
@@ -898,13 +1028,19 @@ private fun BooleanFieldCard(
 private fun ReadonlyInfoCard(
   title: String,
   lines: List<String>,
+  helpTopic: RoleEditorHelpTopic? = null,
+  onShowHelp: ((RoleEditorHelpTopic) -> Unit)? = null,
 ) {
   Card {
     Column(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      Text(title, style = MaterialTheme.typography.titleSmall)
+      FieldHeader(
+        title = title,
+        helpTopic = helpTopic,
+        onShowHelp = onShowHelp,
+      )
       lines.forEach { line ->
         Text(line, style = MaterialTheme.typography.bodyMedium)
       }
@@ -939,6 +1075,7 @@ private fun LorebookEntryCard(
   onUpdatePosition: (String, String) -> Unit,
   onUpdateUseRegex: (String, Boolean) -> Unit,
   onRemove: (String) -> Unit,
+  onShowHelp: (RoleEditorHelpTopic) -> Unit,
 ) {
   Card {
     Column(
@@ -946,71 +1083,114 @@ private fun LorebookEntryCard(
       verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
       Text(stringResource(R.string.role_editor_lorebook_entry_title), style = MaterialTheme.typography.titleSmall)
-      OutlinedTextField(
-        value = entry.idText,
-        onValueChange = { onUpdateId(entry.editorId, it) },
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(stringResource(R.string.role_editor_lorebook_entry_id_label)) },
-      )
-      OutlinedTextField(
-        value = entry.keysText,
-        onValueChange = { onUpdateKeys(entry.editorId, it) },
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(stringResource(R.string.role_editor_lorebook_entry_keys_label)) },
-      )
-      OutlinedTextField(
-        value = entry.secondaryKeysText,
-        onValueChange = { onUpdateSecondaryKeys(entry.editorId, it) },
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(stringResource(R.string.role_editor_lorebook_entry_secondary_keys_label)) },
-      )
-      OutlinedTextField(
-        value = entry.comment,
-        onValueChange = { onUpdateComment(entry.editorId, it) },
-        modifier = Modifier.fillMaxWidth().heightIn(max = editorTextFieldMaxHeight(ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES)),
-        label = { Text(stringResource(R.string.role_editor_lorebook_entry_comment_label)) },
-        minLines = 2,
-        maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
-      )
-      OutlinedTextField(
-        value = entry.content,
-        onValueChange = { onUpdateContent(entry.editorId, it) },
-        modifier = Modifier.fillMaxWidth().heightIn(max = editorTextFieldMaxHeight(ROLE_EDITOR_LARGE_TEXT_MAX_LINES)),
-        label = { Text(stringResource(R.string.role_editor_lorebook_entry_content_label)) },
-        minLines = 4,
-        maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
-      )
-      OutlinedTextField(
-        value = entry.insertionOrderText,
-        onValueChange = { onUpdateInsertionOrder(entry.editorId, it) },
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(stringResource(R.string.role_editor_lorebook_entry_order_label)) },
-      )
-      OutlinedTextField(
-        value = entry.position,
-        onValueChange = { onUpdatePosition(entry.editorId, it) },
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(stringResource(R.string.role_editor_lorebook_entry_position_label)) },
-      )
+      LabeledTextField(
+        title = stringResource(R.string.role_editor_lorebook_entry_id_label),
+        helpTopic = RoleEditorHelpTopic.LORE_ENTRY_ID,
+        onShowHelp = onShowHelp,
+      ) {
+        OutlinedTextField(
+          value = entry.idText,
+          onValueChange = { onUpdateId(entry.editorId, it) },
+          modifier = Modifier.fillMaxWidth(),
+        )
+      }
+      LabeledTextField(
+        title = stringResource(R.string.role_editor_lorebook_entry_keys_label),
+        helpTopic = RoleEditorHelpTopic.LORE_ENTRY_KEYS,
+        onShowHelp = onShowHelp,
+      ) {
+        OutlinedTextField(
+          value = entry.keysText,
+          onValueChange = { onUpdateKeys(entry.editorId, it) },
+          modifier = Modifier.fillMaxWidth(),
+        )
+      }
+      LabeledTextField(
+        title = stringResource(R.string.role_editor_lorebook_entry_secondary_keys_label),
+        helpTopic = RoleEditorHelpTopic.LORE_ENTRY_SECONDARY_KEYS,
+        onShowHelp = onShowHelp,
+      ) {
+        OutlinedTextField(
+          value = entry.secondaryKeysText,
+          onValueChange = { onUpdateSecondaryKeys(entry.editorId, it) },
+          modifier = Modifier.fillMaxWidth(),
+        )
+      }
+      LabeledTextField(
+        title = stringResource(R.string.role_editor_lorebook_entry_comment_label),
+        helpTopic = RoleEditorHelpTopic.LORE_ENTRY_COMMENT,
+        onShowHelp = onShowHelp,
+      ) {
+        OutlinedTextField(
+          value = entry.comment,
+          onValueChange = { onUpdateComment(entry.editorId, it) },
+          modifier = Modifier.fillMaxWidth().heightIn(max = editorTextFieldMaxHeight(ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES)),
+          minLines = 2,
+          maxLines = ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES,
+        )
+      }
+      LabeledTextField(
+        title = stringResource(R.string.role_editor_lorebook_entry_content_label),
+        helpTopic = RoleEditorHelpTopic.LORE_ENTRY_CONTENT,
+        onShowHelp = onShowHelp,
+      ) {
+        OutlinedTextField(
+          value = entry.content,
+          onValueChange = { onUpdateContent(entry.editorId, it) },
+          modifier = Modifier.fillMaxWidth().heightIn(max = editorTextFieldMaxHeight(ROLE_EDITOR_LARGE_TEXT_MAX_LINES)),
+          minLines = 4,
+          maxLines = ROLE_EDITOR_LARGE_TEXT_MAX_LINES,
+        )
+      }
+      LabeledTextField(
+        title = stringResource(R.string.role_editor_lorebook_entry_order_label),
+        helpTopic = RoleEditorHelpTopic.LORE_ENTRY_ORDER,
+        onShowHelp = onShowHelp,
+      ) {
+        OutlinedTextField(
+          value = entry.insertionOrderText,
+          onValueChange = { onUpdateInsertionOrder(entry.editorId, it) },
+          modifier = Modifier.fillMaxWidth(),
+        )
+      }
+      LabeledTextField(
+        title = stringResource(R.string.role_editor_lorebook_entry_position_label),
+        helpTopic = RoleEditorHelpTopic.LORE_ENTRY_POSITION,
+        onShowHelp = onShowHelp,
+      ) {
+        OutlinedTextField(
+          value = entry.position,
+          onValueChange = { onUpdatePosition(entry.editorId, it) },
+          modifier = Modifier.fillMaxWidth(),
+        )
+      }
       BooleanFieldCard(
         title = stringResource(R.string.role_editor_lorebook_entry_enabled_label),
         checked = entry.enabled,
         onCheckedChange = { onUpdateEnabled(entry.editorId, it) },
+        helpTopic = RoleEditorHelpTopic.LORE_ENTRY_ENABLED,
+        onShowHelp = onShowHelp,
       )
       BooleanFieldCard(
         title = stringResource(R.string.role_editor_lorebook_entry_constant_label),
         checked = entry.constant,
         onCheckedChange = { onUpdateConstant(entry.editorId, it) },
+        helpTopic = RoleEditorHelpTopic.LORE_ENTRY_CONSTANT,
+        onShowHelp = onShowHelp,
       )
       BooleanFieldCard(
         title = stringResource(R.string.role_editor_lorebook_entry_selective_label),
         checked = entry.selective,
         onCheckedChange = { onUpdateSelective(entry.editorId, it) },
+        helpTopic = RoleEditorHelpTopic.LORE_ENTRY_SELECTIVE,
+        onShowHelp = onShowHelp,
       )
       BooleanFieldCard(
         title = stringResource(R.string.role_editor_lorebook_entry_regex_label),
         checked = entry.useRegex,
         onCheckedChange = { onUpdateUseRegex(entry.editorId, it) },
+        helpTopic = RoleEditorHelpTopic.LORE_ENTRY_REGEX,
+        onShowHelp = onShowHelp,
       )
       OutlinedButton(onClick = { onRemove(entry.editorId) }, modifier = Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.role_editor_lorebook_remove_entry))
@@ -1021,6 +1201,99 @@ private fun LorebookEntryCard(
 
 private fun editorTextFieldMaxHeight(maxLines: Int) =
   (ROLE_EDITOR_TEXTFIELD_BASE_HEIGHT_DP + ((maxLines - 1).coerceAtLeast(0) * ROLE_EDITOR_TEXTFIELD_LINE_STEP_DP)).dp
+
+@Composable
+private fun RequiredFieldsHintCard() {
+  Card {
+    Text(
+      text = stringResource(R.string.role_editor_required_hint),
+      modifier = Modifier.fillMaxWidth().padding(16.dp),
+      style = MaterialTheme.typography.bodySmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+  }
+}
+
+@Composable
+private fun FieldHeader(
+  title: String,
+  modifier: Modifier = Modifier,
+  required: Boolean = false,
+  helpTopic: RoleEditorHelpTopic? = null,
+  onShowHelp: ((RoleEditorHelpTopic) -> Unit)? = null,
+) {
+  Row(
+    modifier = modifier.fillMaxWidth(),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(8.dp),
+  ) {
+    Text(
+      text = title,
+      style = MaterialTheme.typography.titleSmall,
+      modifier = Modifier.weight(1f),
+    )
+    if (required) {
+      RequiredBadge()
+    }
+    if (helpTopic != null && onShowHelp != null) {
+      IconButton(onClick = { onShowHelp(helpTopic) }) {
+        Icon(
+          imageVector = Icons.Outlined.HelpOutline,
+          contentDescription = stringResource(R.string.cd_help),
+        )
+      }
+    }
+  }
+}
+
+@Composable
+private fun RequiredBadge() {
+  Surface(
+    color = MaterialTheme.colorScheme.errorContainer,
+    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+    shape = MaterialTheme.shapes.small,
+  ) {
+    Text(
+      text = stringResource(R.string.role_editor_required_badge),
+      modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+      style = MaterialTheme.typography.labelSmall,
+    )
+  }
+}
+
+@Composable
+private fun RoleEditorHelpDialog(
+  topic: RoleEditorHelpTopic,
+  onDismiss: () -> Unit,
+) {
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(stringResource(topic.titleRes)) },
+    text = { Text(stringResource(topic.bodyRes)) },
+    confirmButton = {
+      FilledTonalButton(onClick = onDismiss) {
+        Text(stringResource(R.string.ok))
+      }
+    },
+  )
+}
+
+@Composable
+private fun LabeledTextField(
+  title: String,
+  helpTopic: RoleEditorHelpTopic,
+  onShowHelp: (RoleEditorHelpTopic) -> Unit,
+  content: @Composable () -> Unit,
+) {
+  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    FieldHeader(
+      title = title,
+      helpTopic = helpTopic,
+      onShowHelp = onShowHelp,
+    )
+    content()
+  }
+}
 
 private fun takeReadPermission(context: android.content.Context, uri: Uri) {
   runCatching {

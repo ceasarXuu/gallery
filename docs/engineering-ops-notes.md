@@ -33,6 +33,7 @@ Notes:
 - Also clamp tab labels to `maxLines = 1`, `softWrap = false`, and `overflow = Ellipsis`. A scrollable tab row alone does not stop the `Text` inside each tab from wrapping when localized labels get wider.
 - Keep destructive role actions outside the role editor. If the catalog/list page already owns delete, do not repeat a full-width delete button inside every editor tab state; it adds noise and increases accidental-delete risk during editing.
 - For multi-section editors, make the section pills and content area share one pager state. Scrollable pills without horizontal swipe support create a false tab expectation and make the UI feel broken on mobile.
+- In the role editor, required-state hints and parameter help should come from the same header component. If the required badge and help trigger are implemented separately, they drift quickly and some fields end up undocumented or visually inconsistent.
 
 ## 2026-04-10 LiteRT-LM single-session reset failure
 
