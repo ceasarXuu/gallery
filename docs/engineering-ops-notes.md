@@ -1,3 +1,36 @@
+## 2026-04-09 Roleplay chat UX regression verification
+
+- Goal: verify the roleplay chat fixes for send-time auto-scroll, tap-outside keyboard dismissal, and role avatar top alignment on a real device.
+- Device: `ONNZ95CAEMMZSKTS`
+- Page: roleplay session detail chat
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew :app:compileDebugKotlin
+.\gradlew :app:assembleDebug
+adb -s ONNZ95CAEMMZSKTS install -r .\app\build\outputs\apk\debug\app-debug.apk
+adb -s ONNZ95CAEMMZSKTS shell am force-stop selfgemma.talk
+adb -s ONNZ95CAEMMZSKTS logcat -c
+adb -s ONNZ95CAEMMZSKTS shell am start -n selfgemma.talk/.MainActivity
+adb -s ONNZ95CAEMMZSKTS logcat -d -v time | Select-String -Pattern 'RoleplayChatScreen|RoleplayChatViewModel|SendRoleplayMessage|AndroidRuntime'
+```
+
+Manual verification flow:
+
+- Open the first roleplay session card from the sessions tab.
+- Tap the composer to open the IME, then tap the message list area outside the composer.
+- Confirm logcat prints `keyboard dismissed by outside tap ...`, the `EditText` focus drops, and the message list height expands back to the pre-IME state.
+- Type a short message and tap send while the IME is open.
+- Confirm logcat prints `auto scroll to latest after message append ...`, then confirm the new user bubble is still visible near the bottom after the assistant placeholder/error arrives.
+- Check the latest role message bubble in the dump: the avatar bounds should start above or level with the bubble top, not align to the bubble bottom.
+
+Notes:
+
+- On long sessions the current model can still fail with `Input token ids are too long`; treat that as existing model/prompt pressure, not a regression in chat-page scrolling or layout.
+- `uiautomator dump` is enough to verify avatar vertical placement quickly: compare the role avatar bounds with the adjacent bubble bounds in the latest message block.
+
 ## 2026-04-07 Android debug build and device install
 
 - Workspace: `D:\gallery`

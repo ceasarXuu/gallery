@@ -3,6 +3,7 @@
 import android.os.SystemClock
 import android.text.method.LinkMovementMethod
 import android.util.Log
+import android.view.MotionEvent
 import android.widget.TextView
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -66,20 +67,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import kotlinx.coroutines.delay
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.text.HtmlCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import kotlinx.coroutines.delay
 import selfgemma.talk.AppTopBar
 import selfgemma.talk.data.AppBarAction
 import selfgemma.talk.data.AppBarActionType
@@ -110,6 +118,8 @@ fun RoleplayChatScreen(
 ) {
   val context = LocalContext.current
   val density = LocalDensity.current
+  val focusManager = LocalFocusManager.current
+  val keyboardController = LocalSoftwareKeyboardController.current
   val uiState by viewModel.uiState.collectAsState()
   val modelManagerUiState by modelManagerViewModel.uiState.collectAsState()
   val activeModel = uiState.session?.activeModelId?.let(modelManagerViewModel::getModelByName)
@@ -129,6 +139,7 @@ fun RoleplayChatScreen(
   var hasCompletedInitialPositioning by rememberSaveable(uiState.session?.id) { mutableStateOf(false) }
   var hasLoggedInitialPositioning by rememberSaveable(uiState.session?.id) { mutableStateOf(false) }
   var previousMessageCount by rememberSaveable(uiState.session?.id) { mutableStateOf(0) }
+  var composerBoundsInWindow by remember { mutableStateOf<Rect?>(null) }
   val latestListItemIndex =
     remember(uiState.messages.size) {
       calculateLatestListItemIndex(
@@ -212,7 +223,11 @@ fun RoleplayChatScreen(
 
     val messageCountIncreased = uiState.messages.size > previousMessageCount
     previousMessageCount = uiState.messages.size
-    if (messageCountIncreased && shouldKeepLatestMessageVisible(listState, latestListItemIndex)) {
+    if (messageCountIncreased) {
+      Log.d(
+        TAG,
+        "auto scroll to latest after message append sessionId=${uiState.session?.id} messageCount=${uiState.messages.size} latestItemIndex=$latestListItemIndex",
+      )
       scrollToItem(listState = listState, itemIndex = latestListItemIndex, animate = true)
     }
   }
@@ -227,7 +242,23 @@ fun RoleplayChatScreen(
     }
   }
 
-  Box(modifier = modifier) {
+  Box(
+    modifier =
+      modifier.fillMaxSize().pointerInteropFilter { motionEvent ->
+        if (motionEvent.action == MotionEvent.ACTION_DOWN) {
+          val tapPosition = Offset(motionEvent.rawX, motionEvent.rawY)
+          val tappedInsideComposer = composerBoundsInWindow?.contains(tapPosition) == true
+          if (!tappedInsideComposer) {
+            if (imeBottom > 0) {
+              Log.d(TAG, "keyboard dismissed by outside tap sessionId=${uiState.session?.id}")
+            }
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
+          }
+        }
+        false
+      }
+  ) {
     Scaffold(
       topBar = {
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -369,6 +400,10 @@ fun RoleplayChatScreen(
           draft = uiState.draft,
           onDraftChange = viewModel::updateDraft,
           canSend = activeModel != null && uiState.draft.isNotBlank(),
+          modifier =
+            Modifier.onGloballyPositioned { coordinates ->
+              composerBoundsInWindow = coordinates.boundsInWindow()
+            },
           onSend = {
             activeModel?.let { currentModel ->
               viewModel.sendMessage(currentModel)
@@ -477,7 +512,7 @@ private fun ChatMessageBubble(
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-        verticalAlignment = Alignment.Bottom,
+        verticalAlignment = if (isUser) Alignment.Bottom else Alignment.Top,
       ) {
         if (isUser) {
           Text(
@@ -650,13 +685,14 @@ private fun ChatComposer(
   onDraftChange: (String) -> Unit,
   canSend: Boolean,
   onSend: () -> Unit,
+  modifier: Modifier = Modifier,
 ) {
   Surface(
     shape = RoundedCornerShape(28.dp),
     tonalElevation = 3.dp,
     shadowElevation = 4.dp,
     color = MaterialTheme.colorScheme.surface,
-    modifier = Modifier
+    modifier = modifier
       .fillMaxWidth()
       .shadow(
         elevation = 6.dp,
