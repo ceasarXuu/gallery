@@ -623,6 +623,7 @@ Notes:
 
 ## 2026-04-10 Role editor text-field clipping note
 
-- When the clipped glyph appears inside `OutlinedTextField` content rather than in headers or tabs, fix the field text style itself first. Adjusting nearby labels or pills does not affect the internal text layout pipeline.
-- On this device, Chinese characters inside single-line role-editor text fields need `PlatformTextStyle(includeFontPadding = true)` on the input `textStyle`; otherwise the lower glyph area can be cut even when the surrounding card spacing looks correct.
-- For Compose text-field clipping checks, always confirm with a real device screenshot from the exact failing screen. Header text, chip text, and text-field content can clip for different reasons and should not be treated as the same bug.
+- For the role-name input, the real bottleneck was total control height, not the tab/header typography. The previous `64dp` cap had to hold both the outlined field and the `5/120` counter, which left roughly `48dp` of editable content height on this device.
+- Single-line role-editor fields should reserve at least `80dp` total height when a supporting counter is shown. That keeps the normal `56dp` outlined container plus the supporting text line from competing for the same vertical budget.
+- `PlatformTextStyle(includeFontPadding = true)` should stay on the text-field input text itself, but it is not sufficient alone if the field height is capped too tightly.
+- When verifying OEM-font clipping, always compare the exact failing `EditText` bounds from `uiautomator dump` with the rendered screenshot. Header text, tab text, and text-field text have different layout paths and should be debugged separately.

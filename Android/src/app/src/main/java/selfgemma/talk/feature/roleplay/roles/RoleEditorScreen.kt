@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -74,6 +75,7 @@ private const val TAG = "RoleEditorScreen"
 private const val ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES = 8
 private const val ROLE_EDITOR_LARGE_TEXT_MAX_LINES = 12
 private const val ROLE_EDITOR_XL_TEXT_MAX_LINES = 14
+private const val ROLE_EDITOR_SINGLE_LINE_TEXTFIELD_MIN_HEIGHT_DP = 80
 private const val ROLE_EDITOR_TEXTFIELD_BASE_HEIGHT_DP = 64
 private const val ROLE_EDITOR_TEXTFIELD_LINE_STEP_DP = 24
 
@@ -1026,7 +1028,7 @@ private fun EditorTextCard(
         modifier =
           Modifier
             .fillMaxWidth()
-            .heightIn(max = editorTextFieldMaxHeight(maxLines))
+            .then(roleEditorTextFieldHeightModifier(maxLines))
             .testTag(testTag),
         minLines = minLines,
         maxLines = maxLines,
@@ -1212,6 +1214,13 @@ private fun LorebookEntryCard(
 
 private fun editorTextFieldMaxHeight(maxLines: Int) =
   (ROLE_EDITOR_TEXTFIELD_BASE_HEIGHT_DP + ((maxLines - 1).coerceAtLeast(0) * ROLE_EDITOR_TEXTFIELD_LINE_STEP_DP)).dp
+
+private fun roleEditorTextFieldHeightModifier(maxLines: Int): Modifier =
+  if (maxLines <= 1) {
+    Modifier.requiredHeightIn(min = ROLE_EDITOR_SINGLE_LINE_TEXTFIELD_MIN_HEIGHT_DP.dp)
+  } else {
+    Modifier.heightIn(max = editorTextFieldMaxHeight(maxLines))
+  }
 
 @Composable
 private fun RequiredFieldsHintCard() {
