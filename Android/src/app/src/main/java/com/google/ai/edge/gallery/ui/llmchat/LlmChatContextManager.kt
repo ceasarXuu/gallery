@@ -10,7 +10,6 @@ import selfgemma.talk.ui.common.chat.ChatMessageType
 import selfgemma.talk.ui.common.chat.ChatSide
 import com.google.ai.edge.litertlm.Contents
 
-private const val SYSTEM_PROMPT_FALLBACK_TOKENS = 96
 private const val PER_IMAGE_TOKEN_RESERVE = 256
 private const val PER_AUDIO_TOKEN_RESERVE = 192
 private const val HISTORY_LINE_MAX_CHARS = 240
@@ -66,7 +65,7 @@ internal class LlmChatContextManager(
         LlmChatContextMode.AGGRESSIVE -> availableInstructionTokens
       }
     val normalizedBasePrompt = baseSystemPrompt.trim()
-    var basePrompt = fitToBudget(normalizedBasePrompt, budgetTokens = promptBudget / 2)
+    val basePrompt = fitToBudget(normalizedBasePrompt, budgetTokens = promptBudget / 2)
     val systemPromptTrimmed =
       normalizedBasePrompt.isNotBlank() &&
         tokenEstimator.estimate(basePrompt) < tokenEstimator.estimate(normalizedBasePrompt)
@@ -95,12 +94,13 @@ internal class LlmChatContextManager(
         summaryLines = summaryLines,
         recentLines = recentLines,
       )
-    val estimatedTokens = tokenEstimator.estimate(prompt)
+    val fittedPrompt = fitToBudget(prompt, budgetTokens = promptBudget)
+    val estimatedTokens = tokenEstimator.estimate(fittedPrompt)
     val droppedLineCount =
       (historyLines.size - recentLines.size - summaryLines.size).coerceAtLeast(0)
 
     return LlmChatContextPlan(
-      systemInstruction = prompt.takeIf { it.isNotBlank() }?.let(Contents::of),
+      systemInstruction = fittedPrompt.takeIf { it.isNotBlank() }?.let(Contents::of),
       report =
         LlmChatContextReport(
           usableInputTokens = contextProfile.usableInputTokens,
@@ -132,7 +132,7 @@ internal class LlmChatContextManager(
     var usedTokens = 0
     for (line in historyLines.asReversed()) {
       val lineTokens = tokenEstimator.estimate(line)
-      if (selected.isNotEmpty() && usedTokens + lineTokens > budgetTokens) {
+      if (usedTokens + lineTokens > budgetTokens) {
         break
       }
       selected += line
@@ -161,7 +161,7 @@ internal class LlmChatContextManager(
     cappedOlderLines.forEach { line ->
       val summaryLine = "- ${line.take(SUMMARY_LINE_MAX_CHARS)}"
       val summaryTokens = tokenEstimator.estimate(summaryLine)
-      if (summaryLines.isNotEmpty() && usedTokens + summaryTokens > budgetTokens) {
+      if (usedTokens + summaryTokens > budgetTokens) {
         return@forEach
       }
       summaryLines += summaryLine
@@ -178,7 +178,10 @@ internal class LlmChatContextManager(
     if (tokenEstimator.estimate(normalized) <= budgetTokens) {
       return normalized
     }
-    val maxChars = (budgetTokens * 4).coerceAtLeast(64)
+    val maxChars = (budgetTokens * 4).coerceAtLeast(0)
+    if (maxChars == 0) {
+      return ""
+    }
     return normalized.take(maxChars).trim()
   }
 

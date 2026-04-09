@@ -1,6 +1,7 @@
 package selfgemma.talk.ui.llmchat
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import selfgemma.talk.domain.roleplay.model.ModelContextProfile
@@ -101,5 +102,33 @@ class LlmChatContextManagerTest {
 
     assertTrue(plan.report.currentTurnOverflowDetected)
     assertEquals(0, plan.report.availableInstructionTokens)
+  }
+
+  @Test
+  fun buildPlan_keepsInstructionEstimateWithinTinyBudget() {
+    val history =
+      listOf(
+        ChatMessageText(content = "User " + "detail ".repeat(40), side = ChatSide.USER),
+        ChatMessageText(content = "Assistant " + "reply ".repeat(40), side = ChatSide.AGENT),
+      )
+
+    val plan =
+      contextManager.buildPlan(
+        baseSystemPrompt = "Rule ".repeat(40),
+        historyMessages = history,
+        pendingInput = "Short question",
+        pendingImageCount = 0,
+        pendingAudioCount = 0,
+        contextProfile =
+          ModelContextProfile(
+            contextWindowTokens = 512,
+            reservedOutputTokens = 256,
+            reservedThinkingTokens = 0,
+            safetyMarginTokens = 200,
+          ),
+      )
+
+    assertFalse(plan.report.currentTurnOverflowDetected)
+    assertTrue(plan.report.estimatedInstructionTokens <= plan.report.availableInstructionTokens)
   }
 }
