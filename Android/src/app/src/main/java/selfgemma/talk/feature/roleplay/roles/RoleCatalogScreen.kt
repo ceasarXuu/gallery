@@ -17,16 +17,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -45,7 +40,10 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import selfgemma.talk.AppTopBar
 import selfgemma.talk.R
+import selfgemma.talk.data.AppBarAction
+import selfgemma.talk.data.AppBarActionType
 import kotlinx.coroutines.launch
 import selfgemma.talk.performance.TrackPerformanceState
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
@@ -105,37 +103,33 @@ fun RoleCatalogScreen(
     modifier = modifier.semantics { testTagsAsResourceId = true },
     contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
     topBar = {
-      CenterAlignedTopAppBar(
-        title = { Text(stringResource(R.string.tab_roles)) },
-        navigationIcon = {
+      AppTopBar(
+        title = stringResource(R.string.tab_roles),
+        leftAction =
           if (showNavigateUp) {
-            IconButton(onClick = handleNavigateUp) {
-              Icon(
-                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = stringResource(R.string.navigate_back),
-              )
-            }
-          }
-        },
-        actions = {
+            AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = handleNavigateUp)
+          } else {
+            null
+          },
+        rightActionContent = {
           TopBarOverflowMenuButton(
             expanded = showMenu,
             onExpandedChange = { showMenu = it },
           ) {
-              DropdownMenuItem(
-                text = { Text(stringResource(R.string.roles_menu_create)) },
-                onClick = {
-                  showMenu = false
-                  onCreateRole()
-                },
-              )
-              DropdownMenuItem(
-                text = { Text(stringResource(R.string.roles_menu_import)) },
-                onClick = {
-                  showMenu = false
-                  importLauncher.launch("*/*")
-                },
-              )
+            DropdownMenuItem(
+              text = { Text(stringResource(R.string.roles_menu_create)) },
+              onClick = {
+                showMenu = false
+                onCreateRole()
+              },
+            )
+            DropdownMenuItem(
+              text = { Text(stringResource(R.string.roles_menu_import)) },
+              onClick = {
+                showMenu = false
+                importLauncher.launch("*/*")
+              },
+            )
           }
         },
       )
