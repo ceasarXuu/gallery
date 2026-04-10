@@ -93,6 +93,7 @@ private const val ROLE_EDITOR_SINGLE_LINE_TEXTFIELD_MIN_HEIGHT_DP = 80
 private const val ROLE_EDITOR_TEXTFIELD_BASE_HEIGHT_DP = 64
 private const val ROLE_EDITOR_TEXTFIELD_LINE_STEP_DP = 24
 private const val ROLE_EDITOR_COMPRESSION_INIT_TIMEOUT_MS = 60_000L
+private const val ROLE_EDITOR_COMPRESSION_MAX_ATTEMPTS = 3
 
 private data class RoleEditorTextFieldSpec(
   val maxChars: Int? = null,
@@ -239,14 +240,15 @@ fun RoleEditorScreen(
             model = resolvedModel,
             coroutineScope = compressionScope,
           )
-          resolvedModel.runtimeHelper.resetConversation(model = resolvedModel)
-          val compressed =
-            runRoleEditorCompressionInference(
+          val compressionResult =
+            compressRoleEditorFieldToTarget(
               model = resolvedModel,
-              input = buildRoleEditorCompressionPrompt(fieldTitle, maxChars, currentValue),
+              fieldTitle = fieldTitle,
+              maxChars = maxChars,
+              originalContent = currentValue,
               coroutineScope = compressionScope,
             )
-          val cleanedResult = compressed.trim()
+          val cleanedResult = compressionResult.text.trim()
           when {
             cleanedResult.isBlank() -> {
               withContext(Dispatchers.Main) {
@@ -257,12 +259,16 @@ fun RoleEditorScreen(
             cleanedResult.length > maxChars -> {
               withContext(Dispatchers.Main) {
                 viewModel.showErrorMessage(
-                  context.getString(R.string.role_editor_ai_compress_failed_limit, maxChars),
+                  context.getString(
+                    R.string.role_editor_ai_compress_failed_limit,
+                    cleanedResult.length,
+                    maxChars,
+                  ),
                 )
               }
               Log.w(
                 TAG,
-                "Role editor AI compression exceeded target field=$fieldKey resultLength=${cleanedResult.length} targetLength=$maxChars",
+                "Role editor AI compression exceeded target after ${compressionResult.attempts} attempts field=$fieldKey resultLength=${cleanedResult.length} targetLength=$maxChars",
               )
             }
             else -> {
@@ -1723,13 +1729,29 @@ private fun buildRoleEditorCompressionPrompt(
   fieldTitle: String,
   maxChars: Int,
   content: String,
+  attempt: Int,
+  previousLength: Int? = null,
 ): String {
+  val retryInstructions =
+    if (attempt <= 1) {
+      ""
+    } else {
+      """
+      Previous rewrite was still too long${previousLength?.let { " ($it characters)" } ?: ""}.
+      Compress much more aggressively this time.
+      It is acceptable to drop secondary details as long as the core roleplay intent remains.
+      The final output must be no more than $maxChars characters.
+
+      """.trimIndent()
+    }
   return """
     You are helping edit a role card field.
     Rewrite the field below so the final result is at or under $maxChars characters.
     Preserve the original meaning, tone, and roleplay intent.
     Keep useful line breaks or list structure when they matter.
     Remove redundancy first. If needed, aggressively shorten until the limit is satisfied.
+    Count all characters in the final output, including spaces and line breaks.
+    $retryInstructions
     Return only the rewritten field text with no explanation, no markdown, and no quotes.
 
     Field: $fieldTitle
@@ -1739,6 +1761,11 @@ private fun buildRoleEditorCompressionPrompt(
     $content
   """.trimIndent()
 }
+
+private data class RoleEditorCompressionResult(
+  val text: String,
+  val attempts: Int,
+)
 
 private suspend fun ensureRoleEditorCompressionModelReady(
   context: android.content.Context,
@@ -1806,6 +1833,42 @@ private suspend fun runRoleEditorCompressionInference(
       model.runtimeHelper.stopResponse(model)
     }
   }
+}
+
+private suspend fun compressRoleEditorFieldToTarget(
+  model: Model,
+  fieldTitle: String,
+  maxChars: Int,
+  originalContent: String,
+  coroutineScope: CoroutineScope,
+): RoleEditorCompressionResult {
+  var currentText = originalContent
+  var attempt = 0
+  while (attempt < ROLE_EDITOR_COMPRESSION_MAX_ATTEMPTS) {
+    attempt += 1
+    model.runtimeHelper.resetConversation(model = model)
+    val nextText =
+      runRoleEditorCompressionInference(
+        model = model,
+        input =
+          buildRoleEditorCompressionPrompt(
+            fieldTitle = fieldTitle,
+            maxChars = maxChars,
+            content = currentText,
+            attempt = attempt,
+            previousLength = currentText.length.takeIf { attempt > 1 },
+          ),
+        coroutineScope = coroutineScope,
+      ).trim()
+    if (nextText.isBlank()) {
+      return RoleEditorCompressionResult(text = nextText, attempts = attempt)
+    }
+    currentText = nextText
+    if (currentText.length <= maxChars) {
+      return RoleEditorCompressionResult(text = currentText, attempts = attempt)
+    }
+  }
+  return RoleEditorCompressionResult(text = currentText, attempts = attempt)
 }
 
 private fun takeReadPermission(context: android.content.Context, uri: Uri) {

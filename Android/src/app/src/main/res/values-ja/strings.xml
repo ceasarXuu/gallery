@@ -195,7 +195,7 @@
   <string name="role_editor_ai_compress_success">%1$d/%2$d 文字まで圧縮しました。</string>
   <string name="role_editor_ai_compress_failed_generic">AI 圧縮に失敗しました。選択中のモデルを確認してから再試行してください。</string>
   <string name="role_editor_ai_compress_failed_blank">AI 圧縮の結果が空でした。元のテキストを保持しました。</string>
-  <string name="role_editor_ai_compress_failed_limit">%1$d 文字以内に収まりませんでした。元のテキストを保持しました。</string>
+  <string name="role_editor_ai_compress_failed_limit">AI 圧縮結果は %1$d 文字で、上限 %2$d を超えていました。元のテキストを保持しました。</string>
   <string name="role_editor_ai_compress_missing_model">利用可能なローカルモデルがありません。先にモデルを追加するか、設定で編集アシスタントモデルを選んでください。</string>
 
   <!-- Model Manager -->

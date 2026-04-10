@@ -100,6 +100,7 @@ Notes:
 
 - Reuse the roleplay settings page to choose a dedicated editor assistant model. If no explicit model is configured, fall back to the first available local model.
 - Keep compression failure behavior honest: if the model returns blank text or still exceeds the target length, keep the original field content and surface a clear error instead of silently truncating.
+- If users report "AI compress did nothing", check logcat for `resultLength` versus `targetLength` first. The editor intentionally preserves the original text when the model rewrite is still over budget, so unchanged content can mean a failed compression attempt rather than a broken button.
 - Treat role editor compression as a single in-flight task. LiteRT-LM conversation state is simpler and more predictable when the editor does not attempt multiple parallel compressions against the same model session.
 
 ## 2026-04-10 Role editor ST-native rewrite verification
