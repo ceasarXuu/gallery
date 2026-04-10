@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Archive
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FileUpload
@@ -312,7 +313,7 @@ private fun SessionCard(
       Spacer(Modifier.width(8.dp))
       IconButton(onClick=onTogglePin, modifier=Modifier.size(52.dp).background(MaterialTheme.colorScheme.primary.copy(alpha=0.15f), CircleShape)) {
         Icon(
-          Icons.Rounded.PushPin,
+          imageVector=if (session.pinned) Icons.Rounded.Close else Icons.Rounded.PushPin,
           contentDescription=stringResource(if (session.pinned) R.string.sessions_unpin else R.string.sessions_pin),
           tint=MaterialTheme.colorScheme.primary,
           modifier=Modifier.size(26.dp),
