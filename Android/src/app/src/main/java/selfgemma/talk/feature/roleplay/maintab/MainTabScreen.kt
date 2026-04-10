@@ -30,12 +30,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import selfgemma.talk.R
 import selfgemma.talk.performance.FrontendPerformanceMonitor
 import selfgemma.talk.performance.TrackPerformanceState
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
-import selfgemma.talk.R
 
 private data class TabItem(
   val titleResId: Int,
@@ -88,7 +89,7 @@ fun MainTabScreen(
 
   LaunchedEffect(currentPage, isScrollInProgress) {
     if (!isScrollInProgress) {
-      android.util.Log.d(TAG, "Tab切换完成: currentPage=$currentPage, 响应时间监控")
+      Log.d(TAG, "main tab settled currentPage=$currentPage targetPage=$targetPage")
     }
   }
 
@@ -106,6 +107,7 @@ fun MainTabScreen(
       ) {
         tabs.forEachIndexed { index, tab ->
           val isSelected = currentPage == index
+          val tabTitle = stringResource(tab.titleResId)
           NavigationBarItem(
             selected = isSelected,
             onClick = {
@@ -118,17 +120,27 @@ fun MainTabScreen(
                     name = "main_tab_switch",
                     durationMs = duration,
                   )
-                  android.util.Log.d(TAG, "Tab切换耗时: ${duration}ms, 目标: $index")
+                  Log.d(
+                    TAG,
+                    "main tab switched targetIndex=$index targetTitle=$tabTitle durationMs=$duration",
+                  )
                 }
               }
             },
             icon = {
               Icon(
                 imageVector = tab.icon,
-                contentDescription = stringResource(tab.titleResId),
+                contentDescription = tabTitle,
               )
             },
-            label = { Text(stringResource(tab.titleResId)) },
+            label = {
+              Text(
+                text = tabTitle,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+              )
+            },
             colors = NavigationBarItemDefaults.colors(
               selectedIconColor = MaterialTheme.colorScheme.primary,
               selectedTextColor = MaterialTheme.colorScheme.primary,

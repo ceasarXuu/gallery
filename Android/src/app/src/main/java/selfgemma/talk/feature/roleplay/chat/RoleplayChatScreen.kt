@@ -44,7 +44,6 @@ import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -81,7 +80,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -103,6 +101,7 @@ import androidx.compose.ui.res.stringResource
 import selfgemma.talk.R
 import selfgemma.talk.domain.roleplay.model.primaryAvatarUri
 import selfgemma.talk.feature.roleplay.common.RoleAvatar
+import selfgemma.talk.ui.common.TopBarOverflowMenuButton
 import selfgemma.talk.ui.common.MarkdownText
 
 private const val TAG = "RoleplayChatScreen"
@@ -160,6 +159,11 @@ fun RoleplayChatScreen(
       (activeModel.initializing || activeModelStatus == ModelInitializationStatusType.INITIALIZING)
   var showMenu by remember { mutableStateOf(false) }
   var showModelPicker by remember { mutableStateOf(false) }
+  val updateOverflowMenuVisibility: (Boolean) -> Unit = { expanded ->
+    showMenu = expanded
+    val event = if (expanded) "opened" else "dismissed"
+    Log.d(TAG, "chat overflow menu $event sessionId=${uiState.session?.id}")
+  }
   val handleNavigateUp: () -> Unit = {
     when {
       showModelPicker -> {
@@ -274,30 +278,13 @@ fun RoleplayChatScreen(
   ) {
     Scaffold(
       topBar = {
-        Box(modifier = Modifier.fillMaxWidth()) {
-          AppTopBar(
-            title = uiState.role?.name ?: stringResource(R.string.chat_title),
-            leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = handleNavigateUp),
-            rightAction =
-              AppBarAction(
-                actionType = AppBarActionType.MENU,
-                actionFn = {
-                  showMenu = true
-                  Log.d(TAG, "chat overflow menu opened sessionId=${uiState.session?.id}")
-                },
-              ),
-          )
-          Box(
-            modifier =
-              Modifier.align(Alignment.TopEnd)
-                .padding(top = 4.dp, end = 4.dp),
-          ) {
-            DropdownMenu(
+        AppTopBar(
+          title = uiState.role?.name ?: stringResource(R.string.chat_title),
+          leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = handleNavigateUp),
+          rightActionContent = {
+            TopBarOverflowMenuButton(
               expanded = showMenu,
-              onDismissRequest = {
-                showMenu = false
-                Log.d(TAG, "chat overflow menu dismissed sessionId=${uiState.session?.id}")
-              },
+              onExpandedChange = updateOverflowMenuVisibility,
             ) {
               DropdownMenuItem(
                 text = { Text(stringResource(R.string.chat_switch_model)) },
@@ -320,8 +307,8 @@ fun RoleplayChatScreen(
                 },
               )
             }
-          }
-        }
+          },
+        )
       },
   ) { innerPadding ->
     if (uiState.loading) {
@@ -427,32 +414,6 @@ fun RoleplayChatScreen(
     }
   }
 
-  DropdownMenu(
-      expanded = false,
-      onDismissRequest = { showMenu = false },
-      offset = DpOffset(x = (-10).dp, y = (-80).dp),
-    ) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_switch_model)) },
-        onClick = {
-          showMenu = false
-          showModelPicker = true
-        },
-        leadingIcon = {
-          Icon(Icons.Rounded.SwapHoriz, contentDescription = null)
-        }
-      )
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_open_model_library_menu)) },
-        onClick = {
-          showMenu = false
-          onOpenModelLibrary()
-        },
-        leadingIcon = {
-          Icon(Icons.Rounded.FolderOpen, contentDescription = null)
-        }
-      )
-    }
 
     if (showModelPicker && downloadedModels.isNotEmpty()) {
       AlertDialog(
