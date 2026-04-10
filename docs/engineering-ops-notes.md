@@ -1,3 +1,26 @@
+## 2026-04-10 Sessions pin swipe-state note
+
+- Symptom on device: after pinning a session from the messages list swipe actions, the action menu stayed expanded and the card front did not show any visible pinned state, so the user could not tell whether pinning had actually taken effect.
+- Root cause: the pin action updated repository state only. `SessionsScreen` kept `expandedSessionId` unchanged, so the swiped-open card stayed open. The card front also had no pinned badge, which made successful state changes invisible unless the user inferred it from list order.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:installDebug
+adb -s ONNZ95CAEMMZSKTS shell am force-stop selfgemma.talk
+adb -s ONNZ95CAEMMZSKTS logcat -c
+adb -s ONNZ95CAEMMZSKTS shell am start -n selfgemma.talk/.MainActivity
+adb -s ONNZ95CAEMMZSKTS logcat -d -v time | Select-String -Pattern 'SessionsViewModel|AndroidRuntime'
+```
+
+Notes:
+
+- For swipe-action list items in Compose, action callbacks that mutate item state should usually also collapse the expanded row in the same event path. Waiting for data refresh alone leaves the transient gesture state orphaned.
+- If a list supports `pinned` ordering, the card face needs its own persistent pinned indicator. Reordering without a badge is too subtle when the tapped row is still in view.
+- Add a focused log for pin toggles with `sessionId`, previous state, and next state. This is enough to distinguish UI-state bugs from repository-write failures during device verification.
+
 ## 2026-04-10 Roleplay chat predictive back regression note
 
 - Symptom on device: on the roleplay chat page, a left-edge back swipe immediately popped the page and the underlying page started its enter animation, which felt like the app was replaying a startup animation instead of following the system back gesture preview.

@@ -55,6 +55,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -194,7 +195,10 @@ fun SessionsScreen(
                 session.roleName.ifBlank { "session" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
               exportLauncher.launch("${fileName}-${session.id.take(8)}.jsonl")
             },
-            onTogglePin={ viewModel.togglePin(session.id) },
+            onTogglePin={
+              expandedSessionId = null
+              viewModel.togglePin(session.id)
+            },
             onArchive={ viewModel.archiveSession(session.id) },
             onDelete={ pendingDeleteSessionId=session.id },
           )
@@ -379,13 +383,44 @@ private fun SessionCard(
             horizontalArrangement=Arrangement.SpaceBetween,
             verticalAlignment=Alignment.CenterVertically,
           ) {
-            Text(
-              session.roleName,
-              style=MaterialTheme.typography.titleMedium,
-              maxLines=1,
-              overflow=TextOverflow.Ellipsis,
+            Row(
               modifier=Modifier.weight(1f),
-            )
+              verticalAlignment=Alignment.CenterVertically,
+              horizontalArrangement=Arrangement.spacedBy(6.dp),
+            ) {
+              Text(
+                session.roleName,
+                style=MaterialTheme.typography.titleMedium,
+                maxLines=1,
+                overflow=TextOverflow.Ellipsis,
+                modifier=Modifier.weight(1f, fill = false),
+              )
+              if (session.pinned) {
+                Row(
+                  modifier=
+                    Modifier
+                      .clip(CircleShape)
+                      .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                      .padding(horizontal = 8.dp, vertical = 4.dp),
+                  verticalAlignment=Alignment.CenterVertically,
+                  horizontalArrangement=Arrangement.spacedBy(4.dp),
+                ) {
+                  Icon(
+                    Icons.Rounded.PushPin,
+                    contentDescription=stringResource(R.string.sessions_pin),
+                    tint=MaterialTheme.colorScheme.primary,
+                    modifier=Modifier.size(14.dp),
+                  )
+                  Text(
+                    text=stringResource(R.string.sessions_pin),
+                    style=MaterialTheme.typography.labelSmall,
+                    color=MaterialTheme.colorScheme.primary,
+                    fontWeight=FontWeight.SemiBold,
+                    maxLines=1,
+                  )
+                }
+              }
+            }
             Text(
               formatTime(session.updatedAt, context),
               style=MaterialTheme.typography.labelSmall,

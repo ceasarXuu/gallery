@@ -1,6 +1,7 @@
 package selfgemma.talk.feature.roleplay.sessions
 
 import android.content.Context
+import android.util.Log
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -50,6 +51,10 @@ constructor(
   private val importStChatJsonlIntoSessionUseCase: ImportStChatJsonlIntoSessionUseCase,
   private val exportStChatJsonlFromSessionUseCase: ExportStChatJsonlFromSessionUseCase,
 ) : ViewModel() {
+  companion object {
+    private const val TAG = "SessionsViewModel"
+  }
+
   private val feedbackState = MutableStateFlow(SessionsUiState(loading = false))
 
   val uiState: StateFlow<SessionsUiState> =
@@ -98,8 +103,10 @@ constructor(
     viewModelScope.launch {
       val session = conversationRepository.getSession(sessionId) ?: return@launch
       val now = System.currentTimeMillis()
+      val nextPinned = !session.pinned
+      Log.d(TAG, "togglePin sessionId=$sessionId fromPinned=${session.pinned} toPinned=$nextPinned")
       conversationRepository.updateSession(
-        session.copy(pinned = !session.pinned, updatedAt = now, lastMessageAt = session.lastMessageAt)
+        session.copy(pinned = nextPinned, updatedAt = now, lastMessageAt = session.lastMessageAt)
       )
     }
   }
