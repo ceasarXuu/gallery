@@ -1740,19 +1740,25 @@ private fun buildRoleEditorCompressionPrompt(
       Previous rewrite was still too long${previousLength?.let { " ($it characters)" } ?: ""}.
       Compress much more aggressively this time.
       It is acceptable to drop secondary details as long as the core roleplay intent remains.
-      The final output must be no more than $maxChars characters.
+      This retry must be under $maxChars characters.
 
       """.trimIndent()
     }
+  val hardConstraint =
+    """
+    HARD CONSTRAINT:
+    Output length MUST be between 1 and $maxChars characters (inclusive upper bound), count every character including spaces and line breaks.
+    Return only rewritten text. No preface, no suffix, no markdown, no quotes.
+    """.trimIndent()
   return """
     You are helping edit a role card field.
-    Rewrite the field below so the final result is at or under $maxChars characters.
+    Rewrite the field below and compress it as much as needed.
     Preserve the original meaning, tone, and roleplay intent.
     Keep useful line breaks or list structure when they matter.
     Remove redundancy first. If needed, aggressively shorten until the limit is satisfied.
-    Count all characters in the final output, including spaces and line breaks.
+    $hardConstraint
     $retryInstructions
-    Return only the rewritten field text with no explanation, no markdown, and no quotes.
+    Do not use any text that is not part of the rewritten field.
 
     Field: $fieldTitle
     Target max characters: $maxChars
