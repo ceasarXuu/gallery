@@ -696,4 +696,5 @@ $src.Dispose()
 ```
 
 - If the source icon contains transparency, inspect adaptive icon background layering after replacement. This repo keeps the previous `ic_launcher_background.png`; transparent edges in the new source may expose that background.
+- If the user wants the supplied art kept at its original framing, do not crop to fill. Composite the PNG onto a solid black square first, then scale that full square into each target size with `scale = Min(target/srcWidth, target/srcHeight)` so aspect ratio stays intact and transparent corners do not leak the adaptive background.
 - After icon replacement, run at least `.\gradlew.bat :app:assembleDebug` from `D:\gallery\Android\src` before claiming success. Resource-name mistakes are cheap to catch there.
