@@ -89,6 +89,10 @@ interface DataStoreRepository {
 
   fun getRoleEditorAssistantModelId(): String?
 
+  fun setLastUsedLlmModelId(modelId: String?)
+
+  fun getLastUsedLlmModelId(): String?
+
   fun addBenchmarkResult(result: BenchmarkResult)
 
   fun getAllBenchmarkResults(): List<BenchmarkResult>
@@ -355,6 +359,29 @@ class DefaultDataStoreRepository(
   override fun getRoleEditorAssistantModelId(): String? {
     return runBlocking {
       dataStore.data.first().roleEditorAssistantModelId.takeIf { it.isNotBlank() }
+    }
+  }
+
+  override fun setLastUsedLlmModelId(modelId: String?) {
+    runBlocking {
+      dataStore.updateData { settings ->
+        settings
+          .toBuilder()
+          .apply {
+            if (modelId.isNullOrBlank()) {
+              clearLastUsedLlmModelId()
+            } else {
+              lastUsedLlmModelId = modelId
+            }
+          }
+          .build()
+      }
+    }
+  }
+
+  override fun getLastUsedLlmModelId(): String? {
+    return runBlocking {
+      dataStore.data.first().lastUsedLlmModelId.takeIf { it.isNotBlank() }
     }
   }
 

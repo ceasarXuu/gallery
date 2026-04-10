@@ -274,6 +274,9 @@ constructor(
     if (_uiState.value.selectedModel.name != model.name) {
       _uiState.update { _uiState.value.copy(selectedModel = model) }
     }
+    if (model.isLlm) {
+      dataStoreRepository.setLastUsedLlmModelId(model.name)
+    }
   }
 
   fun downloadModel(task: Task?, model: Model) {
@@ -917,6 +920,8 @@ constructor(
             )
         }
 
+        preloadLastUsedLlmModel()
+
         // Process pending downloads.
         processPendingDownloads()
       } catch (e: Exception) {
@@ -1164,6 +1169,54 @@ constructor(
     }
 
     return groupedSortedTasks
+  }
+
+  private fun preloadLastUsedLlmModel() {
+    val lastUsedModelId = dataStoreRepository.getLastUsedLlmModelId()
+    if (lastUsedModelId.isNullOrBlank()) {
+      Log.d(TAG, "Skipping startup preload because no last used LLM model is stored")
+      return
+    }
+
+    val model = getModelByName(lastUsedModelId)
+    if (model == null) {
+      Log.w(TAG, "Skipping startup preload because model '$lastUsedModelId' was not found")
+      return
+    }
+
+    if (!model.isLlm) {
+      Log.w(TAG, "Skipping startup preload because model '$lastUsedModelId' is not an LLM")
+      return
+    }
+
+    val llmChatTask = getTaskById(BuiltInTaskId.LLM_CHAT)
+    if (llmChatTask == null) {
+      Log.w(TAG, "Skipping startup preload because LLM chat task is unavailable")
+      return
+    }
+
+    val downloadStatus = uiState.value.modelDownloadStatus[model.name]?.status
+    if (downloadStatus != ModelDownloadStatusType.SUCCEEDED) {
+      Log.d(
+        TAG,
+        "Skipping startup preload for '${model.name}' because download status is $downloadStatus",
+      )
+      return
+    }
+
+    val initStatus = uiState.value.modelInitializationStatus[model.name]?.status
+    if (
+      initStatus == ModelInitializationStatusType.INITIALIZED ||
+        initStatus == ModelInitializationStatusType.INITIALIZING ||
+        model.initializing
+    ) {
+      Log.d(TAG, "Skipping startup preload for '${model.name}' because it is already warm")
+      return
+    }
+
+    Log.d(TAG, "Preloading last used LLM model during startup animation: ${model.name}")
+    selectModel(model)
+    initializeModel(context = context, task = llmChatTask, model = model)
   }
 
   private fun getCategoryLabel(context: Context, category: CategoryInfo): String {

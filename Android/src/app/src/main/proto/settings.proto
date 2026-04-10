@@ -80,6 +80,7 @@ message Settings {
   repeated string viewed_promo_id = 10;
   bool disable_message_sounds = 11;
   string role_editor_assistant_model_id = 12;
+  string last_used_llm_model_id = 13;
 }
 
 message UserData {

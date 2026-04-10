@@ -190,6 +190,13 @@ fun RoleplayChatScreen(
     }
   }
 
+  LaunchedEffect(activeModel?.name) {
+    if (activeModel != null) {
+      Log.d(TAG, "sync active chat model to recent selection model=${activeModel.name}")
+      modelManagerViewModel.selectModel(activeModel)
+    }
+  }
+
   LaunchedEffect(imeBottom, latestListItemIndex, hasCompletedInitialPositioning) {
     if (
       hasCompletedInitialPositioning &&

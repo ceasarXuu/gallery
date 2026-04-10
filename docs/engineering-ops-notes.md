@@ -1,3 +1,26 @@
+## 2026-04-10 Startup last-used-model preload note
+
+- Goal: use the startup animation window to warm the most recently used LLM model before the user opens chat.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:installDebug
+adb -s ONNZ95CAEMMZSKTS shell am force-stop selfgemma.talk
+adb -s ONNZ95CAEMMZSKTS logcat -c
+adb -s ONNZ95CAEMMZSKTS shell am start -n selfgemma.talk/.MainActivity
+adb -s ONNZ95CAEMMZSKTS logcat -d -v time | Select-String -Pattern 'AGMainActivity|AGModelManagerViewModel|RoleplayChatScreen|Initializing model|Preloading last used LLM model'
+```
+
+Notes:
+
+- Startup preload should be keyed by a persisted `last_used_llm_model_id`, not by the current in-memory `selectedModel`, because process death wipes the latter.
+- Run preload only after the model allowlist and imported models have been folded into `ModelManagerViewModel.uiState`; otherwise `getModelByName()` can fail during startup even though the model exists on disk.
+- Restrict preload to already-downloaded models. If startup silently falls back to download or retry logic, the splash window stops being a cheap warm-up phase and becomes another source of cold-start instability.
+- Roleplay chat needs to sync `session.activeModelId` back into the shared recent-model store; otherwise startup warm-up can drift toward an old general-chat selection and miss the model users actually open most often.
+
 ## 2026-04-10 Role editor AI compression and undo/redo verification
 
 - Goal: verify role editor fields with length budgets can be AI-compressed under the target limit, and top-level `undo` / `redo` actions work during editing.
