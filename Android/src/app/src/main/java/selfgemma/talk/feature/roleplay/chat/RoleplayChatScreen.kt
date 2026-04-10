@@ -177,7 +177,13 @@ fun RoleplayChatScreen(
     }
   }
 
-  BackHandler { handleNavigateUp() }
+  BackHandler(enabled = showMenu || showModelPicker) {
+    Log.d(
+      TAG,
+      "intercept back to dismiss transient chat UI sessionId=${uiState.session?.id} showMenu=$showMenu showModelPicker=$showModelPicker",
+    )
+    handleNavigateUp()
+  }
 
   LaunchedEffect(activeModel?.name, activeModelStatus) {
     if (

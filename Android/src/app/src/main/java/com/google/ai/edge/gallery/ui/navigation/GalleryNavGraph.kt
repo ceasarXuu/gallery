@@ -263,7 +263,7 @@ fun AppNavHost(
         onOpenChat = { sessionId ->
           pendingChatEnterStartedAtMs = SystemClock.elapsedRealtime()
           navController.navigate(RoleplayRoutes.chat(sessionId)) {
-            popUpTo(RoleplayRoutes.SESSIONS) { inclusive = true }
+            popUpTo(RoleplayRoutes.SESSIONS) { inclusive = false }
           }
         },
         onCreateRole = { navController.navigate(RoleplayRoutes.roleEditor()) },

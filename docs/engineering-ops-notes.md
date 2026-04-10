@@ -1,3 +1,27 @@
+## 2026-04-10 Roleplay chat predictive back regression note
+
+- Symptom on device: on the roleplay chat page, a left-edge back swipe immediately popped the page and the underlying page started its enter animation, which felt like the app was replaying a startup animation instead of following the system back gesture preview.
+- Root cause: `RoleplayChatScreen` registered an unconditional `BackHandler`. In Compose this consumes system back, including edge back gestures, so the chat page called `navigateUp()` immediately instead of letting Android predictive back drive the host transition.
+
+Verification commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:installDebug
+adb -s ONNZ95CAEMMZSKTS shell am force-stop selfgemma.talk
+adb -s ONNZ95CAEMMZSKTS logcat -c
+adb -s ONNZ95CAEMMZSKTS shell am start -n selfgemma.talk/.MainActivity
+adb -s ONNZ95CAEMMZSKTS logcat -v time | Select-String -Pattern 'RoleplayChatScreen|AGAppNavGraph|intercept back to dismiss transient chat UI|chat navigation exit completed|AndroidRuntime'
+```
+
+Notes:
+
+- On screens that rely on NavHost predictive back, do not install an always-on `BackHandler` just to mirror toolbar back behavior.
+- Limit `BackHandler` to transient UI states that genuinely need local dismissal first, such as menus, sheets, dialogs, or in-page pickers.
+- When users report "edge swipe turned into a direct page jump", search for the nearest unconditional `BackHandler` before changing navigation animations. The bug is often gesture interception, not the transition spec itself.
+- If a root route hosts tabs and opens a detail chat route, avoid `popUpTo(root) { inclusive = true }` unless exit-on-back is the explicit product requirement. Removing the root route turns the detail page into the effective stack root and makes back-gesture bugs much harder to diagnose.
+
 ## 2026-04-10 Startup last-used-model preload note
 
 - Goal: use the startup animation window to warm the most recently used LLM model before the user opens chat.
