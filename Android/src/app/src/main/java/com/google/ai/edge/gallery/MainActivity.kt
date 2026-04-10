@@ -236,6 +236,7 @@ private fun TavernIntroVideoOverlay() {
   var visible by remember { mutableStateOf(true) }
   var videoCompleted by remember { mutableStateOf(false) }
   var videoPrepared by remember { mutableStateOf(false) }
+  var startOverlayFadeOut by remember { mutableStateOf(false) }
   val videoAlpha by
     animateFloatAsState(
       targetValue = if (videoPrepared) 1f else 0f,
@@ -244,9 +245,20 @@ private fun TavernIntroVideoOverlay() {
     )
   val gradientAlpha by
     animateFloatAsState(
-      targetValue = if (videoPrepared) 0f else 1f,
+      targetValue =
+        when {
+          startOverlayFadeOut -> 0.18f
+          videoPrepared -> 0f
+          else -> 1f
+        },
       animationSpec = tween(durationMillis = 950, easing = FastOutSlowInEasing),
       label = "tavernGradientAlpha",
+    )
+  val overlayAlpha by
+    animateFloatAsState(
+      targetValue = if (startOverlayFadeOut) 0f else 1f,
+      animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+      label = "tavernOverlayFadeOut",
     )
   val player =
     remember(context) {
@@ -267,7 +279,8 @@ private fun TavernIntroVideoOverlay() {
     }
 
     Log.d(MAIN_ACTIVITY_LOG_TAG, "tavern intro video finished")
-    delay(120)
+    startOverlayFadeOut = true
+    delay(680)
     visible = false
   }
 
@@ -291,6 +304,7 @@ private fun TavernIntroVideoOverlay() {
       modifier =
         Modifier
           .fillMaxSize()
+          .alpha(overlayAlpha)
           .background(Color.Black)
     ) {
       DisposableEffect(player) {
