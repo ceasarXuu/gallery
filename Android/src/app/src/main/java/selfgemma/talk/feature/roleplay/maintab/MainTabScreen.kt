@@ -3,12 +3,6 @@ package selfgemma.talk.feature.roleplay.maintab
 import android.os.SystemClock
 import android.util.Log
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
@@ -16,11 +10,9 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Chat
 import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -92,8 +84,6 @@ fun MainTabScreen(
     }
   }
 
-  val fabDuration = 150
-
   TrackPerformanceState(key = "MainTab", value = currentPageName)
 
   LaunchedEffect(currentPage, isScrollInProgress) {
@@ -107,27 +97,6 @@ fun MainTabScreen(
   Scaffold(
     modifier = modifier,
     contentWindowInsets = WindowInsets(0, 0, 0, 0),
-    floatingActionButton = {
-      AnimatedVisibility(
-        visible = currentPage == 0 && !isScrollInProgress,
-        enter = fadeIn(animationSpec = tween(fabDuration)) + slideInVertically(
-          animationSpec = tween(fabDuration),
-          initialOffsetY = { it / 2 },
-        ),
-        exit = fadeOut(animationSpec = tween(fabDuration)) + slideOutVertically(
-          animationSpec = tween(fabDuration),
-          targetOffsetY = { it / 2 },
-        ),
-      ) {
-        FloatingActionButton(
-          onClick = onOpenRoleCatalog,
-          containerColor = MaterialTheme.colorScheme.primaryContainer,
-          contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        ) {
-          Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.sessions_new_session))
-        }
-      }
-    },
     bottomBar = {
       NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -202,6 +171,10 @@ fun MainTabScreen(
           )
         }
         2 -> {
+          // NOTE:
+          // The bottom "Settings" tab in the roleplay main UI renders RoleplaySettingsScreen here.
+          // If a setting should appear in the roleplay tab, update RoleplaySettingsScreen instead of
+          // the legacy home SettingsDialog.
           selfgemma.talk.feature.roleplay.settings.RoleplaySettingsScreen(
             modelManagerViewModel = modelManagerViewModel,
             navigateUp = handleNavigateUp,

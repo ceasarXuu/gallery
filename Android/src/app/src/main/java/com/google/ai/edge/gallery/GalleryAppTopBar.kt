@@ -21,6 +21,7 @@ package selfgemma.talk
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
@@ -56,6 +57,7 @@ fun AppTopBar(
   modifier: Modifier = Modifier,
   leftAction: AppBarAction? = null,
   rightAction: AppBarAction? = null,
+  rightActionContent: (@Composable RowScope.() -> Unit)? = null,
   scrollBehavior: TopAppBarScrollBehavior? = null,
   subtitle: String = "",
 ) {
@@ -120,35 +122,39 @@ fun AppTopBar(
     },
     // The "action" component at the right.
     actions = {
-      when (rightAction?.actionType) {
-        // Click an icon to open "app setting".
-        AppBarActionType.APP_SETTING -> {
-          IconButton(onClick = rightAction.actionFn) {
-            Icon(
-              imageVector = Icons.Rounded.Settings,
-              contentDescription = stringResource(R.string.cd_app_settings_icon),
-              tint = MaterialTheme.colorScheme.onSurface,
-            )
+      if (rightActionContent != null) {
+        rightActionContent()
+      } else {
+        when (rightAction?.actionType) {
+          // Click an icon to open "app setting".
+          AppBarActionType.APP_SETTING -> {
+            IconButton(onClick = rightAction.actionFn) {
+              Icon(
+                imageVector = Icons.Rounded.Settings,
+                contentDescription = stringResource(R.string.cd_app_settings_icon),
+                tint = MaterialTheme.colorScheme.onSurface,
+              )
+            }
           }
-        }
 
-        // Click a button to navigate up.
-        AppBarActionType.NAVIGATE_UP -> {
-          TextButton(onClick = rightAction.actionFn) { Text(rightAction.label ?: "Done") }
-        }
-
-        // Click an icon to open menu (three dots).
-        AppBarActionType.MENU -> {
-          IconButton(onClick = rightAction.actionFn) {
-            Icon(
-              imageVector = Icons.Rounded.MoreVert,
-              contentDescription = stringResource(R.string.cd_menu),
-              tint = MaterialTheme.colorScheme.onSurface,
-            )
+          // Click a button to navigate up.
+          AppBarActionType.NAVIGATE_UP -> {
+            TextButton(onClick = rightAction.actionFn) { Text(rightAction.label ?: "Done") }
           }
-        }
 
-        else -> {}
+          // Click an icon to open menu (three dots).
+          AppBarActionType.MENU -> {
+            IconButton(onClick = rightAction.actionFn) {
+              Icon(
+                imageVector = Icons.Rounded.MoreVert,
+                contentDescription = stringResource(R.string.cd_menu),
+                tint = MaterialTheme.colorScheme.onSurface,
+              )
+            }
+          }
+
+          else -> {}
+        }
       }
     },
   )

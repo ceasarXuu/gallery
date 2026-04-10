@@ -19,11 +19,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -53,6 +51,7 @@ import selfgemma.talk.performance.TrackPerformanceState
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import selfgemma.talk.domain.roleplay.model.primaryAvatarUri
 import selfgemma.talk.feature.roleplay.common.RoleAvatar
+import selfgemma.talk.ui.common.TopBarOverflowMenuButton
 
 private const val TAG = "RoleCatalogScreen"
 
@@ -119,18 +118,10 @@ fun RoleCatalogScreen(
           }
         },
         actions = {
-          Box {
-            IconButton(onClick = { showMenu = true }) {
-              Icon(
-                imageVector = Icons.Rounded.MoreVert,
-                contentDescription = stringResource(R.string.cd_menu),
-              )
-            }
-            
-            DropdownMenu(
-              expanded = showMenu,
-              onDismissRequest = { showMenu = false },
-            ) {
+          TopBarOverflowMenuButton(
+            expanded = showMenu,
+            onExpandedChange = { showMenu = it },
+          ) {
               DropdownMenuItem(
                 text = { Text(stringResource(R.string.roles_menu_create)) },
                 onClick = {
@@ -145,7 +136,6 @@ fun RoleCatalogScreen(
                   importLauncher.launch("*/*")
                 },
               )
-            }
           }
         },
       )
