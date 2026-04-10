@@ -48,6 +48,7 @@ class ContextBudgetPlanner @Inject constructor(private val tokenEstimator: Token
           PromptSectionId.SESSION_SUMMARY,
           PromptSectionId.RELEVANT_MEMORY,
           PromptSectionId.RECENT_CONVERSATION,
+          PromptSectionId.CHARACTER_PERSONALITY,
           PromptSectionId.PERSONA,
           PromptSectionId.WORLD,
           PromptSectionId.CHARACTER_SUMMARY -> PromptSectionLevel.COMPACT
@@ -59,6 +60,7 @@ class ContextBudgetPlanner @Inject constructor(private val tokenEstimator: Token
           PromptSectionId.SESSION_SUMMARY -> if (candidate.required) PromptSectionLevel.MINIMAL else PromptSectionLevel.DROPPED
           PromptSectionId.RELEVANT_MEMORY,
           PromptSectionId.RECENT_CONVERSATION,
+          PromptSectionId.CHARACTER_PERSONALITY,
           PromptSectionId.PERSONA,
           PromptSectionId.WORLD,
           PromptSectionId.CHARACTER_SUMMARY -> PromptSectionLevel.MINIMAL
@@ -84,6 +86,7 @@ class ContextBudgetPlanner @Inject constructor(private val tokenEstimator: Token
         PromptSectionId.SESSION_SUMMARY,
         PromptSectionId.RELEVANT_MEMORY,
         PromptSectionId.RECENT_CONVERSATION,
+        PromptSectionId.CHARACTER_PERSONALITY,
         PromptSectionId.PERSONA,
         PromptSectionId.WORLD,
         PromptSectionId.CHARACTER_SUMMARY,

@@ -10,9 +10,11 @@ import selfgemma.talk.domain.roleplay.model.RoleRuntimeProfile
 import selfgemma.talk.domain.roleplay.model.SessionSummary
 import selfgemma.talk.domain.roleplay.model.StChatRuntimeRole
 import selfgemma.talk.domain.roleplay.model.name
+import selfgemma.talk.domain.roleplay.model.personaDescriptionInPrompt
 import selfgemma.talk.domain.roleplay.model.personaDescription
 import selfgemma.talk.domain.roleplay.model.summary
 import selfgemma.talk.domain.roleplay.model.systemPrompt
+import selfgemma.talk.domain.roleplay.model.userPersonaDescription
 import selfgemma.talk.domain.roleplay.model.worldSettings
 
 private const val FULL_RECENT_DIALOGUE_TOKEN_BUDGET = 1800
@@ -69,11 +71,21 @@ internal class PromptMaterialBuilder @Inject constructor(private val tokenEstima
         )
         addCandidate(
           PromptSectionCandidate(
-            id = PromptSectionId.PERSONA,
-            title = "Persona",
+            id = PromptSectionId.CHARACTER_PERSONALITY,
+            title = "Personality",
             fullBody = macroContext.substitute(runtimeRole.personaDescription()).trim(),
             compactBody = runtimeProfile?.compiledPersonaPrompt,
             minimalBody = runtimeProfile?.compiledPersonaPrompt?.take(220),
+            priority = PromptSectionPriority.MEDIUM,
+          )
+        )
+        addCandidate(
+          PromptSectionCandidate(
+            id = PromptSectionId.PERSONA,
+            title = "Persona",
+            fullBody = macroContext.substitute(runtimeRole.userProfile.personaDescriptionInPrompt()).trim(),
+            compactBody = macroContext.substitute(runtimeRole.userProfile.personaDescriptionInPrompt()).trim().take(220),
+            minimalBody = macroContext.substitute(runtimeRole.userProfile.personaDescriptionInPrompt()).trim().take(160),
             priority = PromptSectionPriority.MEDIUM,
           )
         )
@@ -259,7 +271,7 @@ internal class PromptMaterialBuilder @Inject constructor(private val tokenEstima
 
   private fun MessageSide.toSpeakerLabel(runtimeRole: StChatRuntimeRole): String {
     return when (this) {
-      MessageSide.USER -> "User"
+      MessageSide.USER -> runtimeRole.userName
       MessageSide.ASSISTANT -> runtimeRole.name()
       MessageSide.SYSTEM -> "System"
     }

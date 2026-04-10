@@ -3,16 +3,18 @@ package selfgemma.talk.domain.roleplay.usecase
 import com.google.gson.JsonObject
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.StChatRuntimeRole
+import selfgemma.talk.domain.roleplay.model.StUserProfile
 import selfgemma.talk.domain.roleplay.model.cardData
 import selfgemma.talk.domain.roleplay.model.exampleDialoguesRaw
 import selfgemma.talk.domain.roleplay.model.name
+import selfgemma.talk.domain.roleplay.model.personaDescriptionInPrompt
 import selfgemma.talk.domain.roleplay.model.personaDescription
 import selfgemma.talk.domain.roleplay.model.summary
 import selfgemma.talk.domain.roleplay.model.systemPrompt
 import selfgemma.talk.domain.roleplay.model.toStChatRuntimeRole
+import selfgemma.talk.domain.roleplay.model.userPersonaDescription
 import selfgemma.talk.domain.roleplay.model.worldSettings
 
-private const val DEFAULT_ST_USER_NAME = "User"
 private const val ST_MACRO_MAX_PASSES = 4
 private val LEGACY_ST_NAME_MACROS =
   linkedMapOf(
@@ -53,14 +55,19 @@ data class StMacroContext(
   }
 }
 
-fun RoleCard.toStMacroContext(userName: String = DEFAULT_ST_USER_NAME): StMacroContext {
-  return toStChatRuntimeRole(userName = userName).toStMacroContext()
+fun RoleCard.toStMacroContext(userProfile: StUserProfile = StUserProfile()): StMacroContext {
+  return toStChatRuntimeRole(userProfile = userProfile).toStMacroContext()
+}
+
+fun RoleCard.toStMacroContext(userName: String): StMacroContext {
+  return toStMacroContext(userProfile = StUserProfile().withActivePersona(name = userName))
 }
 
 fun StChatRuntimeRole.toStMacroContext(): StMacroContext {
   val cardData = cardData()
   val creatorNotes = cardData.creator_notes.orEmpty().ifBlank { card.creatorcomment.orEmpty() }
   val mesExamplesRaw = exampleDialoguesRaw()
+  val inPromptPersona = userProfile.personaDescriptionInPrompt()
   return StMacroContext(
     values =
       mapOf(
@@ -69,7 +76,7 @@ fun StChatRuntimeRole.toStMacroContext(): StMacroContext {
         "description" to summary(),
         "personality" to personaDescription(),
         "scenario" to worldSettings(),
-        "persona" to personaDescription(),
+        "persona" to inPromptPersona,
         "mesExamples" to mesExamplesRaw,
         "mesExamplesRaw" to mesExamplesRaw,
         "creatorNotes" to creatorNotes,

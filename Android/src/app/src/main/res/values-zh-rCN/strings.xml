@@ -67,7 +67,27 @@
   <!-- Tabs -->
   <string name="tab_messages">消息</string>
   <string name="tab_roles">角色</string>
+  <string name="tab_me">我的</string>
   <string name="tab_settings">设置</string>
+  <string name="my_profile_avatar_slot_title">Persona 槽位</string>
+  <string name="my_profile_persona_name_title">Persona 名称</string>
+  <string name="my_profile_persona_title_title">Persona 标题</string>
+  <string name="my_profile_persona_description_title">Persona 描述</string>
+  <string name="my_profile_persona_position_title">Persona 插入位置</string>
+  <string name="my_profile_persona_position_in_prompt">放入 Prompt</string>
+  <string name="my_profile_persona_position_top_an">置于作者注释前</string>
+  <string name="my_profile_persona_position_bottom_an">置于作者注释后</string>
+  <string name="my_profile_persona_position_at_depth">按深度插入</string>
+  <string name="my_profile_persona_position_none">禁用</string>
+  <string name="my_profile_persona_depth_title">Persona 深度</string>
+  <string name="my_profile_persona_role_title">Persona 角色</string>
+  <string name="my_profile_persona_role_system">系统</string>
+  <string name="my_profile_persona_role_user">用户</string>
+  <string name="my_profile_persona_role_assistant">助手</string>
+  <string name="my_profile_default_persona_title">设为默认 Persona</string>
+  <string name="my_profile_default_persona_summary">默认应用到新的角色扮演会话。</string>
+  <string name="my_profile_reset">重置 Persona</string>
+  <string name="my_profile_save">保存 Persona</string>
 
   <!-- Sessions Screen -->
   <string name="sessions_loading">加载会话中...</string>
@@ -186,10 +206,15 @@
   <string name="chat_open_model_library_menu">打开模型库</string>
   <string name="chat_select_model_title">选择模型</string>
   <string name="chat_current_model">当前使用</string>
+  <string name="chat_token_speed_format">%1$d 令牌/秒</string>
 
   <!-- Settings Screen -->
   <string name="settings_model_library_title">模型库</string>
   <string name="settings_model_library_summary">下载、导入和管理本地模型</string>
+  <string name="settings_dialog_live_token_speed_title">显示实时生成速率</string>
+  <string name="settings_dialog_live_token_speed_summary">模型生成时，在聊天页头部实时显示 token 输出速度。</string>
+  <string name="settings_dialog_streaming_output_title">开启流式输出</string>
+  <string name="settings_dialog_streaming_output_summary">生成时逐步显示回复内容；若中途打断，会撤回当前未完成气泡，下一轮重新从头生成。</string>
   <string name="settings_role_editor_assistant_model_title">编辑助手模型</string>
   <string name="settings_role_editor_assistant_model_none">默认：第一个可用模型</string>
   <string name="settings_role_editor_assistant_model_empty">当前还没有可用本地模型。请先添加模型，再在角色编辑器中使用 AI 压缩。</string>

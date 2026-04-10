@@ -3,6 +3,7 @@ package selfgemma.talk.domain.roleplay.usecase
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
+import selfgemma.talk.data.DataStoreRepository
 import selfgemma.talk.domain.roleplay.model.MessageKind
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
@@ -18,6 +19,7 @@ private const val SUMMARY_MESSAGE_LINE_LENGTH = 180
 class SummarizeSessionUseCase
 @Inject
 constructor(
+  private val dataStoreRepository: DataStoreRepository,
   private val conversationRepository: ConversationRepository,
   private val tokenEstimator: TokenEstimator,
 ) {
@@ -84,8 +86,9 @@ constructor(
   }
 
   private fun MessageSide.toSpeakerLabel(): String {
+    val userName = dataStoreRepository.getStUserProfile().userName
     return when (this) {
-      MessageSide.USER -> "User"
+      MessageSide.USER -> userName
       MessageSide.ASSISTANT -> "Assistant"
       MessageSide.SYSTEM -> "System"
     }

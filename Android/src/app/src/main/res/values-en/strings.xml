@@ -67,7 +67,27 @@
   <!-- Tabs -->
   <string name="tab_messages">Messages</string>
   <string name="tab_roles">Roles</string>
+  <string name="tab_me">Me</string>
   <string name="tab_settings">Settings</string>
+  <string name="my_profile_avatar_slot_title">Persona Slot</string>
+  <string name="my_profile_persona_name_title">Persona Name</string>
+  <string name="my_profile_persona_title_title">Persona Title</string>
+  <string name="my_profile_persona_description_title">Persona Description</string>
+  <string name="my_profile_persona_position_title">Persona Placement</string>
+  <string name="my_profile_persona_position_in_prompt">In Prompt</string>
+  <string name="my_profile_persona_position_top_an">Top Author Note</string>
+  <string name="my_profile_persona_position_bottom_an">Bottom Author Note</string>
+  <string name="my_profile_persona_position_at_depth">At Depth</string>
+  <string name="my_profile_persona_position_none">Disabled</string>
+  <string name="my_profile_persona_depth_title">Persona Depth</string>
+  <string name="my_profile_persona_role_title">Persona Role</string>
+  <string name="my_profile_persona_role_system">System</string>
+  <string name="my_profile_persona_role_user">User</string>
+  <string name="my_profile_persona_role_assistant">Assistant</string>
+  <string name="my_profile_default_persona_title">Use As Default Persona</string>
+  <string name="my_profile_default_persona_summary">Apply this persona to new roleplay chats by default.</string>
+  <string name="my_profile_reset">Reset Persona</string>
+  <string name="my_profile_save">Save Persona</string>
 
   <!-- Sessions Screen -->
   <string name="sessions_loading">Loading sessions...</string>
@@ -182,10 +202,15 @@
   <string name="chat_open_model_library_menu">Open Model Library</string>
   <string name="chat_select_model_title">Select Model</string>
   <string name="chat_current_model">Current</string>
+  <string name="chat_token_speed_format">%1$d token/s</string>
 
   <!-- Settings Screen -->
   <string name="settings_model_library_title">Model Library</string>
   <string name="settings_model_library_summary">Download, import and manage local models</string>
+  <string name="settings_dialog_live_token_speed_title">Show live generation speed</string>
+  <string name="settings_dialog_live_token_speed_summary">Display real-time token output speed in the chat header while the model is generating.</string>
+  <string name="settings_dialog_streaming_output_title">Enable streaming output</string>
+  <string name="settings_dialog_streaming_output_summary">Show assistant replies incrementally while generating. If interrupted, the partial bubble is withdrawn and the next turn restarts from scratch.</string>
   <string name="settings_role_editor_assistant_model_title">Editor assistant model</string>
   <string name="settings_role_editor_assistant_model_none">Default: first available model</string>
   <string name="settings_role_editor_assistant_model_empty">No local model is available yet. Add a model before using AI compression in the role editor.</string>

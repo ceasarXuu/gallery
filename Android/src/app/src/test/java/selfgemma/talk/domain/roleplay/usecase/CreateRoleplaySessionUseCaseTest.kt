@@ -17,6 +17,7 @@ import selfgemma.talk.domain.roleplay.model.StCharacterCard
 import selfgemma.talk.domain.roleplay.model.StCharacterCardData
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
+import selfgemma.talk.testing.FakeDataStoreRepository
 
 class CreateRoleplaySessionUseCaseTest {
   @Test
@@ -37,6 +38,7 @@ class CreateRoleplaySessionUseCaseTest {
 
     val session =
       CreateRoleplaySessionUseCase(
+        dataStoreRepository = FakeDataStoreRepository(),
         conversationRepository = conversationRepository,
         roleRepository = roleRepository,
       ).invoke(roleId = "role-1", modelId = "gemma")
@@ -63,6 +65,7 @@ class CreateRoleplaySessionUseCaseTest {
       )
 
     CreateRoleplaySessionUseCase(
+      dataStoreRepository = FakeDataStoreRepository(),
       conversationRepository = conversationRepository,
       roleRepository = roleRepository,
     ).invoke(roleId = "role-2", modelId = "gemma")
@@ -90,6 +93,7 @@ class CreateRoleplaySessionUseCaseTest {
       )
 
     CreateRoleplaySessionUseCase(
+      dataStoreRepository = FakeDataStoreRepository(),
       conversationRepository = conversationRepository,
       roleRepository = roleRepository,
     ).invoke(roleId = "role-3", modelId = "gemma")
@@ -119,6 +123,7 @@ class CreateRoleplaySessionUseCaseTest {
       )
 
     CreateRoleplaySessionUseCase(
+      dataStoreRepository = FakeDataStoreRepository(),
       conversationRepository = conversationRepository,
       roleRepository = roleRepository,
     ).invoke(roleId = "role-4", modelId = "gemma")
@@ -146,6 +151,7 @@ class CreateRoleplaySessionUseCaseTest {
       )
 
     CreateRoleplaySessionUseCase(
+      dataStoreRepository = FakeDataStoreRepository(),
       conversationRepository = conversationRepository,
       roleRepository = roleRepository,
     ).invoke(roleId = "role-5", modelId = "gemma")

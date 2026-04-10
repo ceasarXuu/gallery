@@ -15,6 +15,7 @@ import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
 import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentMetadata
 import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentRepository
+import selfgemma.talk.testing.FakeDataStoreRepository
 
 class StChatSessionInteropUseCaseTest {
   @Test
@@ -88,6 +89,7 @@ class StChatSessionInteropUseCaseTest {
     val documentRepository = FakeDocumentRepository()
     val exportUseCase =
       ExportStChatJsonlFromSessionUseCase(
+        dataStoreRepository = FakeDataStoreRepository(),
         conversationRepository = repository,
         roleRepository = FakeRoleRepository(),
         exportStChatJsonlToUriUseCase =

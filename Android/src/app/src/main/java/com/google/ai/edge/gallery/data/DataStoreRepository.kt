@@ -24,12 +24,19 @@ import selfgemma.talk.proto.Cutout
 import selfgemma.talk.proto.CutoutCollection
 import selfgemma.talk.proto.ImportedModel
 import selfgemma.talk.proto.Settings
+import selfgemma.talk.proto.StPersonaConnectionSettings
+import selfgemma.talk.proto.StPersonaDescriptorSettings
+import selfgemma.talk.proto.StUserProfileSettings
 import selfgemma.talk.proto.Skill
 import selfgemma.talk.proto.Skills
 import selfgemma.talk.proto.Theme
 import selfgemma.talk.proto.UserData
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import selfgemma.talk.domain.roleplay.model.StPersonaConnection
+import selfgemma.talk.domain.roleplay.model.StPersonaDescriptionPosition
+import selfgemma.talk.domain.roleplay.model.StPersonaDescriptor
+import selfgemma.talk.domain.roleplay.model.StUserProfile
 
 // TODO(b/423700720): Change to async (suspend) functions
 interface DataStoreRepository {
@@ -85,6 +92,14 @@ interface DataStoreRepository {
 
   fun areMessageSoundsEnabled(): Boolean
 
+  fun setLiveTokenSpeedEnabled(enabled: Boolean)
+
+  fun isLiveTokenSpeedEnabled(): Boolean
+
+  fun setStreamingOutputEnabled(enabled: Boolean)
+
+  fun isStreamingOutputEnabled(): Boolean
+
   fun setRoleEditorAssistantModelId(modelId: String?)
 
   fun getRoleEditorAssistantModelId(): String?
@@ -92,6 +107,10 @@ interface DataStoreRepository {
   fun setLastUsedLlmModelId(modelId: String?)
 
   fun getLastUsedLlmModelId(): String?
+
+  fun setStUserProfile(profile: StUserProfile)
+
+  fun getStUserProfile(): StUserProfile
 
   fun addBenchmarkResult(result: BenchmarkResult)
 
@@ -339,6 +358,36 @@ class DefaultDataStoreRepository(
     }
   }
 
+  override fun setLiveTokenSpeedEnabled(enabled: Boolean) {
+    runBlocking {
+      dataStore.updateData { settings ->
+        settings.toBuilder().setDisableLiveTokenSpeed(!enabled).build()
+      }
+    }
+  }
+
+  override fun isLiveTokenSpeedEnabled(): Boolean {
+    return runBlocking {
+      val settings = dataStore.data.first()
+      !settings.disableLiveTokenSpeed
+    }
+  }
+
+  override fun setStreamingOutputEnabled(enabled: Boolean) {
+    runBlocking {
+      dataStore.updateData { settings ->
+        settings.toBuilder().setDisableStreamingOutput(!enabled).build()
+      }
+    }
+  }
+
+  override fun isStreamingOutputEnabled(): Boolean {
+    return runBlocking {
+      val settings = dataStore.data.first()
+      !settings.disableStreamingOutput
+    }
+  }
+
   override fun setRoleEditorAssistantModelId(modelId: String?) {
     runBlocking {
       dataStore.updateData { settings ->
@@ -382,6 +431,20 @@ class DefaultDataStoreRepository(
   override fun getLastUsedLlmModelId(): String? {
     return runBlocking {
       dataStore.data.first().lastUsedLlmModelId.takeIf { it.isNotBlank() }
+    }
+  }
+
+  override fun setStUserProfile(profile: StUserProfile) {
+    runBlocking {
+      dataStore.updateData { settings ->
+        settings.toBuilder().setStUserProfile(profile.ensureDefaults().toProto()).build()
+      }
+    }
+  }
+
+  override fun getStUserProfile(): StUserProfile {
+    return runBlocking {
+      dataStore.data.first().stUserProfile.toDomain()
     }
   }
 
@@ -506,4 +569,64 @@ class DefaultDataStoreRepository(
       settings.viewedPromoIdList.contains(promoId)
     }
   }
+}
+
+private fun StUserProfile.toProto(): StUserProfileSettings {
+  val personaDescriptionSettings = mutableMapOf<String, StPersonaDescriptorSettings>()
+  personaDescriptions.forEach { (key, descriptorValue) ->
+    val descriptor: StPersonaDescriptor = descriptorValue
+    personaDescriptionSettings[key] = descriptor.toProto()
+  }
+  return StUserProfileSettings.newBuilder()
+    .setUserAvatarId(resolvedUserAvatarId())
+    .apply {
+      defaultPersonaId?.takeIf { it.isNotBlank() }?.let(::setDefaultPersonaId)
+      putAllPersonas(personas)
+      putAllPersonaDescriptions(personaDescriptionSettings)
+    }
+    .build()
+}
+
+private fun StPersonaDescriptor.toProto(): StPersonaDescriptorSettings {
+  return StPersonaDescriptorSettings.newBuilder()
+    .setDescription(description)
+    .setTitle(title)
+    .setPosition(position.rawValue)
+    .setDepth(depth)
+    .setRole(role)
+    .setLorebook(lorebook)
+    .apply {
+      addAllConnections(connections.map { connection ->
+        StPersonaConnectionSettings.newBuilder()
+          .setType(connection.type)
+          .setId(connection.id)
+          .build()
+      })
+      avatarUri?.takeIf { it.isNotBlank() }?.let(::setAvatarUri)
+    }
+    .build()
+}
+
+private fun StUserProfileSettings.toDomain(): StUserProfile {
+  return StUserProfile(
+    userAvatarId = userAvatarId,
+    defaultPersonaId = defaultPersonaId.takeIf { it.isNotBlank() },
+    personas = personasMap.toMap(),
+    personaDescriptions =
+      personaDescriptionsMap.mapValues { (_, descriptor) ->
+        StPersonaDescriptor(
+          description = descriptor.description,
+          title = descriptor.title,
+          position = StPersonaDescriptionPosition.fromRawValue(descriptor.position),
+          depth = descriptor.depth,
+          role = descriptor.role,
+          lorebook = descriptor.lorebook,
+          connections =
+            descriptor.connectionsList.map { connection ->
+              StPersonaConnection(type = connection.type, id = connection.id)
+            },
+          avatarUri = descriptor.avatarUri.takeIf { it.isNotBlank() },
+        )
+      },
+  ).ensureDefaults()
 }

@@ -5,6 +5,8 @@ import selfgemma.talk.data.roleplay.interop.stchat.StChatInteropMapper
 import selfgemma.talk.data.roleplay.interop.stchat.StChatJsonlSerializer
 import selfgemma.talk.domain.roleplay.model.Message
 
+private const val ST_DEPRECATED_CHAT_HEADER_VALUE = "unused"
+
 class ExportStChatJsonlUseCase @Inject constructor() {
   private val serializer = StChatJsonlSerializer()
 
@@ -23,8 +25,8 @@ class ExportStChatJsonlUseCase @Inject constructor() {
 
     return serializer.serialize(
       chatMetadataJson = chatMetadataJson,
-      userName = userName,
-      characterName = roleName,
+      userName = ST_DEPRECATED_CHAT_HEADER_VALUE,
+      characterName = ST_DEPRECATED_CHAT_HEADER_VALUE,
       messages = interopMessages,
     )
   }

@@ -2,6 +2,7 @@ package selfgemma.talk.domain.roleplay.usecase
 
 import java.util.UUID
 import javax.inject.Inject
+import selfgemma.talk.data.DataStoreRepository
 import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
@@ -14,13 +15,14 @@ import selfgemma.talk.domain.roleplay.repository.RoleRepository
 class CreateRoleplaySessionUseCase
 @Inject
 constructor(
+  private val dataStoreRepository: DataStoreRepository,
   private val conversationRepository: ConversationRepository,
   private val roleRepository: RoleRepository,
 ) {
   suspend operator fun invoke(roleId: String, modelId: String): Session {
     val session = conversationRepository.createSession(roleId = roleId, modelId = modelId)
     val role = roleRepository.getRole(roleId) ?: return session
-    val runtimeRole = role.toStChatRuntimeRole()
+    val runtimeRole = role.toStChatRuntimeRole(userProfile = dataStoreRepository.getStUserProfile())
     val cardData = runtimeRole.card.data
     val macroContext = runtimeRole.toStMacroContext()
     val openingMessage =

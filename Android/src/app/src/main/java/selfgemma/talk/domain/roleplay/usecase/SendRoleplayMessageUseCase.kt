@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import selfgemma.talk.data.ConfigKeys
+import selfgemma.talk.data.DataStoreRepository
 import selfgemma.talk.data.Model
 import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageSide
@@ -69,6 +70,7 @@ private const val TAG = "SendRoleplayMessage"
 class SendRoleplayMessageUseCase
 @Inject
 constructor(
+  private val dataStoreRepository: DataStoreRepository,
   private val conversationRepository: ConversationRepository,
   private val roleRepository: RoleRepository,
   private val memoryRepository: MemoryRepository,
@@ -77,7 +79,6 @@ constructor(
   private val extractMemoriesUseCase: ExtractMemoriesUseCase,
 ) {
   companion object {
-    const val ENABLE_STREAMING = false
     private const val MODEL_READY_TIMEOUT_MS = 60_000L
     private const val MODEL_READY_POLL_INTERVAL_MS = 50L
   }
@@ -87,6 +88,7 @@ constructor(
     model: Model,
     userInput: String,
     stagedTurn: StagedRoleplayTurn? = null,
+    enableStreamingOutput: Boolean = true,
     isStopRequested: () -> Boolean,
   ): SendRoleplayMessageResult {
     val resolvedTurn =
@@ -100,6 +102,7 @@ constructor(
     return completePendingMessage(
       pendingMessage = pendingMessage,
       model = model,
+      enableStreamingOutput = enableStreamingOutput,
       isStopRequested = isStopRequested,
     )
   }
@@ -150,6 +153,7 @@ constructor(
   suspend fun completePendingMessage(
     pendingMessage: PendingRoleplayMessage,
     model: Model,
+    enableStreamingOutput: Boolean = true,
     isStopRequested: () -> Boolean,
   ): SendRoleplayMessageResult {
     val startTime = SystemClock.elapsedRealtime()
@@ -215,7 +219,7 @@ constructor(
       memoryRepository.markUsed(relevantMemories.map { it.id }, System.currentTimeMillis())
     }
 
-    val runtimeRole = role.toStChatRuntimeRole()
+    val runtimeRole = role.toStChatRuntimeRole(userProfile = dataStoreRepository.getStUserProfile())
     val runtimeSession = session.toStChatRuntimeSession(generationTrigger = "normal")
     val contextProfile = model.toModelContextProfile()
     var attemptMode = PromptBudgetMode.FULL
@@ -315,6 +319,7 @@ constructor(
           role = role,
           sessionId = sessionId,
           startTime = startTime,
+          enableStreamingOutput = enableStreamingOutput,
           isStopRequested = isStopRequested,
         )
       finalMessage = inferenceResult.message
@@ -500,12 +505,14 @@ constructor(
     role: selfgemma.talk.domain.roleplay.model.RoleCard,
     sessionId: String,
     startTime: Long,
+    enableStreamingOutput: Boolean,
     isStopRequested: () -> Boolean,
   ): InferenceAttemptResult {
     val callbackScope = CoroutineScope(Dispatchers.IO)
     val partialContent = StringBuilder()
     val completed = AtomicBoolean(false)
     val inferenceStart = System.currentTimeMillis()
+    val hasLoggedStreamingUpdate = AtomicBoolean(false)
 
     return try {
       suspendCancellableCoroutine { continuation ->
@@ -539,7 +546,13 @@ constructor(
               if (!partialResult.startsWith("<ctrl") && partialResult.isNotEmpty()) {
                 partialContent.append(partialResult)
 
-                if (ENABLE_STREAMING) {
+                if (enableStreamingOutput && !isStopRequested()) {
+                  if (hasLoggedStreamingUpdate.compareAndSet(false, true)) {
+                    Log.d(
+                      TAG,
+                      "streaming content updates enabled sessionId=$sessionId assistantMessageId=${assistantSeed.id}",
+                    )
+                  }
                   val streamingMessage =
                     assistantSeed.copy(
                       content = partialContent.toString(),

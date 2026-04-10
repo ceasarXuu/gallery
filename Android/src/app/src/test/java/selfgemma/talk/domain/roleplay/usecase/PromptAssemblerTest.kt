@@ -267,7 +267,8 @@ class PromptAssemblerTest {
     assertTrue(prompt.contains("You are roleplaying as Canonical Name."))
     assertTrue(prompt.contains("[Core Character]\nCanonical prompt"))
     assertTrue(prompt.contains("[Character Summary]\nCanonical summary"))
-    assertTrue(prompt.contains("[Persona]\nCanonical persona"))
+    assertTrue(prompt.contains("[Personality]\nCanonical persona"))
+    assertFalse(prompt.contains("[Persona]\nCanonical persona"))
     assertTrue(prompt.contains("[World]\nCanonical world"))
     assertTrue(prompt.contains("[Example Dialogue]\nCanonical example"))
     assertFalse(prompt.contains("Legacy summary"))
@@ -333,13 +334,47 @@ class PromptAssemblerTest {
 
     assertTrue(prompt.contains("Protect User and remember User rescued Catty from a shelter.."))
     assertTrue(prompt.contains("[Character Summary]\nUser adopted Catty."))
-    assertTrue(prompt.contains("[Persona]\nCatty is playful."))
+    assertTrue(prompt.contains("[Personality]\nCatty is playful."))
     assertTrue(prompt.contains("[World]\nUser and Catty share an apartment."))
     assertTrue(prompt.contains("[Example Dialogue]\nUser: Hi\nCatty: Hey."))
     assertTrue(prompt.contains("Catty trusts User."))
     assertFalse(prompt.contains("{{char}}"))
     assertFalse(prompt.contains("{{user}}"))
     assertFalse(prompt.contains("<USER>"))
+  }
+
+  @Test
+  fun assemble_injects_user_persona_only_when_profile_is_in_prompt() {
+    val now = System.currentTimeMillis()
+    val prompt =
+      assembler.assemble(
+        role =
+          RoleCard(
+            id = "role-14",
+            name = "Guide",
+            summary = "Helpful guide.",
+            systemPrompt = "Stay focused.",
+            cardCore =
+              StCharacterCard(
+                name = "Guide",
+                data = StCharacterCardData(personality = "Patient and observant."),
+              ),
+            createdAt = now,
+            updatedAt = now,
+          ),
+        summary = null,
+        memories = emptyList(),
+        recentMessages = emptyList(),
+        pendingUserInput = "",
+        userProfile =
+          selfgemma.talk.domain.roleplay.model.StUserProfile().withActivePersona(
+            name = "Alex",
+            description = "{{user}} is a cautious negotiator.",
+          ),
+      )
+
+    assertTrue(prompt.contains("[Persona]\nAlex is a cautious negotiator."))
+    assertTrue(prompt.contains("[Personality]\nPatient and observant."))
   }
 
   @Test

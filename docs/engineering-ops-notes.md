@@ -1,3 +1,26 @@
+## 2026-04-11 Top app bar overflow menu anchor note
+
+- Symptom on device: the roleplay chat page top-right overflow menu opened on top of the menu trigger, so the popup visually covered the three-dot button and felt misaligned compared with the role tab menu.
+- Root cause: `RoleplayChatScreen` rendered the `DropdownMenu` in a separate overlay `Box` aligned to `TopEnd` of the whole app bar instead of anchoring the popup to the same container as the trigger button. That broke the natural menu position calculation from Material3.
+
+Verification commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:installDebug
+adb -s ONNZ95CAEMMZSKTS shell am force-stop selfgemma.talk
+adb -s ONNZ95CAEMMZSKTS logcat -c
+adb -s ONNZ95CAEMMZSKTS shell am start -n selfgemma.talk/.MainActivity
+adb -s ONNZ95CAEMMZSKTS logcat -d -v time | Select-String -Pattern 'RoleplayChatScreen|RoleCatalogScreen|AndroidRuntime'
+```
+
+Notes:
+
+- In Compose top bars, the overflow popup and the three-dot trigger should live in the same `Box` anchor. Do not align the menu separately against the whole `Scaffold` top bar unless a custom offset is truly required.
+- If two pages expose the same top-right overflow pattern, extract a shared menu button wrapper before tweaking offsets. Reusing the same anchor structure is more reliable than trying to hand-tune popup coordinates per screen.
+- For menu-position regressions, first compare whether the trigger and popup share the same composition subtree. Wrong subtree placement is a more common cause than `DropdownMenu` itself.
+
 ## 2026-04-10 Sessions pin swipe-state note
 
 - Symptom on device: after pinning a session from the messages list swipe actions, the action menu stayed expanded and the card front did not show any visible pinned state, so the user could not tell whether pinning had actually taken effect.
@@ -769,3 +792,43 @@ $src.Dispose()
 - If the source icon contains transparency, inspect adaptive icon background layering after replacement. This repo keeps the previous `ic_launcher_background.png`; transparent edges in the new source may expose that background.
 - If the user wants the supplied art kept at its original framing, do not crop to fill. Composite the PNG onto a solid black square first, then scale that full square into each target size with `scale = Min(target/srcWidth, target/srcHeight)` so aspect ratio stays intact and transparent corners do not leak the adaptive background.
 - After icon replacement, run at least `.\gradlew.bat :app:assembleDebug` from `D:\gallery\Android\src` before claiming success. Resource-name mistakes are cheap to catch there.
+
+## 2026-04-10 Roleplay live token speed note
+
+- Symptom: roleplay chat header never showed live `token/s` even when a reply visibly took several seconds.
+- Root cause: the roleplay send pipeline was doing streaming inference, but `SendRoleplayMessageUseCase` had `ENABLE_STREAMING = false`, so partial assistant text was only persisted at completion. The header speed display reads current streaming content, so without incremental repository updates it always stayed hidden.
+
+Notes:
+
+- For roleplay header telemetry that depends on live output length, inference streaming alone is not enough; the partial assistant content must also be surfaced into observable UI state during generation.
+- If live speed disappears again on roleplay pages, inspect `SendRoleplayMessageUseCase.ENABLE_STREAMING` and whether partial `conversationRepository.updateMessage(...)` writes are still happening during `resultListener` callbacks.
+- A quick validation path is: send one short roleplay message, then check logcat for `streaming content updates enabled` before the final `dispatch finished` line.
+
+## 2026-04-11 Roleplay main-tab label consistency note
+
+- Symptom: the bottom `角色` tab label looked visually larger or inconsistent compared with `消息` and `设置`, even though all three entries used the same `NavigationBarItem`.
+- Safer fix: render the bottom-tab `label` with an explicit `Text(style = MaterialTheme.typography.labelMedium, maxLines = 1)` instead of relying on the component's internal default label styling.
+- In this repo, the app-wide font family is `Nunito`. CJK tab text falls back to a system font, so a component that applies implicit text treatment can still make equal-length labels look mismatched.
+- For future visual QA, inspect the exact tab widget first (`NavigationBarItem`, `Tab`, `NavigationRailItem`) before changing page headers. Header typography and tab-label typography are separate layout paths.
+- Keep tab-switch logs readable: `targetIndex + targetTitle + durationMs` is enough to align screenshots, locale, and behavior without digging through ambiguous numeric logs.
+
+## 2026-04-11 ST user persona alignment note
+
+- Symptom: roleplay runtime treated character `personality` and ST user `persona` as the same field, so prompt sections could look plausible while still diverging from SillyTavern.
+- Root cause: app-side macro context mapped both `{{personality}}` and `{{persona}}` to character-card personality, and there was no persisted ST-style user persona state.
+
+Notes:
+
+- ST alignment needs two separate prompt concepts:
+  `personality` = character personality from the card
+  `persona` = active user persona description
+- The minimum storage shape that preserves ST chat semantics is:
+  `user_avatar`
+  `personas[avatarId] -> personaName`
+  `persona_descriptions[avatarId] -> { description, title, position, depth, role, lorebook, connections }`
+  optional `default_persona`
+- ST chat JSONL header fields `user_name` and `character_name` are deprecated compatibility fields. Current ST writes `"unused"` and does not use them to hydrate runtime persona state on import.
+- Prompt regressions must assert placement, not only substitution:
+  `[Personality]` should contain character personality
+  `[Persona]` should appear only for `IN_PROMPT`
+  `TOP_AN` / `BOTTOM_AN` / `AT_DEPTH` should be validated in their actual insertion blocks

@@ -14,6 +14,7 @@ import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionSummary
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
+import selfgemma.talk.testing.FakeDataStoreRepository
 
 class SummarizeSessionUseCaseTest {
   @Test
@@ -57,7 +58,7 @@ class SummarizeSessionUseCaseTest {
             ),
         )
 
-      SummarizeSessionUseCase(conversationRepository, TokenEstimator())("session-1")
+      SummarizeSessionUseCase(FakeDataStoreRepository(), conversationRepository, TokenEstimator())("session-1")
 
       val summary = conversationRepository.savedSummary
       assertNotNull(summary)

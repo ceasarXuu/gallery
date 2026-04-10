@@ -67,7 +67,27 @@
   <!-- Tabs -->
   <string name="tab_messages">메시지</string>
   <string name="tab_roles">역할</string>
+  <string name="tab_me">내 정보</string>
   <string name="tab_settings">설정</string>
+  <string name="my_profile_avatar_slot_title">페르소나 슬롯</string>
+  <string name="my_profile_persona_name_title">페르소나 이름</string>
+  <string name="my_profile_persona_title_title">페르소나 제목</string>
+  <string name="my_profile_persona_description_title">페르소나 설명</string>
+  <string name="my_profile_persona_position_title">페르소나 배치</string>
+  <string name="my_profile_persona_position_in_prompt">프롬프트에 포함</string>
+  <string name="my_profile_persona_position_top_an">작성자 노트 앞</string>
+  <string name="my_profile_persona_position_bottom_an">작성자 노트 뒤</string>
+  <string name="my_profile_persona_position_at_depth">깊이 삽입</string>
+  <string name="my_profile_persona_position_none">사용 안 함</string>
+  <string name="my_profile_persona_depth_title">페르소나 깊이</string>
+  <string name="my_profile_persona_role_title">페르소나 역할</string>
+  <string name="my_profile_persona_role_system">시스템</string>
+  <string name="my_profile_persona_role_user">사용자</string>
+  <string name="my_profile_persona_role_assistant">어시스턴트</string>
+  <string name="my_profile_default_persona_title">기본 페르소나로 사용</string>
+  <string name="my_profile_default_persona_summary">새 역할극 채팅에 이 페르소나를 기본값으로 적용합니다.</string>
+  <string name="my_profile_reset">페르소나 초기화</string>
+  <string name="my_profile_save">페르소나 저장</string>
 
   <!-- Sessions Screen -->
   <string name="sessions_loading">세션 로드 중...</string>
@@ -182,10 +202,15 @@
   <string name="chat_open_model_library_menu">모델 라이브러리 열기</string>
   <string name="chat_select_model_title">모델 선택</string>
   <string name="chat_current_model">현재 사용 중</string>
+  <string name="chat_token_speed_format">%1$d토큰/초</string>
 
   <!-- Settings Screen -->
   <string name="settings_model_library_title">모델 라이브러리</string>
   <string name="settings_model_library_summary">로컬 모델 다운로드, 가져오기 및 관리</string>
+  <string name="settings_dialog_live_token_speed_title">실시간 생성 속도 표시</string>
+  <string name="settings_dialog_live_token_speed_summary">모델 생성 중 채팅 헤더에 토큰 출력 속도를 실시간으로 표시합니다.</string>
+  <string name="settings_dialog_streaming_output_title">스트리밍 출력 사용</string>
+  <string name="settings_dialog_streaming_output_summary">생성 중인 답변을 순차적으로 표시합니다. 중간에 끊으면 부분 말풍선은 회수되고, 다음 전송에서 처음부터 다시 생성합니다.</string>
   <string name="settings_role_editor_assistant_model_title">편집 도우미 모델</string>
   <string name="settings_role_editor_assistant_model_none">기본값: 첫 번째 사용 가능한 모델</string>
   <string name="settings_role_editor_assistant_model_empty">아직 로컬 모델이 없습니다. 역할 편집기에서 AI 압축을 쓰기 전에 모델을 추가하세요.</string>

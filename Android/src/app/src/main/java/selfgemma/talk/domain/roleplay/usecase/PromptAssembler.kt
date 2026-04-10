@@ -13,14 +13,19 @@ import selfgemma.talk.domain.roleplay.model.RoleRuntimeProfile
 import selfgemma.talk.domain.roleplay.model.SessionSummary
 import selfgemma.talk.domain.roleplay.model.StChatRuntimeRole
 import selfgemma.talk.domain.roleplay.model.StChatRuntimeSession
+import selfgemma.talk.domain.roleplay.model.StPersonaDescriptionPosition
+import selfgemma.talk.domain.roleplay.model.StUserProfile
 import selfgemma.talk.domain.roleplay.model.cardData
 import selfgemma.talk.domain.roleplay.model.exampleDialoguesRaw
 import selfgemma.talk.domain.roleplay.model.name
+import selfgemma.talk.domain.roleplay.model.personaDescriptionForAuthorNote
+import selfgemma.talk.domain.roleplay.model.personaDescriptionForDepthPrompt
 import selfgemma.talk.domain.roleplay.model.personaDescription
 import selfgemma.talk.domain.roleplay.model.summary
 import selfgemma.talk.domain.roleplay.model.systemPrompt
 import selfgemma.talk.domain.roleplay.model.tags
 import selfgemma.talk.domain.roleplay.model.toStChatRuntimeRole
+import selfgemma.talk.domain.roleplay.model.userPersonaDescription
 import selfgemma.talk.domain.roleplay.model.worldSettings
 
 private const val RECENT_DIALOGUE_TOKEN_BUDGET = 1800
@@ -38,6 +43,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     recentMessages: List<Message>,
     pendingUserInput: String = "",
     generationTrigger: String = "normal",
+    userProfile: StUserProfile = StUserProfile(),
     contextProfile: ModelContextProfile? = null,
     budgetMode: PromptBudgetMode = PromptBudgetMode.FULL,
   ): String {
@@ -48,6 +54,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       recentMessages = recentMessages,
       pendingUserInput = pendingUserInput,
       generationTrigger = generationTrigger,
+      userProfile = userProfile,
       chatMetadataJson = null,
       contextProfile = contextProfile,
       budgetMode = budgetMode,
@@ -61,11 +68,12 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
     recentMessages: List<Message>,
     pendingUserInput: String = "",
     generationTrigger: String = "normal",
+    userProfile: StUserProfile = StUserProfile(),
     chatMetadataJson: String? = null,
     contextProfile: ModelContextProfile? = null,
     budgetMode: PromptBudgetMode = PromptBudgetMode.FULL,
   ): PromptAssemblyResult {
-    val runtimeRole = role.toStChatRuntimeRole()
+    val runtimeRole = role.toStChatRuntimeRole(userProfile = userProfile)
     val runtimeSession =
       StChatRuntimeSession(
         chatMetadataJson = chatMetadataJson,
@@ -127,6 +135,9 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
         .trim()
     val postHistoryBlock =
       buildList {
+          if (runtimeRole.userProfile.personaDescriptionPosition == StPersonaDescriptionPosition.TOP_AN) {
+            runtimeRole.userProfile.personaDescriptionForAuthorNote()?.let(::add)
+          }
           addAll(resolvedCharacterBook.authorNoteBefore)
           cardData.post_history_instructions
             ?.let(macroContext::substitute)
@@ -134,12 +145,26 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
             ?.takeIf(String::isNotBlank)
             ?.let(::add)
           addAll(resolvedCharacterBook.authorNoteAfter)
+          if (runtimeRole.userProfile.personaDescriptionPosition == StPersonaDescriptionPosition.BOTTOM_AN) {
+            runtimeRole.userProfile.personaDescriptionForAuthorNote()?.let(::add)
+          }
         }
         .joinToString("\n")
         .trim()
     val depthPromptBlock =
       buildList {
           coreDepthPrompt?.toPromptSection()?.let(::add)
+          runtimeRole.userProfile.personaDescriptionForDepthPrompt()
+            ?.let(macroContext::substitute)
+            ?.takeIf(String::isNotBlank)
+            ?.let { personaDepthPrompt ->
+              add(
+                buildString {
+                  appendLine("role=${runtimeRole.userProfile.personaDescriptionRole.toPromptRoleName()} depth=${runtimeRole.userProfile.personaDescriptionDepth}")
+                  append(personaDepthPrompt)
+                }
+              )
+            }
           addAll(resolvedCharacterBook.depthPrompts.map { it.toPromptSection() })
         }
         .joinToString("\n\n")
@@ -203,7 +228,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
 
   private fun MessageSide.toSpeakerLabel(runtimeRole: StChatRuntimeRole): String {
     return when (this) {
-      MessageSide.USER -> "User"
+      MessageSide.USER -> runtimeRole.userName
       MessageSide.ASSISTANT -> runtimeRole.name()
       MessageSide.SYSTEM -> "System"
     }
@@ -235,7 +260,7 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
       roleTags = runtimeRole.tags(),
       generationTrigger = generationTrigger,
       recentMessagesNewestFirst = recentMessagesNewestFirst,
-      personaDescription = macroContext.substitute(runtimeRole.personaDescription()),
+      userPersonaDescription = macroContext.substitute(runtimeRole.userPersonaDescription()),
       characterDescription = macroContext.substitute(runtimeRole.summary()),
       characterPersonality =
         macroContext.substitute(

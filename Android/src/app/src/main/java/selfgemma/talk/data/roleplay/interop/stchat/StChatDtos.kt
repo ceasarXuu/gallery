@@ -50,5 +50,6 @@ data class StChatMessage(
 
 data class ImportedStChatMessages(
   val chatMetadataJson: String,
+  val userName: String? = null,
   val messages: List<Message>,
 )

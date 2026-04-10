@@ -13,7 +13,7 @@ internal data class StWorldScanContext(
   val roleTags: List<String>,
   val generationTrigger: String,
   val recentMessagesNewestFirst: List<String>,
-  val personaDescription: String,
+  val userPersonaDescription: String,
   val characterDescription: String,
   val characterPersonality: String,
   val characterDepthPrompt: String,
@@ -655,7 +655,7 @@ private fun StWorldScanContext.toScanText(
       .joinToString("\n")
   val selectedGlobalFields =
     buildList {
-        if (extensions.matchPersonaDescription) add(personaDescription)
+        if (extensions.matchPersonaDescription) add(userPersonaDescription)
         if (extensions.matchCharacterDescription) add(characterDescription)
         if (extensions.matchCharacterPersonality) add(characterPersonality)
         if (extensions.matchCharacterDepthPrompt) add(characterDepthPrompt)

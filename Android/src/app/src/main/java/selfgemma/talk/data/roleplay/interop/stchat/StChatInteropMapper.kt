@@ -37,6 +37,7 @@ internal object StChatInteropMapper {
 
     return ImportedStChatMessages(
       chatMetadataJson = parsed.chatMetadataJson,
+      userName = parsed.userName,
       messages = messages,
     )
   }

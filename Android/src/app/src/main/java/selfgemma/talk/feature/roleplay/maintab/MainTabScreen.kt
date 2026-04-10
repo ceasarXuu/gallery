@@ -12,6 +12,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Chat
 import androidx.compose.material.icons.rounded.Face
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +47,7 @@ private data class TabItem(
 private val tabs = listOf(
   TabItem(R.string.tab_messages, Icons.Rounded.Chat),
   TabItem(R.string.tab_roles, Icons.Rounded.Face),
+  TabItem(R.string.tab_me, Icons.Rounded.Person),
   TabItem(R.string.tab_settings, Icons.Rounded.Settings),
 )
 
@@ -73,6 +75,7 @@ fun MainTabScreen(
   val currentPageName = when (currentPage) {
     0 -> "messages"
     1 -> "roles"
+    2 -> "me"
     else -> "settings"
   }
   val handleNavigateUp: () -> Unit = {
@@ -183,6 +186,13 @@ fun MainTabScreen(
           )
         }
         2 -> {
+          selfgemma.talk.feature.roleplay.profile.MyProfileScreen(
+            navigateUp = handleNavigateUp,
+            showNavigateUp = false,
+            contentPadding = innerPadding,
+          )
+        }
+        3 -> {
           // NOTE:
           // The bottom "Settings" tab in the roleplay main UI renders RoleplaySettingsScreen here.
           // If a setting should appear in the roleplay tab, update RoleplaySettingsScreen instead of

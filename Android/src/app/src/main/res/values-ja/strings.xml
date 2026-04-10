@@ -67,7 +67,27 @@
   <!-- Tabs -->
   <string name="tab_messages">メッセージ</string>
   <string name="tab_roles">ロール</string>
+  <string name="tab_me">マイ</string>
   <string name="tab_settings">設定</string>
+  <string name="my_profile_avatar_slot_title">ペルソナスロット</string>
+  <string name="my_profile_persona_name_title">ペルソナ名</string>
+  <string name="my_profile_persona_title_title">ペルソナ称号</string>
+  <string name="my_profile_persona_description_title">ペルソナ説明</string>
+  <string name="my_profile_persona_position_title">ペルソナ配置</string>
+  <string name="my_profile_persona_position_in_prompt">プロンプト内</string>
+  <string name="my_profile_persona_position_top_an">著者ノートの先頭</string>
+  <string name="my_profile_persona_position_bottom_an">著者ノートの末尾</string>
+  <string name="my_profile_persona_position_at_depth">深度挿入</string>
+  <string name="my_profile_persona_position_none">無効</string>
+  <string name="my_profile_persona_depth_title">ペルソナ深度</string>
+  <string name="my_profile_persona_role_title">ペルソナ役割</string>
+  <string name="my_profile_persona_role_system">システム</string>
+  <string name="my_profile_persona_role_user">ユーザー</string>
+  <string name="my_profile_persona_role_assistant">アシスタント</string>
+  <string name="my_profile_default_persona_title">既定のペルソナにする</string>
+  <string name="my_profile_default_persona_summary">新しいロールプレイ会話にこのペルソナを既定で適用します。</string>
+  <string name="my_profile_reset">ペルソナをリセット</string>
+  <string name="my_profile_save">ペルソナを保存</string>
 
   <!-- Sessions Screen -->
   <string name="sessions_loading">セッションを読み込み中...</string>
@@ -182,10 +202,15 @@
   <string name="chat_open_model_library_menu">モデルライブラリを開く</string>
   <string name="chat_select_model_title">モデルを選択</string>
   <string name="chat_current_model">現在使用中</string>
+  <string name="chat_token_speed_format">%1$dトークン/秒</string>
 
   <!-- Settings Screen -->
   <string name="settings_model_library_title">モデルライブラリ</string>
   <string name="settings_model_library_summary">ローカルモデルのダウンロード、インポート、管理</string>
+  <string name="settings_dialog_live_token_speed_title">生成速度をリアルタイム表示</string>
+  <string name="settings_dialog_live_token_speed_summary">モデル生成中に、チャットヘッダーへトークン出力速度をリアルタイム表示します。</string>
+  <string name="settings_dialog_streaming_output_title">ストリーミング出力を有効化</string>
+  <string name="settings_dialog_streaming_output_summary">生成中の返信を順次表示します。途中で中断した場合は部分的な吹き出しを取り消し、次の送信で最初から再生成します。</string>
   <string name="settings_role_editor_assistant_model_title">編集アシスタントモデル</string>
   <string name="settings_role_editor_assistant_model_none">既定: 最初に利用可能なモデル</string>
   <string name="settings_role_editor_assistant_model_empty">まだローカルモデルがありません。ロールエディタで AI 圧縮を使う前にモデルを追加してください。</string>

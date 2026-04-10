@@ -24,6 +24,7 @@ import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
 import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentMetadata
 import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentRepository
+import selfgemma.talk.testing.FakeDataStoreRepository
 
 class StSampleCardsRegressionTest {
   private val promptAssembler = PromptAssembler(TokenEstimator())
@@ -64,6 +65,7 @@ class StSampleCardsRegressionTest {
       val seededMessages =
         SampleSessionSeedConversationRepository().also { conversationRepository ->
           CreateRoleplaySessionUseCase(
+            dataStoreRepository = FakeDataStoreRepository(),
             conversationRepository = conversationRepository,
             roleRepository = SampleSessionSeedRoleRepository(imported),
           ).invoke(roleId = imported.id, modelId = "gemma")
