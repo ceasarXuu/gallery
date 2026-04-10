@@ -63,6 +63,14 @@ adb -s ONNZ95CAEMMZSKTS logcat -d -s AGMainActivity
 - Mid frame should show the MP4 content itself.
 - `AGMainActivity` should log `tavern intro video prepared` once the `VideoView` starts successfully.
 
+### Black-first-frame and full-bleed video note
+
+- If the startup requirement is "first frame pure black, then fade into video", keep both `windowSplashScreenBackground` and the app overlay base layer at `#000000`.
+- For full-screen startup video, `VideoView` and plain texture playback were not stable enough in this workspace/device combination. `media3-exoplayer + PlayerView` with `RESIZE_MODE_ZOOM` produced the stable full-bleed result.
+- Verification target on device:
+  - first screenshot around `150ms` to `250ms`: fully black
+  - second screenshot around `1500ms` to `1800ms`: video visible, cropped to fill the screen without explicit top/bottom letterboxing
+
 ## 2026-04-07
 
 ### Stable command sequence

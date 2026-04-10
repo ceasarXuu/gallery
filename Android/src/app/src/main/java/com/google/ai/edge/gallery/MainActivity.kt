@@ -17,19 +17,18 @@
 package selfgemma.talk
 
 import android.animation.ObjectAnimator
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
-import android.widget.VideoView
 import android.view.animation.DecelerateInterpolator
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -48,7 +47,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.animation.doOnEnd
 import androidx.core.os.bundleOf
@@ -57,6 +58,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.metrics.performance.JankStats
 import androidx.metrics.performance.PerformanceMetricsState
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import selfgemma.talk.performance.FrontendPerformanceMonitor
 import selfgemma.talk.ui.theme.AppTheme
@@ -226,11 +232,34 @@ class MainActivity : AppCompatActivity() {
 
 @Composable
 private fun TavernIntroVideoOverlay() {
-  val context = LocalContext.current
+  val context = androidx.compose.ui.platform.LocalContext.current
   var visible by remember { mutableStateOf(true) }
   var videoCompleted by remember { mutableStateOf(false) }
-  val videoUri =
-    remember(context) { Uri.parse("android.resource://${context.packageName}/${R.raw.gemma_tavern}") }
+  var videoPrepared by remember { mutableStateOf(false) }
+  val videoAlpha by
+    animateFloatAsState(
+      targetValue = if (videoPrepared) 1f else 0f,
+      animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
+      label = "tavernVideoAlpha",
+    )
+  val gradientAlpha by
+    animateFloatAsState(
+      targetValue = if (videoPrepared) 0f else 1f,
+      animationSpec = tween(durationMillis = 950, easing = FastOutSlowInEasing),
+      label = "tavernGradientAlpha",
+    )
+  val player =
+    remember(context) {
+      ExoPlayer.Builder(context).build().apply {
+        volume = 0f
+        repeatMode = Player.REPEAT_MODE_OFF
+        playWhenReady = true
+        setMediaItem(
+          MediaItem.fromUri("android.resource://${context.packageName}/${R.raw.gemma_tavern}")
+        )
+        prepare()
+      }
+    }
 
   LaunchedEffect(videoCompleted) {
     if (!videoCompleted) {
@@ -255,49 +284,78 @@ private fun TavernIntroVideoOverlay() {
     enter = fadeIn(animationSpec = snap(0)),
     exit = fadeOut(animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing)),
   ) {
-    Log.d(MAIN_ACTIVITY_LOG_TAG, "tavern intro video overlay visible")
+    LaunchedEffect(Unit) {
+      Log.d(MAIN_ACTIVITY_LOG_TAG, "tavern intro video overlay visible")
+    }
     Box(
       modifier =
         Modifier
           .fillMaxSize()
-          .background(MaterialTheme.colorScheme.background)
+          .background(Color.Black)
     ) {
-      AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { viewContext ->
-          VideoView(viewContext).apply {
-            setVideoURI(videoUri)
-            setOnPreparedListener { mediaPlayer ->
-              mediaPlayer.isLooping = false
-              mediaPlayer.setVolume(0f, 0f)
-              Log.d(MAIN_ACTIVITY_LOG_TAG, "tavern intro video prepared")
-              start()
+      DisposableEffect(player) {
+        val listener =
+          object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+              when (playbackState) {
+                Player.STATE_READY -> {
+                  if (!videoPrepared) {
+                    Log.d(MAIN_ACTIVITY_LOG_TAG, "tavern intro video prepared")
+                    videoPrepared = true
+                  }
+                }
+                Player.STATE_ENDED -> {
+                  videoCompleted = true
+                }
+              }
             }
-            setOnCompletionListener {
-              videoCompleted = true
-            }
-            setOnErrorListener { _, what, extra ->
-              Log.e(
-                MAIN_ACTIVITY_LOG_TAG,
-                "tavern intro video failed what=$what extra=$extra",
-              )
-              videoCompleted = true
-              true
-            }
-          }
-        },
-        update = { videoView ->
-          if (!videoView.isPlaying && !videoCompleted) {
-            videoView.start()
-          }
-        },
-      )
 
-      DisposableEffect(Unit) {
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+              Log.e(MAIN_ACTIVITY_LOG_TAG, "tavern intro video failed", error)
+              videoCompleted = true
+            }
+          }
+        player.addListener(listener)
         onDispose {
+          player.removeListener(listener)
+          player.release()
           Log.d(MAIN_ACTIVITY_LOG_TAG, "tavern intro video disposed")
         }
       }
+      AndroidView(
+        modifier = Modifier.fillMaxSize().alpha(videoAlpha),
+        factory = { viewContext ->
+          PlayerView(viewContext).apply {
+            useController = false
+            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            setShutterBackgroundColor(android.graphics.Color.BLACK)
+            this.player = player
+            Log.d(MAIN_ACTIVITY_LOG_TAG, "tavern intro player view created")
+          }
+        },
+        update = { playerView ->
+          if (!videoCompleted) {
+            playerView.player = player
+          }
+        },
+      )
+      Box(
+        modifier =
+          Modifier
+            .fillMaxSize()
+            .alpha(gradientAlpha)
+            .background(
+              Brush.verticalGradient(
+                colors =
+                  listOf(
+                    Color.Black,
+                    Color.Black.copy(alpha = 0.88f),
+                    Color.Black.copy(alpha = 0.62f),
+                    Color.Black.copy(alpha = 0.22f),
+                  ),
+              ),
+            )
+      )
     }
   }
 }

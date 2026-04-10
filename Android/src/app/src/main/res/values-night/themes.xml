@@ -17,7 +17,7 @@
 
 <resources xmlns:tools="http://schemas.android.com/tools">
   <style name="Theme.Gallery.SplashScreen" parent="Theme.SplashScreen">
-    <item name="windowSplashScreenBackground">#FF2A1C17</item>
+    <item name="windowSplashScreenBackground">#FF000000</item>
     <item name="windowSplashScreenAnimatedIcon">@drawable/splash_screen_static_icon</item>
     <item name="postSplashScreenTheme">@style/Theme.Gallery</item>
   </style>

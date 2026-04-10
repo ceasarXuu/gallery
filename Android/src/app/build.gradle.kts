@@ -123,6 +123,8 @@ dependencies {
   implementation(libs.firebase.analytics)
   implementation(libs.firebase.messaging)
   implementation(libs.androidx.exifinterface)
+  implementation(libs.androidx.media3.exoplayer)
+  implementation(libs.androidx.media3.ui)
   implementation(libs.moshi.kotlin)
   kapt(libs.hilt.android.compiler)
   testImplementation(libs.junit)
