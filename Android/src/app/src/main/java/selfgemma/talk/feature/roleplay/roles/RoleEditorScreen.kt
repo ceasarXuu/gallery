@@ -78,10 +78,12 @@ import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withContext
 
 private const val TAG = "RoleEditorScreen"
 private const val ROLE_EDITOR_MEDIUM_TEXT_MAX_LINES = 8
@@ -226,7 +228,7 @@ fun RoleEditorScreen(
     }
 
     val job =
-      compressionScope.launch {
+      compressionScope.launch(Dispatchers.Default) {
         try {
           Log.d(
             TAG,
@@ -247,27 +249,33 @@ fun RoleEditorScreen(
           val cleanedResult = compressed.trim()
           when {
             cleanedResult.isBlank() -> {
-              viewModel.showErrorMessage(context.getString(R.string.role_editor_ai_compress_failed_blank))
+              withContext(Dispatchers.Main) {
+                viewModel.showErrorMessage(context.getString(R.string.role_editor_ai_compress_failed_blank))
+              }
               Log.w(TAG, "Role editor AI compression returned blank result field=$fieldKey")
             }
             cleanedResult.length > maxChars -> {
-              viewModel.showErrorMessage(
-                context.getString(R.string.role_editor_ai_compress_failed_limit, maxChars),
-              )
+              withContext(Dispatchers.Main) {
+                viewModel.showErrorMessage(
+                  context.getString(R.string.role_editor_ai_compress_failed_limit, maxChars),
+                )
+              }
               Log.w(
                 TAG,
                 "Role editor AI compression exceeded target field=$fieldKey resultLength=${cleanedResult.length} targetLength=$maxChars",
               )
             }
             else -> {
-              onValueChange(cleanedResult)
-              viewModel.showStatusMessage(
-                context.getString(
-                  R.string.role_editor_ai_compress_success,
-                  cleanedResult.length,
-                  maxChars,
-                ),
-              )
+              withContext(Dispatchers.Main) {
+                onValueChange(cleanedResult)
+                viewModel.showStatusMessage(
+                  context.getString(
+                    R.string.role_editor_ai_compress_success,
+                    cleanedResult.length,
+                    maxChars,
+                  ),
+                )
+              }
               Log.i(
                 TAG,
                 "Role editor AI compression completed field=$fieldKey resultLength=${cleanedResult.length} targetLength=$maxChars",
@@ -277,13 +285,17 @@ fun RoleEditorScreen(
         } catch (_: kotlinx.coroutines.CancellationException) {
           Log.i(TAG, "Role editor AI compression cancelled field=$fieldKey")
         } catch (error: Exception) {
-          viewModel.showErrorMessage(
-            error.message ?: context.getString(R.string.role_editor_ai_compress_failed_generic),
-          )
+          withContext(Dispatchers.Main) {
+            viewModel.showErrorMessage(
+              error.message ?: context.getString(R.string.role_editor_ai_compress_failed_generic),
+            )
+          }
           Log.e(TAG, "Role editor AI compression failed field=$fieldKey", error)
         } finally {
-          activeCompressions[fieldKey]?.completed = true
-          activeCompressions.remove(fieldKey)
+          withContext(Dispatchers.Main) {
+            activeCompressions[fieldKey]?.completed = true
+            activeCompressions.remove(fieldKey)
+          }
         }
       }
 
