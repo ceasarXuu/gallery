@@ -661,3 +661,39 @@ Notes:
 - Single-line role-editor fields should reserve at least `80dp` total height when a supporting counter is shown. That keeps the normal `56dp` outlined container plus the supporting text line from competing for the same vertical budget.
 - `PlatformTextStyle(includeFontPadding = true)` should stay on the text-field input text itself, but it is not sufficient alone if the field height is capped too tightly.
 - When verifying OEM-font clipping, always compare the exact failing `EditText` bounds from `uiautomator dump` with the rendered screenshot. Header text, tab text, and text-field text have different layout paths and should be debugged separately.
+
+## 2026-04-10 Android app icon replacement note
+
+- Workspace root icon source for this repo is currently `D:\gallery\app_icon.png`.
+- Android launcher assets in this project live under `D:\gallery\Android\src\app\src\main\res\mipmap-*`; the manifest points both `android:icon` and `android:roundIcon` to `@mipmap/ic_launcher`.
+- Replacing only `ic_launcher.png` is incomplete on modern Android. This project also ships adaptive icon layers:
+  - `ic_launcher_foreground.png`
+  - `ic_launcher_monochrome.png`
+  - `mipmap-anydpi-v26\ic_launcher.xml`
+- Safe replacement flow used in this workspace:
+
+```powershell
+Add-Type -AssemblyName System.Drawing
+$src = [System.Drawing.Bitmap]::FromFile('D:\gallery\app_icon.png')
+$targets = @(
+  @{ Path='D:\gallery\Android\src\app\src\main\res\mipmap-mdpi\ic_launcher.png'; Size=48 },
+  @{ Path='D:\gallery\Android\src\app\src\main\res\mipmap-hdpi\ic_launcher.png'; Size=72 },
+  @{ Path='D:\gallery\Android\src\app\src\main\res\mipmap-xhdpi\ic_launcher.png'; Size=96 },
+  @{ Path='D:\gallery\Android\src\app\src\main\res\mipmap-xxhdpi\ic_launcher.png'; Size=144 },
+  @{ Path='D:\gallery\Android\src\app\src\main\res\mipmap-xxxhdpi\ic_launcher.png'; Size=192 }
+)
+foreach ($t in $targets) {
+  $bmp = New-Object System.Drawing.Bitmap($t.Size, $t.Size)
+  $g = [System.Drawing.Graphics]::FromImage($bmp)
+  $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+  $g.Clear([System.Drawing.Color]::Transparent)
+  $g.DrawImage($src, 0, 0, $t.Size, $t.Size)
+  $bmp.Save($t.Path, [System.Drawing.Imaging.ImageFormat]::Png)
+  $g.Dispose()
+  $bmp.Dispose()
+}
+$src.Dispose()
+```
+
+- If the source icon contains transparency, inspect adaptive icon background layering after replacement. This repo keeps the previous `ic_launcher_background.png`; transparent edges in the new source may expose that background.
+- After icon replacement, run at least `.\gradlew.bat :app:assembleDebug` from `D:\gallery\Android\src` before claiming success. Resource-name mistakes are cheap to catch there.
