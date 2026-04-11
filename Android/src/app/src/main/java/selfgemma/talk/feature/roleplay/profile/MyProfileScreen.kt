@@ -233,16 +233,6 @@ fun MyProfileScreen(
               )
           }
         },
-        onAvatarClear = {
-          Log.d(TAG, "clear persona avatar slot=${uiState.avatarSlotId}")
-          viewModel.updateAvatarEditState(
-            avatarUri = null,
-            avatarEditorSourceUri = null,
-            avatarCropZoom = 1f,
-            avatarCropOffsetX = 0f,
-            avatarCropOffsetY = 0f,
-          )
-        },
         onPersonaPositionChange = viewModel::updatePersonaPosition,
         onPersonaDepthChange = viewModel::updatePersonaDepth,
         onPersonaRoleChange = viewModel::updatePersonaRole,
@@ -471,7 +461,6 @@ private fun MyProfileEditorContent(
   onPersonaNameChange: (String) -> Unit,
   onPersonaDescriptionChange: (String) -> Unit,
   onAvatarClick: () -> Unit,
-  onAvatarClear: () -> Unit,
   onPersonaPositionChange: (StPersonaDescriptionPosition) -> Unit,
   onPersonaDepthChange: (String) -> Unit,
   onPersonaRoleChange: (Int) -> Unit,
@@ -490,7 +479,6 @@ private fun MyProfileEditorContent(
       name = uiState.personaName,
       avatarUri = uiState.avatarUri,
       onAvatarClick = onAvatarClick,
-      onClearAvatar = onAvatarClear,
     )
     EditorCard(
       title = stringResource(R.string.my_profile_persona_name_title),
@@ -715,7 +703,6 @@ private fun PersonaAvatarCard(
   name: String,
   avatarUri: String?,
   onAvatarClick: () -> Unit,
-  onClearAvatar: () -> Unit,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(
@@ -746,13 +733,6 @@ private fun PersonaAvatarCard(
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (!avatarUri.isNullOrBlank()) {
-          TextButton(onClick = onClearAvatar) {
-            Text(stringResource(R.string.role_editor_media_clear))
-          }
-        }
-      }
     }
   }
 }
