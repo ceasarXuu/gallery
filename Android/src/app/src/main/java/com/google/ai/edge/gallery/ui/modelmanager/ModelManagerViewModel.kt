@@ -52,6 +52,7 @@ import selfgemma.talk.data.createLlmChatConfigs
 import selfgemma.talk.proto.AccessTokenData
 import selfgemma.talk.proto.ImportedModel
 import selfgemma.talk.proto.Theme
+import selfgemma.talk.runtime.runtimeHelper
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -414,6 +415,83 @@ constructor(
           model = model,
           onDone = onDoneFn,
         )
+    }
+  }
+
+  fun initializeLlmModel(
+    context: Context,
+    model: Model,
+    supportImage: Boolean,
+    supportAudio: Boolean,
+    force: Boolean = false,
+    onDone: () -> Unit = {},
+  ) {
+    viewModelScope.launch(Dispatchers.Default) {
+      if (
+        !force &&
+          uiState.value.modelInitializationStatus[model.name]?.status ==
+            ModelInitializationStatusType.INITIALIZED
+      ) {
+        Log.d(
+          TAG,
+          "Model '${model.name}' has been initialized for multimodal chat. Skipping.",
+        )
+        return@launch
+      }
+
+      if (model.initializing) {
+        model.cleanUpAfterInit = false
+        Log.d(TAG, "Model '${model.name}' is being initialized for multimodal chat. Skipping.")
+        return@launch
+      }
+
+      getTaskById(BuiltInTaskId.LLM_CHAT)?.let { task ->
+        cleanupModel(context = context, task = task, model = model)
+      }
+
+      Log.d(
+        TAG,
+        "Initializing model '${model.name}' for multimodal roleplay supportImage=$supportImage supportAudio=$supportAudio",
+      )
+      model.initializing = true
+      updateModelInitializationStatus(
+        model = model,
+        status = ModelInitializationStatusType.INITIALIZING,
+      )
+
+      val onDoneFn: (String) -> Unit = { error ->
+        model.initializing = false
+        if (model.instance != null) {
+          Log.d(TAG, "Model '${model.name}' initialized successfully for multimodal roleplay")
+          updateModelInitializationStatus(
+            model = model,
+            status = ModelInitializationStatusType.INITIALIZED,
+          )
+          if (model.cleanUpAfterInit) {
+            getTaskById(BuiltInTaskId.LLM_CHAT)?.let { task ->
+              Log.d(TAG, "Model '${model.name}' needs cleaning up after multimodal init.")
+              cleanupModel(context = context, task = task, model = model)
+            }
+          }
+          onDone()
+        } else if (error.isNotEmpty()) {
+          Log.d(TAG, "Model '${model.name}' failed multimodal initialization")
+          updateModelInitializationStatus(
+            model = model,
+            status = ModelInitializationStatusType.ERROR,
+            error = error,
+          )
+        }
+      }
+
+      model.runtimeHelper.initialize(
+        context = context,
+        model = model,
+        supportImage = supportImage,
+        supportAudio = supportAudio,
+        onDone = onDoneFn,
+        coroutineScope = viewModelScope,
+      )
     }
   }
 

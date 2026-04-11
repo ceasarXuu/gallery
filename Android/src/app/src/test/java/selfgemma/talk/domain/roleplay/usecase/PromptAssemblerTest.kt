@@ -8,6 +8,7 @@ import com.google.gson.JsonArray
 import selfgemma.talk.domain.roleplay.model.MemoryCategory
 import selfgemma.talk.domain.roleplay.model.MemoryItem
 import selfgemma.talk.domain.roleplay.model.Message
+import selfgemma.talk.domain.roleplay.model.MessageKind
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.RoleCard
@@ -165,6 +166,54 @@ class PromptAssemblerTest {
     assertTrue(prompt.contains("Iris Vale: Agreed. The forged pass narrows the route."))
     assertFalse(prompt.contains("[Suggested Opening Tone]"))
     assertFalse(prompt.contains("The case file is already open."))
+  }
+
+  @Test
+  fun assemble_keepsMultimodalHistoryPlaceholdersInRecentConversation() {
+    val now = System.currentTimeMillis()
+    val prompt =
+      assembler.assemble(
+        role =
+          RoleCard(
+            id = "role-media",
+            name = "Iris Vale",
+            summary = "A dry-witted investigator.",
+            systemPrompt = "Always stay in character.",
+            createdAt = now,
+            updatedAt = now,
+          ),
+        summary = null,
+        memories = emptyList(),
+        recentMessages =
+          listOf(
+            Message(
+              id = "message-image",
+              sessionId = "session-media",
+              seq = 1,
+              side = MessageSide.USER,
+              kind = MessageKind.IMAGE,
+              content = "Shared 2 image(s).",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            ),
+            Message(
+              id = "message-audio",
+              sessionId = "session-media",
+              seq = 2,
+              side = MessageSide.USER,
+              kind = MessageKind.AUDIO,
+              content = "Shared an audio clip.",
+              status = MessageStatus.COMPLETED,
+              createdAt = now,
+              updatedAt = now,
+            ),
+          ),
+        pendingUserInput = "What do you notice from them?",
+      )
+
+    assertTrue(prompt.contains("Shared 2 image(s)."))
+    assertTrue(prompt.contains("Shared an audio clip."))
   }
 
   @Test

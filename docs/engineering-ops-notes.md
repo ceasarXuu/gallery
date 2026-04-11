@@ -1071,3 +1071,29 @@ Notes:
 - Do not overwrite the only avatar source with the cropped export. Persist the display avatar URI separately from the editor source URI and crop state, or second-pass edits will reopen a previously cropped bitmap with no framing headroom left.
 - For Android document URIs, read EXIF orientation from a separate stream before decoding the bitmap used by the editor. Some camera/gallery images will otherwise open rotated and users will compensate with a bad crop.
 - Persist the cropped avatar into app-private storage, not only the original gallery `content://` URI. This keeps the persona avatar stable after grant loss, gallery cleanup, or device reboot.
+
+## 2026-04-12 Roleplay multimodal chat note
+
+- Goal: add image send and voice-note send to the roleplay chat screen without forking a second attachment stack.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat --stop
+Remove-Item -Recurse -Force app\build\tmp\hiltJavaCompileDebug, app\build\tmp\kapt3 -ErrorAction SilentlyContinue
+.\gradlew.bat :app:compileDebugKotlin :app:compileDebugUnitTestKotlin --no-daemon
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.PromptAssemblerTest" --tests "selfgemma.talk.domain.roleplay.model.RoleplayMessageMediaModelsTest" --no-daemon
+.\gradlew.bat :app:assembleDebug --no-daemon
+adb install -r D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk
+adb shell am force-stop selfgemma.talk
+adb shell am start -W -n selfgemma.talk/.MainActivity
+adb logcat -d -v time | Select-String -Pattern 'RoleplayChatScreen|RoleplayChatViewModel|SendRoleplayMessage'
+```
+
+Notes:
+
+- Reuse `MessageInputText` for picker/record interactions, but do not assume a model marked `INITIALIZED` was initialized with image/audio backends. Roleplay entry must request a fresh multimodal initialization for the selected model.
+- Persist outgoing chat attachments into app-private files before enqueueing the message. UI pickers can return transient `Bitmap`/PCM objects; without a durable file path, the roleplay timeline cannot survive process death or conversation reload.
+- Store audio clips as raw PCM plus `sampleRate` metadata if you want both playback and inference reuse. `AudioPlaybackPanel` wants PCM, while LiteRT LM audio input wants a WAV wrapper; wrapping PCM into WAV on demand keeps one source of truth.
+- Keep multimodal history visible to prompt assembly through short textual placeholders such as `Shared 2 image(s).` and `Shared an audio clip.`. Otherwise future turns lose the fact that the user already sent media.

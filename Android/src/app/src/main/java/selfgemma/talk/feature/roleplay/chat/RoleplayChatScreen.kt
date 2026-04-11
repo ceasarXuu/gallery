@@ -1,5 +1,6 @@
 ﻿package selfgemma.talk.feature.roleplay.chat
 
+import android.graphics.BitmapFactory
 import android.os.SystemClock
 import android.text.method.LinkMovementMethod
 import android.util.Log
@@ -14,8 +15,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +39,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -67,10 +71,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.boundsInWindow
@@ -93,9 +99,14 @@ import selfgemma.talk.data.AppBarActionType
 import selfgemma.talk.data.BuiltInTaskId
 import selfgemma.talk.data.Model
 import selfgemma.talk.domain.roleplay.model.Message
+import selfgemma.talk.domain.roleplay.model.MessageKind
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
+import selfgemma.talk.domain.roleplay.model.RoleplayMessageAttachmentType
+import selfgemma.talk.domain.roleplay.model.roleplayMessageMediaPayload
 import selfgemma.talk.performance.TrackPerformanceState
+import selfgemma.talk.ui.common.chat.AudioPlaybackPanel
+import selfgemma.talk.ui.common.chat.MessageInputText
 import selfgemma.talk.ui.common.chat.rememberStreamingTokenSpeed
 import selfgemma.talk.ui.modelmanager.ModelInitializationStatusType
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
@@ -179,6 +190,7 @@ fun RoleplayChatScreen(
   var hasCompletedInitialPositioning by rememberSaveable(uiState.session?.id) { mutableStateOf(false) }
   var hasLoggedInitialPositioning by rememberSaveable(uiState.session?.id) { mutableStateOf(false) }
   var previousMessageCount by rememberSaveable(uiState.session?.id) { mutableStateOf(0) }
+  var hasRequestedMultimodalInit by rememberSaveable(activeModel?.name) { mutableStateOf(false) }
   var composerBoundsInWindow by remember { mutableStateOf<Rect?>(null) }
   val latestListItemIndex =
     remember(uiState.messages.size) {
@@ -230,14 +242,21 @@ fun RoleplayChatScreen(
     handleNavigateUp()
   }
 
-  LaunchedEffect(activeModel?.name, activeModelStatus) {
+  LaunchedEffect(activeModel?.name, activeModelStatus, hasRequestedMultimodalInit) {
     if (
       activeModel != null &&
         llmChatTask != null &&
-        !isActiveModelInitialized &&
-        !isActiveModelInitializing
+        !isActiveModelInitializing &&
+        !hasRequestedMultimodalInit
     ) {
-      modelManagerViewModel.initializeModel(context = context, task = llmChatTask, model = activeModel)
+      hasRequestedMultimodalInit = true
+      modelManagerViewModel.initializeLlmModel(
+        context = context,
+        model = activeModel,
+        supportImage = activeModel.llmSupportImage,
+        supportAudio = activeModel.llmSupportAudio,
+        force = true,
+      )
     }
   }
 
@@ -447,20 +466,66 @@ fun RoleplayChatScreen(
           )
         }
 
-        ChatComposer(
-          draft = uiState.draft,
-          onDraftChange = viewModel::updateDraft,
-          canSend = activeModel != null && uiState.draft.isNotBlank(),
-          modifier =
-            Modifier.onGloballyPositioned { coordinates ->
-              composerBoundsInWindow = coordinates.boundsInWindow()
+        if (llmChatTask != null) {
+          Box(
+            modifier =
+              Modifier.onGloballyPositioned { coordinates ->
+                composerBoundsInWindow = coordinates.boundsInWindow()
+              }
+          ) {
+            MessageInputText(
+              task = llmChatTask,
+              modelManagerViewModel = modelManagerViewModel,
+              curMessage = uiState.draft,
+              isResettingSession = false,
+              inProgress = uiState.inProgress || activeModel == null,
+              imageCount = 0,
+              audioClipMessageCount = 0,
+              modelInitializing = isActiveModelInitializing,
+              modelPreparing = uiState.inProgress && uiState.messages.lastOrNull()?.status == MessageStatus.STREAMING,
+              textFieldPlaceHolderRes = llmChatTask.textInputPlaceHolderRes,
+              onValueChanged = viewModel::updateDraft,
+              onSendMessage = { messages ->
+                activeModel?.let { currentModel ->
+                  messages
+                    .mapNotNull { message ->
+                      when (message) {
+                        is selfgemma.talk.ui.common.chat.ChatMessageText -> message.content.trim().takeIf(String::isNotBlank)
+                        else -> null
+                      }
+                    }
+                    .firstOrNull()
+                    ?.let(modelManagerViewModel::addTextInputHistory)
+                  viewModel.sendChatMessages(
+                    model = currentModel,
+                    messages = messages,
+                    clearDraft = true,
+                  )
+                }
+              },
+              onAmplitudeChanged = {},
+              showPromptTemplatesInMenu = false,
+              showSkillsPicker = false,
+              showImagePicker = activeModel?.llmSupportImage == true,
+              showAudioPicker = activeModel?.llmSupportAudio == true,
+            )
+          }
+        } else {
+          ChatComposer(
+            draft = uiState.draft,
+            onDraftChange = viewModel::updateDraft,
+            canSend = activeModel != null && uiState.draft.isNotBlank(),
+            modifier =
+              Modifier.onGloballyPositioned { coordinates ->
+                composerBoundsInWindow = coordinates.boundsInWindow()
+              },
+            onSend = {
+              activeModel?.let { currentModel ->
+                viewModel.sendMessage(currentModel)
+              }
             },
-          onSend = {
-            activeModel?.let { currentModel ->
-              viewModel.sendMessage(currentModel)
-            }
-          },
-        )
+          )
+        }
       }
     }
   }
@@ -570,11 +635,12 @@ private fun ChatMessageBubble(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
           ) {
-            if (message.status == MessageStatus.STREAMING && message.content.isBlank()) {
+            if (message.status == MessageStatus.STREAMING && message.content.isBlank() && message.kind == MessageKind.TEXT) {
               TypingIndicator()
             } else {
-              RenderChatMessageText(
-                text = message.displayText(),
+              RenderRoleplayMessageBody(
+                message = message,
+                isUser = isUser,
                 textColor =
                   if (isUser) {
                     MaterialTheme.colorScheme.onPrimaryContainer
@@ -679,6 +745,102 @@ private fun ActivePersonaBanner(
             )
           }
       }
+    }
+  }
+}
+
+@Composable
+private fun RenderRoleplayMessageBody(
+  message: Message,
+  isUser: Boolean,
+  textColor: Color,
+) {
+  when (message.kind) {
+    MessageKind.IMAGE -> RoleplayImageMessageBody(message = message)
+    MessageKind.AUDIO -> RoleplayAudioMessageBody(message = message)
+    else ->
+      RenderChatMessageText(
+        text = message.displayText(),
+        textColor = textColor,
+      )
+  }
+}
+
+@Composable
+private fun RoleplayImageMessageBody(message: Message) {
+  val imagePaths =
+    remember(message.metadataJson) {
+      message
+        .roleplayMessageMediaPayload()
+        ?.attachments
+        ?.filter { it.type == RoleplayMessageAttachmentType.IMAGE }
+        ?.map { it.filePath }
+        .orEmpty()
+    }
+  val bitmaps =
+    remember(imagePaths) {
+      imagePaths.mapNotNull { filePath ->
+        runCatching { BitmapFactory.decodeFile(filePath) }.getOrNull()
+      }
+    }
+  if (bitmaps.isEmpty()) {
+    RenderChatMessageText(
+      text = message.displayText(),
+      textColor = MaterialTheme.colorScheme.onSurface,
+    )
+    return
+  }
+
+  Row(
+    modifier = Modifier.horizontalScroll(rememberScrollState()),
+    horizontalArrangement = Arrangement.spacedBy(10.dp),
+  ) {
+    bitmaps.forEach { bitmap ->
+      Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = stringResource(R.string.cd_image_thumbnail),
+        modifier =
+          Modifier.size(156.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)),
+      )
+    }
+  }
+}
+
+@Composable
+private fun RoleplayAudioMessageBody(message: Message) {
+  val audioAttachments =
+    remember(message.metadataJson) {
+      message
+        .roleplayMessageMediaPayload()
+        ?.attachments
+        ?.filter { it.type == RoleplayMessageAttachmentType.AUDIO }
+        .orEmpty()
+    }
+  val audioPayloads =
+    remember(audioAttachments) {
+      audioAttachments.mapNotNull { attachment ->
+        val sampleRate = attachment.sampleRate ?: return@mapNotNull null
+        val audioData = runCatching { java.io.File(attachment.filePath).readBytes() }.getOrNull()
+        audioData?.let { it to sampleRate }
+      }
+    }
+  if (audioPayloads.isEmpty()) {
+    RenderChatMessageText(
+      text = message.displayText(),
+      textColor = MaterialTheme.colorScheme.onSurface,
+    )
+    return
+  }
+
+  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    audioPayloads.forEach { (audioData, sampleRate) ->
+      AudioPlaybackPanel(
+        audioData = audioData,
+        sampleRate = sampleRate,
+        isRecording = false,
+      )
     }
   }
 }

@@ -647,7 +647,7 @@ fun MessageInputText(
                 else {
                   val canSend = !inProgress &&
                     !isResettingSession &&
-                    (curMessage.isNotEmpty() || pickedAudioClips.isNotEmpty())
+                    (curMessage.isNotEmpty() || pickedImages.isNotEmpty() || pickedAudioClips.isNotEmpty())
 
                   Surface(
                     shape = CircleShape,

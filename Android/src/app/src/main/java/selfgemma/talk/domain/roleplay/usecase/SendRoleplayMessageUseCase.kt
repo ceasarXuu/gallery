@@ -1,8 +1,11 @@
 package selfgemma.talk.domain.roleplay.usecase
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.SystemClock
 import android.util.Log
 import com.google.ai.edge.litertlm.Contents
+import java.io.File
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -17,8 +20,12 @@ import selfgemma.talk.data.ConfigKeys
 import selfgemma.talk.data.DataStoreRepository
 import selfgemma.talk.data.Model
 import selfgemma.talk.domain.roleplay.model.Message
+import selfgemma.talk.domain.roleplay.model.MessageKind
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
+import selfgemma.talk.domain.roleplay.model.RoleplayMessageAttachmentType
+import selfgemma.talk.domain.roleplay.model.pcm16MonoToWav
+import selfgemma.talk.domain.roleplay.model.roleplayMessageMediaPayload
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionEventType
@@ -64,6 +71,11 @@ private data class InferenceAttemptResult(
 private data class ConversationPreparationResult(
   val failureMessage: Message? = null,
   val overflowDetected: Boolean = false,
+)
+
+private data class CurrentTurnMedia(
+  val images: List<Bitmap> = emptyList(),
+  val audioClips: List<ByteArray> = emptyList(),
 )
 
 private const val TAG = "SendRoleplayMessage"
@@ -115,7 +127,9 @@ constructor(
   ): PendingRoleplayMessage? {
     val startTime = SystemClock.elapsedRealtime()
     val trimmedInput = stagedTurn.combinedUserInput.trim()
-    if (trimmedInput.isBlank()) {
+    val hasMediaInput =
+      stagedTurn.userMessages.any { it.kind == MessageKind.IMAGE || it.kind == MessageKind.AUDIO }
+    if (trimmedInput.isBlank() && !hasMediaInput) {
       return null
     }
 
@@ -202,14 +216,18 @@ constructor(
       conversationRepository.observeMessages(sessionId).first().filter { message ->
         message.id != assistantSeed.id && userMessages.none { userMessage -> userMessage.id == message.id }
       }
+    val currentTurnMedia = loadCurrentTurnMedia(userMessages)
     val summary = conversationRepository.getSummary(sessionId)
     val memoryLimit = role.memoryMaxItems.coerceIn(0, 8)
+    val memoryQuery =
+      trimmedInput.takeIf(String::isNotBlank)
+        ?: userMessages.joinToString(separator = " ") { it.content.trim() }.trim()
     val relevantMemories =
-      if (role.memoryEnabled && memoryLimit > 0) {
+      if (role.memoryEnabled && memoryLimit > 0 && memoryQuery.isNotBlank()) {
         memoryRepository.searchRelevant(
           roleId = role.id,
           sessionId = sessionId,
-          query = trimmedInput,
+          query = memoryQuery,
           limit = memoryLimit,
         )
       } else {
@@ -269,6 +287,7 @@ constructor(
           assistantSeed = assistantSeed,
           model = model,
           promptAssembly = promptAssembly,
+          currentTurnMedia = currentTurnMedia,
           sessionId = sessionId,
           recentMessages = recentMessages,
           relevantMemories = relevantMemories,
@@ -320,6 +339,7 @@ constructor(
           assistantSeed = assistantSeed,
           model = model,
           input = trimmedInput,
+          currentTurnMedia = currentTurnMedia,
           role = role,
           sessionId = sessionId,
           startTime = startTime,
@@ -366,10 +386,11 @@ constructor(
 
     if (finalMessage.status == MessageStatus.COMPLETED) {
       summarizeSessionUseCase(sessionId)
+      val memorySourceUserMessage = userMessages.lastOrNull { it.kind == MessageKind.TEXT } ?: userMessages.last()
       extractMemoriesUseCase(
         session = session,
         role = role,
-        userMessage = userMessages.last(),
+        userMessage = memorySourceUserMessage,
         assistantMessage = finalMessage,
       )
     }
@@ -467,6 +488,7 @@ constructor(
     assistantSeed: Message,
     model: Model,
     promptAssembly: PromptAssemblyResult,
+    currentTurnMedia: CurrentTurnMedia,
     sessionId: String,
     recentMessages: List<Message>,
     relevantMemories: List<selfgemma.talk.domain.roleplay.model.MemoryItem>,
@@ -482,11 +504,14 @@ constructor(
     return try {
       model.runtimeHelper.resetConversation(
         model = model,
-        supportImage = false,
-        supportAudio = false,
+        supportImage = currentTurnMedia.images.isNotEmpty(),
+        supportAudio = currentTurnMedia.audioClips.isNotEmpty(),
         systemInstruction = systemInstruction,
       )
-      Log.d(TAG, "conversation reset after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId")
+      Log.d(
+        TAG,
+        "conversation reset after ${SystemClock.elapsedRealtime() - startTime}ms sessionId=$sessionId images=${currentTurnMedia.images.size} audioClips=${currentTurnMedia.audioClips.size}",
+      )
       ConversationPreparationResult()
     } catch (exception: Exception) {
       val errorMessage = exception.message ?: "Failed to prepare the chat session."
@@ -506,6 +531,7 @@ constructor(
     assistantSeed: Message,
     model: Model,
     input: String,
+    currentTurnMedia: CurrentTurnMedia,
     role: selfgemma.talk.domain.roleplay.model.RoleCard,
     sessionId: String,
     startTime: Long,
@@ -598,6 +624,8 @@ constructor(
                 errorMessage = if (isStopRequested()) null else message,
               )
             },
+            images = currentTurnMedia.images,
+            audioClips = currentTurnMedia.audioClips,
             extraContext =
               if (
                 role.enableThinking &&
@@ -638,6 +666,48 @@ constructor(
         overflowDetected = ContextOverflowRecovery.isContextOverflow(exception.message),
       )
     }
+  }
+
+  private fun loadCurrentTurnMedia(userMessages: List<Message>): CurrentTurnMedia {
+    val images = mutableListOf<Bitmap>()
+    val audioClips = mutableListOf<ByteArray>()
+
+    userMessages.forEach { message ->
+      val attachments = message.roleplayMessageMediaPayload()?.attachments.orEmpty()
+      attachments.forEach { attachment ->
+        when (attachment.type) {
+          RoleplayMessageAttachmentType.IMAGE -> {
+            val bitmap = BitmapFactory.decodeFile(attachment.filePath)
+            if (bitmap != null) {
+              images += bitmap
+            } else {
+              Log.w(
+                TAG,
+                "failed to decode roleplay image attachment messageId=${message.id} path=${attachment.filePath}",
+              )
+            }
+          }
+          RoleplayMessageAttachmentType.AUDIO -> {
+            val sampleRate = attachment.sampleRate
+            val file = File(attachment.filePath)
+            if (sampleRate == null || !file.exists()) {
+              Log.w(
+                TAG,
+                "failed to load roleplay audio attachment messageId=${message.id} sampleRate=$sampleRate path=${attachment.filePath}",
+              )
+            } else {
+              audioClips += pcm16MonoToWav(file.readBytes(), sampleRate)
+            }
+          }
+        }
+      }
+    }
+
+    Log.d(
+      TAG,
+      "loaded current turn media imageCount=${images.size} audioClipCount=${audioClips.size} userMessageCount=${userMessages.size}",
+    )
+    return CurrentTurnMedia(images = images, audioClips = audioClips)
   }
 
   private suspend fun awaitModelReady(

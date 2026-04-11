@@ -242,7 +242,9 @@ internal class PromptMaterialBuilder @Inject constructor(private val tokenEstima
   private fun selectRecentMessages(messages: List<Message>, tokenBudget: Int): List<Message> {
     val filtered =
       messages.filter { message ->
-        message.kind == MessageKind.TEXT &&
+        (message.kind == MessageKind.TEXT ||
+          message.kind == MessageKind.IMAGE ||
+          message.kind == MessageKind.AUDIO) &&
           message.side != MessageSide.SYSTEM &&
           message.status != MessageStatus.FAILED &&
           message.content.isNotBlank()
