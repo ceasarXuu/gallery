@@ -1274,6 +1274,7 @@ private fun EditorTextCard(
               fieldSpec?.supportsAiCompress == true &&
               maxChars != null
           ) {
+            val canCompress = value.length > maxChars
             {
               TextButton(
                 onClick = {
@@ -1285,7 +1286,7 @@ private fun EditorTextCard(
                     onValueChange,
                   )
                 },
-                enabled = !isCompressing && value.isNotBlank(),
+                enabled = !isCompressing && value.isNotBlank() && canCompress,
               ) {
                 Text(
                   if (isCompressing) {
@@ -1625,26 +1626,27 @@ private fun LabeledTextField(
       title = title,
       helpTopic = helpTopic,
       onShowHelp = onShowHelp,
-      compressionAction =
-        if (
-          compressionFieldKey != null &&
-            onCompressField != null &&
-            fieldSpec?.supportsAiCompress == true &&
-            maxChars != null
-        ) {
-          {
-            TextButton(
-              onClick = {
-                onCompressField(
-                  compressionFieldKey,
-                  title,
+        compressionAction =
+          if (
+            compressionFieldKey != null &&
+              onCompressField != null &&
+              fieldSpec?.supportsAiCompress == true &&
+              maxChars != null
+          ) {
+            val canCompress = value.length > maxChars
+            {
+              TextButton(
+                onClick = {
+                  onCompressField(
+                    compressionFieldKey,
+                    title,
                   maxChars,
                   value,
                   onValueChange,
-                )
-              },
-              enabled = !isCompressing && value.isNotBlank(),
-            ) {
+                  )
+                },
+                enabled = !isCompressing && value.isNotBlank() && canCompress,
+              ) {
               Text(
                 if (isCompressing) {
                   stringResource(R.string.role_editor_ai_compress_running)
