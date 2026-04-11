@@ -697,6 +697,10 @@
   <string name="role_editor_media_usage_scene">Usage: Scene</string>
   <string name="role_editor_media_usage_reference">Usage: Reference</string>
   <string name="role_catalog_no_avatar">No avatar</string>
+  <string name="my_profile_avatar_tap_to_upload">Tap the avatar to upload from your gallery.</string>
+  <string name="my_profile_avatar_tap_to_edit">Tap the avatar to adjust framing.</string>
+  <string name="my_profile_avatar_edit_title">Edit Avatar</string>
+  <string name="my_profile_avatar_edit_hint">Drag to reposition and pinch to zoom until the subject fits inside the circle.</string>
   <string name="role_editor_media_compatibility_title">Media compatibility</string>
   <string name="role_editor_media_compatibility_avatar_ready">Primary avatar is ready for ST PNG export.</string>
   <string name="role_editor_media_compatibility_avatar_missing">Primary avatar is missing. ST PNG export will prompt for a default image or upload.</string>

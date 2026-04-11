@@ -75,6 +75,10 @@
   <string name="my_profile_avatar_slot_new_label">New Slot ID</string>
   <string name="my_profile_avatar_slot_use_selected">Use Selected Slot</string>
   <string name="my_profile_avatar_title">Avatar</string>
+  <string name="my_profile_avatar_tap_to_upload">Tap the avatar to upload from your gallery.</string>
+  <string name="my_profile_avatar_tap_to_edit">Tap the avatar to adjust framing.</string>
+  <string name="my_profile_avatar_edit_title">Edit Avatar</string>
+  <string name="my_profile_avatar_edit_hint">Drag to reposition and pinch to zoom until the subject fits inside the circle.</string>
   <string name="my_profile_persona_name_title">Persona Name</string>
   <string name="my_profile_persona_title_title">Persona Title</string>
   <string name="my_profile_persona_description_title">Persona Description</string>

@@ -430,9 +430,11 @@
   <string name="delete_skill_dialog_content">确定要删除该技能吗？</string>
   <string name="delete_selected_skills_title">删除选中的技能</string>
   <plurals name="delete_selected_skills_content">
+    <item quantity="one">确定要删除%d个技能吗？</item>
     <item quantity="other">确定要删除%d个技能吗？</item>
   </plurals>
   <plurals name="selected_custom_skills_count">
+    <item quantity="one">已选择%d个</item>
     <item quantity="other">已选择%d个</item>
   </plurals>
   <string name="built_in_skills_title">内置技能</string>
@@ -711,4 +713,8 @@
   <string name="role_editor_gallery_usage_expression">表情</string>
   <string name="role_editor_gallery_usage_scene">场景</string>
   <string name="role_editor_gallery_usage_reference">参考</string>
+  <string name="my_profile_avatar_tap_to_upload">点击头像，从相册上传。</string>
+  <string name="my_profile_avatar_tap_to_edit">点击头像，调整取景。</string>
+  <string name="my_profile_avatar_edit_title">编辑头像</string>
+  <string name="my_profile_avatar_edit_hint">拖动调整位置，双指缩放，直到内容刚好落在圆形头像框内。</string>
 </resources>

@@ -1043,3 +1043,29 @@ Notes:
 - The persona editor's `editingSlotId`, create-dialog visibility, delete-confirm dialog, and help-dialog visibility are transient UI state. Do not keep them in `rememberSaveable` across task/process recreation, or the screen can reopen in editor mode while the `ViewModel` has already been rebuilt from persisted `StUserProfile`, which looks like the form was cleared.
 - `saveProfile()` should validate persisted reality, not only in-memory draft state. After `setStUserProfile(...)`, immediately read back `getStUserProfile()` and bind the UI to that result so restart-only drift is visible during the same save flow.
 - For persona persistence regressions, keep one real `DefaultDataStoreRepository + protobuf DataStore` round-trip test in addition to `FakeDataStoreRepository` tests. The fake repository only covers `ViewModel` logic and cannot prove the on-device proto file preserves `personas` and `personaDescriptions.avatarUri`.
+
+## 2026-04-11 Persona circular avatar editor note
+
+- Goal: make the `Me / Persona` editor match mainstream social-app avatar setup by using one circular avatar entry, gallery upload for empty state, and an in-dialog drag/zoom cropper for existing avatars.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat --stop
+.\gradlew.bat :app:compileDebugKotlin --no-daemon
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.feature.roleplay.profile.MyProfileViewModelTest" --tests "selfgemma.talk.feature.roleplay.profile.PersonaAvatarEditorTest" --no-daemon
+.\gradlew.bat :app:assembleDebug --no-daemon
+adb install -r D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk
+adb shell am force-stop selfgemma.talk
+adb shell am start -W -n selfgemma.talk/.MainActivity
+adb logcat -d -v time | Select-String -Pattern 'MyProfileScreen|PersonaAvatarEditor|AndroidRuntime'
+```
+
+Notes:
+
+- Keep the avatar entry itself as the primary affordance. If the user already has an avatar, tapping the circle should open the crop dialog instead of launching the picker immediately.
+- Social-style avatar editing is easier to reason about when the crop dialog works on a square export and only uses the circle as a framing mask. Persist a real square PNG and let display surfaces keep using `CircleShape`.
+- Clamp drag offsets against the scaled image bounds before exporting. Otherwise users can pan the image past the crop frame and save transparent or empty edges even though the preview looked acceptable.
+- For Android document URIs, read EXIF orientation from a separate stream before decoding the bitmap used by the editor. Some camera/gallery images will otherwise open rotated and users will compensate with a bad crop.
+- Persist the cropped avatar into app-private storage, not only the original gallery `content://` URI. This keeps the persona avatar stable after grant loss, gallery cleanup, or device reboot.

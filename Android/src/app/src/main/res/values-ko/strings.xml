@@ -426,9 +426,11 @@
   <string name="delete_skill_dialog_content">스킬을 삭제하시겠습니까?</string>
   <string name="delete_selected_skills_title">선택한 스킬 삭제</string>
   <plurals name="delete_selected_skills_content">
+    <item quantity="one">%d개 스킬을 삭제하시겠습니까?</item>
     <item quantity="other">%d개 스킬을 삭제하시겠습니까?</item>
   </plurals>
   <plurals name="selected_custom_skills_count">
+    <item quantity="one">%d개 선택됨</item>
     <item quantity="other">%d개 선택됨</item>
   </plurals>
   <string name="built_in_skills_title">기본 제공 스킬</string>
@@ -707,4 +709,8 @@
   <string name="role_editor_gallery_usage_expression">표정</string>
   <string name="role_editor_gallery_usage_scene">장면</string>
   <string name="role_editor_gallery_usage_reference">참고</string>
+  <string name="my_profile_avatar_tap_to_upload">Tap the avatar to upload from your gallery.</string>
+  <string name="my_profile_avatar_tap_to_edit">Tap the avatar to adjust framing.</string>
+  <string name="my_profile_avatar_edit_title">Edit Avatar</string>
+  <string name="my_profile_avatar_edit_hint">Drag to reposition and pinch to zoom until the subject fits inside the circle.</string>
 </resources>

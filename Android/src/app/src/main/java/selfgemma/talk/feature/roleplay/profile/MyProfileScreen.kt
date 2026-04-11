@@ -50,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -111,13 +112,17 @@ fun MyProfileScreen(
   var showMenu by remember { mutableStateOf(false) }
   var pendingDeleteSlotId by remember { mutableStateOf<String?>(null) }
   var activeHelpTopic by remember { mutableStateOf<PersonaHelpTopic?>(null) }
+  var avatarEditorDraft by remember { mutableStateOf<PersonaAvatarEditorDraft?>(null) }
   val isEditing = editingSlotId != null
   val avatarLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-      if (uri != null) {
-        takeReadPermission(context = context, uri = uri)
+      if (uri == null) {
+        Log.d(TAG, "persona avatar picker cancelled")
+        return@rememberLauncherForActivityResult
       }
-      viewModel.updateAvatarUri(uri?.toString())
+      takeReadPermission(context = context, uri = uri)
+      avatarEditorDraft = PersonaAvatarEditorDraft(sourceUri = uri.toString())
+      Log.d(TAG, "persona avatar picked uri=$uri")
     }
   val handleNavigateUp: () -> Unit = {
     if (isEditing) {
@@ -208,8 +213,20 @@ fun MyProfileScreen(
         contentPadding = combinedPadding,
         onPersonaNameChange = viewModel::updatePersonaName,
         onPersonaDescriptionChange = viewModel::updatePersonaDescription,
-        onAvatarPick = { avatarLauncher.launch(arrayOf("image/*")) },
-        onAvatarClear = { viewModel.updateAvatarUri(null) },
+        onAvatarClick = {
+          val currentAvatarUri = uiState.avatarUri
+          if (currentAvatarUri.isNullOrBlank()) {
+            Log.d(TAG, "open persona avatar picker for empty avatar slot=${uiState.avatarSlotId}")
+            avatarLauncher.launch(arrayOf("image/*"))
+          } else {
+            Log.d(TAG, "open persona avatar editor slot=${uiState.avatarSlotId} uri=$currentAvatarUri")
+            avatarEditorDraft = PersonaAvatarEditorDraft(sourceUri = currentAvatarUri)
+          }
+        },
+        onAvatarClear = {
+          Log.d(TAG, "clear persona avatar slot=${uiState.avatarSlotId}")
+          viewModel.updateAvatarUri(null)
+        },
         onPersonaPositionChange = viewModel::updatePersonaPosition,
         onPersonaDepthChange = viewModel::updatePersonaDepth,
         onPersonaRoleChange = viewModel::updatePersonaRole,
@@ -265,6 +282,24 @@ fun MyProfileScreen(
       PersonaHelpDialog(
         topic = helpTopic,
         onDismiss = { activeHelpTopic = null },
+      )
+    }
+
+    val avatarDraft = avatarEditorDraft
+    if (avatarDraft != null) {
+      PersonaAvatarEditorDialog(
+        draft = avatarDraft,
+        onDismiss = { avatarEditorDraft = null },
+        onPickReplacement = { avatarLauncher.launch(arrayOf("image/*")) },
+        onClearAvatar = {
+          viewModel.updateAvatarUri(null)
+          avatarEditorDraft = null
+        },
+        onSave = { bitmap ->
+          val savedUri = savePersonaAvatarBitmap(context, uiState.avatarSlotId, bitmap)
+          viewModel.updateAvatarUri(savedUri)
+          avatarEditorDraft = null
+        },
       )
     }
   }
@@ -407,7 +442,7 @@ private fun MyProfileEditorContent(
   contentPadding: PaddingValues,
   onPersonaNameChange: (String) -> Unit,
   onPersonaDescriptionChange: (String) -> Unit,
-  onAvatarPick: () -> Unit,
+  onAvatarClick: () -> Unit,
   onAvatarClear: () -> Unit,
   onPersonaPositionChange: (StPersonaDescriptionPosition) -> Unit,
   onPersonaDepthChange: (String) -> Unit,
@@ -426,7 +461,7 @@ private fun MyProfileEditorContent(
     PersonaAvatarCard(
       name = uiState.personaName,
       avatarUri = uiState.avatarUri,
-      onPickAvatar = onAvatarPick,
+      onAvatarClick = onAvatarClick,
       onClearAvatar = onAvatarClear,
     )
     EditorCard(
@@ -651,7 +686,7 @@ private fun EditorCard(
 private fun PersonaAvatarCard(
   name: String,
   avatarUri: String?,
-  onPickAvatar: () -> Unit,
+  onAvatarClick: () -> Unit,
   onClearAvatar: () -> Unit,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
@@ -667,18 +702,23 @@ private fun PersonaAvatarCard(
       RoleAvatar(
         name = name,
         avatarUri = avatarUri,
-        modifier = Modifier.size(96.dp),
+        modifier =
+          Modifier
+            .size(112.dp)
+            .clip(androidx.compose.foundation.shape.CircleShape)
+            .clickable(onClick = onAvatarClick),
+      )
+      Text(
+        text =
+          if (avatarUri.isNullOrBlank()) {
+            stringResource(R.string.my_profile_avatar_tap_to_upload)
+          } else {
+            stringResource(R.string.my_profile_avatar_tap_to_edit)
+          },
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
       Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        FilledTonalButton(onClick = onPickAvatar) {
-          Text(
-            if (avatarUri.isNullOrBlank()) {
-              stringResource(R.string.role_editor_media_add)
-            } else {
-              stringResource(R.string.role_editor_media_replace)
-            },
-          )
-        }
         if (!avatarUri.isNullOrBlank()) {
           TextButton(onClick = onClearAvatar) {
             Text(stringResource(R.string.role_editor_media_clear))
