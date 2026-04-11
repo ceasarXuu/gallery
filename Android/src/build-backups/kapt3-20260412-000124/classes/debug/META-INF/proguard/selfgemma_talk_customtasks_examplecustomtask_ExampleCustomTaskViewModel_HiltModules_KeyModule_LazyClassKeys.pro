@@ -1,0 +1,1 @@
+-keep,allowobfuscation,allowshrinking class selfgemma.talk.customtasks.examplecustomtask.ExampleCustomTaskViewModel

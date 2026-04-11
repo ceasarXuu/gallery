@@ -1,0 +1,33 @@
+package selfgemma.talk.ui.common.chat;
+
+@kotlin.Metadata(mv = {2, 2, 0}, k = 2, xi = 48, d1 = {"\u0000\u0080\u0001\n\u0000\n\u0002\u0010\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\u0010 \n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\u0010\b\n\u0002\u0018\u0002\n\u0002\b\u0004\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0003\n\u0002\u0018\u0002\n\u0002\b\u0003\n\u0002\u0010\u000b\n\u0002\b\u0003\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\b\u0003\u001a\u0091\u0003\u0010\u0000\u001a\u00020\u00012\u0006\u0010\u0002\u001a\u00020\u00032\u0006\u0010\u0004\u001a\u00020\u00052\u0006\u0010\u0006\u001a\u00020\u00072\u0006\u0010\b\u001a\u00020\t2\u0006\u0010\n\u001a\u00020\u000b2\u001e\u0010\f\u001a\u001a\u0012\u0004\u0012\u00020\u0007\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u000f0\u000e\u0012\u0004\u0012\u00020\u00010\r2\u0018\u0010\u0010\u001a\u0014\u0012\u0004\u0012\u00020\u0007\u0012\u0004\u0012\u00020\u000f\u0012\u0004\u0012\u00020\u00010\r2B\u0010\u0011\u001a>\u0012\u0004\u0012\u00020\u0007\u0012\u0004\u0012\u00020\u000f\u0012\u0013\u0012\u00110\u0013\u00a2\u0006\f\b\u0014\u0012\b\b\u0015\u0012\u0004\b\b(\u0016\u0012\u0013\u0012\u00110\u0013\u00a2\u0006\f\b\u0014\u0012\b\b\u0015\u0012\u0004\b\b(\u0017\u0012\u0004\u0012\u00020\u00010\u00122\f\u0010\u0018\u001a\b\u0012\u0004\u0012\u00020\u00010\u00192\b\b\u0002\u0010\u001a\u001a\u00020\u001b2\u001a\b\u0002\u0010\u001c\u001a\u0014\u0012\u0004\u0012\u00020\u0007\u0012\u0004\u0012\u00020\u001d\u0012\u0004\u0012\u00020\u00010\r2\u0014\b\u0002\u0010\u001e\u001a\u000e\u0012\u0004\u0012\u00020\u0013\u0012\u0004\u0012\u00020\u00010\u001f2\u000e\b\u0002\u0010 \u001a\b\u0012\u0004\u0012\u00020\u00010\u00192\u000e\b\u0002\u0010!\u001a\b\u0012\u0004\u0012\u00020\u00010\u00192>\b\u0002\u0010\"\u001a8\u0012\u0019\u0012\u0017\u0012\u0004\u0012\u00020#0\u000e\u00a2\u0006\f\b\u0014\u0012\b\b\u0015\u0012\u0004\b\b($\u0012\u0013\u0012\u00110\u0013\u00a2\u0006\f\b\u0014\u0012\b\b\u0015\u0012\u0004\b\b(%\u0012\u0004\u0012\u00020\u00010\r2\b\b\u0002\u0010&\u001a\u00020\'2\b\b\u0002\u0010(\u001a\u00020\'2\b\b\u0002\u0010)\u001a\u00020\'2\u0019\b\u0002\u0010*\u001a\u0013\u0012\u0004\u0012\u00020\u0007\u0012\u0004\u0012\u00020\u00010\u001f\u00a2\u0006\u0002\b+H\u0007\u001a \u0010,\u001a\u00020\u00012\u0006\u0010-\u001a\u00020.2\b\b\u0002\u0010/\u001a\u00020\'H\u0082@\u00a2\u0006\u0002\u00100\u00a8\u00061"}, d2 = {"ChatPanel", "", "modelManagerViewModel", "Lselfgemma/talk/ui/modelmanager/ModelManagerViewModel;", "task", "Lselfgemma/talk/data/Task;", "selectedModel", "Lselfgemma/talk/data/Model;", "viewModel", "Lselfgemma/talk/ui/common/chat/ChatViewModel;", "innerPadding", "Landroidx/compose/foundation/layout/PaddingValues;", "onSendMessage", "Lkotlin/Function2;", "", "Lselfgemma/talk/ui/common/chat/ChatMessage;", "onRunAgainClicked", "onBenchmarkClicked", "Lkotlin/Function4;", "", "Lkotlin/ParameterName;", "name", "warmUpIterations", "benchmarkIterations", "navigateUp", "Lkotlin/Function0;", "modifier", "Landroidx/compose/ui/Modifier;", "onStreamImageMessage", "Lselfgemma/talk/ui/common/chat/ChatMessageImage;", "onStreamEnd", "Lkotlin/Function1;", "onStopButtonClicked", "onSkillClicked", "onImageSelected", "Landroid/graphics/Bitmap;", "bitmaps", "selectedBitmapIndex", "showStopButtonInInputWhenInProgress", "", "showImagePicker", "showAudioPicker", "emptyStateComposable", "Landroidx/compose/runtime/Composable;", "scrollToBottom", "listState", "Landroidx/compose/foundation/lazy/LazyListState;", "animate", "(Landroidx/compose/foundation/lazy/LazyListState;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;", "app_debug"})
+public final class ChatPanelKt {
+    
+    /**
+     * Composable function for the main chat panel, displaying messages and handling user input.
+     */
+    @kotlin.OptIn(markerClass = {androidx.compose.material3.ExperimentalMaterial3Api.class})
+    @androidx.compose.runtime.Composable()
+    public static final void ChatPanel(@org.jetbrains.annotations.NotNull()
+    selfgemma.talk.ui.modelmanager.ModelManagerViewModel modelManagerViewModel, @org.jetbrains.annotations.NotNull()
+    selfgemma.talk.data.Task task, @org.jetbrains.annotations.NotNull()
+    selfgemma.talk.data.Model selectedModel, @org.jetbrains.annotations.NotNull()
+    selfgemma.talk.ui.common.chat.ChatViewModel viewModel, @org.jetbrains.annotations.NotNull()
+    androidx.compose.foundation.layout.PaddingValues innerPadding, @org.jetbrains.annotations.NotNull()
+    kotlin.jvm.functions.Function2<? super selfgemma.talk.data.Model, ? super java.util.List<? extends selfgemma.talk.ui.common.chat.ChatMessage>, kotlin.Unit> onSendMessage, @org.jetbrains.annotations.NotNull()
+    kotlin.jvm.functions.Function2<? super selfgemma.talk.data.Model, ? super selfgemma.talk.ui.common.chat.ChatMessage, kotlin.Unit> onRunAgainClicked, @org.jetbrains.annotations.NotNull()
+    kotlin.jvm.functions.Function4<? super selfgemma.talk.data.Model, ? super selfgemma.talk.ui.common.chat.ChatMessage, ? super java.lang.Integer, ? super java.lang.Integer, kotlin.Unit> onBenchmarkClicked, @org.jetbrains.annotations.NotNull()
+    kotlin.jvm.functions.Function0<kotlin.Unit> navigateUp, @org.jetbrains.annotations.NotNull()
+    androidx.compose.ui.Modifier modifier, @org.jetbrains.annotations.NotNull()
+    kotlin.jvm.functions.Function2<? super selfgemma.talk.data.Model, ? super selfgemma.talk.ui.common.chat.ChatMessageImage, kotlin.Unit> onStreamImageMessage, @org.jetbrains.annotations.NotNull()
+    kotlin.jvm.functions.Function1<? super java.lang.Integer, kotlin.Unit> onStreamEnd, @org.jetbrains.annotations.NotNull()
+    kotlin.jvm.functions.Function0<kotlin.Unit> onStopButtonClicked, @org.jetbrains.annotations.NotNull()
+    kotlin.jvm.functions.Function0<kotlin.Unit> onSkillClicked, @org.jetbrains.annotations.NotNull()
+    kotlin.jvm.functions.Function2<? super java.util.List<android.graphics.Bitmap>, ? super java.lang.Integer, kotlin.Unit> onImageSelected, boolean showStopButtonInInputWhenInProgress, boolean showImagePicker, boolean showAudioPicker, @org.jetbrains.annotations.NotNull()
+    androidx.compose.runtime.internal.ComposableFunction1<? super selfgemma.talk.data.Model, kotlin.Unit> emptyStateComposable) {
+    }
+    
+    private static final java.lang.Object scrollToBottom(androidx.compose.foundation.lazy.LazyListState listState, boolean animate, kotlin.coroutines.Continuation<? super kotlin.Unit> $completion) {
+        return null;
+    }
+}
