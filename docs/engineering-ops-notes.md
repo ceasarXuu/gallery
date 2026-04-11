@@ -832,3 +832,24 @@ Notes:
   `[Personality]` should contain character personality
   `[Persona]` should appear only for `IN_PROMPT`
   `TOP_AN` / `BOTTOM_AN` / `AT_DEPTH` should be validated in their actual insertion blocks
+
+## 2026-04-11 Persona slot editor interaction note
+
+- Symptom on device: the new `我的 / Me` tab showed the current persona slot ID, but tapping the slot area did nothing, so users could not switch or create ST-style persona slots at all.
+- Root cause: the slot card was rendered as a read-only info block and `MyProfileViewModel` only modeled a single active slot projection. There was no in-memory snapshot step to carry unsaved edits across slot switches.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin --no-daemon
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.feature.roleplay.profile.MyProfileViewModelTest" --no-daemon
+.\gradlew.bat :app:assembleDebug --no-daemon
+adb install -r D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk
+```
+
+Notes:
+
+- Persona-slot switching must first snapshot the current UI fields back into the in-memory `StUserProfile`, then switch `userAvatarId`; otherwise unsaved edits vanish as soon as the user changes slots.
+- Keep the dirty-state calculation against the last persisted profile, not only against the currently visible slot fields. Multi-slot editing is one logical draft.
+- For locale-heavy projects, adding new strings only to the base resource file is functionally safe because Android falls back automatically, but it should still be treated as temporary debt and filled into translated resource sets when the locale files are healthy.

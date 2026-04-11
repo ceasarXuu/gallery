@@ -8,12 +8,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import selfgemma.talk.data.DataStoreRepository
+import selfgemma.talk.domain.roleplay.model.DEFAULT_ST_USER_NAME
 import selfgemma.talk.domain.roleplay.model.StPersonaDescriptionPosition
+import selfgemma.talk.domain.roleplay.model.StPersonaDescriptor
 import selfgemma.talk.domain.roleplay.model.StUserProfile
 
 private const val TAG = "MyProfileViewModel"
 
 data class MyProfileUiState(
+  val availableSlotIds: List<String> = emptyList(),
   val personaName: String = "",
   val personaTitle: String = "",
   val personaDescription: String = "",
@@ -31,61 +34,73 @@ class MyProfileViewModel
 constructor(
   private val dataStoreRepository: DataStoreRepository,
 ) : ViewModel() {
-  private var persistedProfile: StUserProfile = dataStoreRepository.getStUserProfile()
-  private val _uiState = MutableStateFlow(persistedProfile.toUiState())
+  private var savedProfile: StUserProfile = dataStoreRepository.getStUserProfile().ensureDefaults()
+  private var workingProfile: StUserProfile = savedProfile
+  private val _uiState = MutableStateFlow(workingProfile.toUiState(savedProfile))
   val uiState: StateFlow<MyProfileUiState> = _uiState.asStateFlow()
 
   fun updatePersonaName(value: String) {
-    _uiState.value = _uiState.value.copy(personaName = value, dirty = true)
+    updateUiState { it.copy(personaName = value) }
   }
 
   fun updatePersonaTitle(value: String) {
-    _uiState.value = _uiState.value.copy(personaTitle = value, dirty = true)
+    updateUiState { it.copy(personaTitle = value) }
   }
 
   fun updatePersonaDescription(value: String) {
-    _uiState.value = _uiState.value.copy(personaDescription = value, dirty = true)
+    updateUiState { it.copy(personaDescription = value) }
   }
 
   fun updatePersonaPosition(value: StPersonaDescriptionPosition) {
-    _uiState.value = _uiState.value.copy(personaPosition = value, dirty = true)
+    updateUiState { it.copy(personaPosition = value) }
   }
 
   fun updatePersonaDepth(value: String) {
-    _uiState.value = _uiState.value.copy(personaDepth = value, dirty = true)
+    updateUiState { it.copy(personaDepth = value) }
   }
 
   fun updatePersonaRole(value: Int) {
-    _uiState.value = _uiState.value.copy(personaRole = value, dirty = true)
+    updateUiState { it.copy(personaRole = value) }
   }
 
   fun updateDefaultPersonaEnabled(enabled: Boolean) {
-    _uiState.value = _uiState.value.copy(defaultPersonaEnabled = enabled, dirty = true)
+    updateUiState { it.copy(defaultPersonaEnabled = enabled) }
+  }
+
+  fun selectAvatarSlot(slotId: String) {
+    val normalizedSlotId = slotId.trim()
+    if (normalizedSlotId.isBlank()) {
+      return
+    }
+    workingProfile =
+      buildProfileFromUiState(_uiState.value)
+        .ensureSlot(normalizedSlotId)
+        .copy(userAvatarId = normalizedSlotId)
+        .ensureDefaults()
+    _uiState.value = workingProfile.toUiState(savedProfile)
+    Log.d(TAG, "selected persona slot avatarId=$normalizedSlotId dirty=${_uiState.value.dirty}")
+  }
+
+  fun createAvatarSlot(slotId: String) {
+    val normalizedSlotId = slotId.trim()
+    if (normalizedSlotId.isBlank()) {
+      return
+    }
+    workingProfile =
+      buildProfileFromUiState(_uiState.value)
+        .ensureSlot(normalizedSlotId)
+        .copy(userAvatarId = normalizedSlotId)
+        .ensureDefaults()
+    _uiState.value = workingProfile.toUiState(savedProfile)
+    Log.d(TAG, "created persona slot avatarId=$normalizedSlotId totalSlots=${_uiState.value.availableSlotIds.size}")
   }
 
   fun saveProfile() {
-    val current = _uiState.value
-    val avatarId = current.avatarSlotId.ifBlank { persistedProfile.resolvedUserAvatarId() }
-    val updatedProfile =
-      persistedProfile
-        .copy(
-          userAvatarId = avatarId,
-          defaultPersonaId = if (current.defaultPersonaEnabled) avatarId else null,
-        )
-        .withActivePersona(
-          name = current.personaName.trim(),
-          title = current.personaTitle.trim(),
-          description = current.personaDescription.trim(),
-          position = current.personaPosition,
-          depth = current.personaDepth.toIntOrNull()?.coerceAtLeast(0) ?: persistedProfile.personaDescriptionDepth,
-          role = current.personaRole,
-          lorebook = persistedProfile.personaDescriptionLorebook,
-          avatarUri = persistedProfile.activeAvatarUri,
-        )
-        .ensureDefaults()
+    val updatedProfile = buildProfileFromUiState(_uiState.value)
     dataStoreRepository.setStUserProfile(updatedProfile)
-    persistedProfile = updatedProfile
-    _uiState.value = updatedProfile.toUiState()
+    savedProfile = updatedProfile
+    workingProfile = updatedProfile
+    _uiState.value = updatedProfile.toUiState(savedProfile)
     Log.d(
       TAG,
       "saved ST user persona avatarId=${updatedProfile.resolvedUserAvatarId()} name=${updatedProfile.userName} position=${updatedProfile.personaDescriptionPosition.rawValue}",
@@ -95,22 +110,85 @@ constructor(
   fun resetProfile() {
     val defaultProfile = StUserProfile().ensureDefaults()
     dataStoreRepository.setStUserProfile(defaultProfile)
-    persistedProfile = defaultProfile
-    _uiState.value = defaultProfile.toUiState()
+    savedProfile = defaultProfile
+    workingProfile = defaultProfile
+    _uiState.value = defaultProfile.toUiState(savedProfile)
     Log.d(TAG, "reset ST user persona profile to defaults")
+  }
+
+  private fun updateUiState(transform: (MyProfileUiState) -> MyProfileUiState) {
+    val nextState = transform(_uiState.value)
+    _uiState.value = nextState.copy(dirty = buildProfileFromUiState(nextState) != savedProfile)
+  }
+
+  private fun buildProfileFromUiState(state: MyProfileUiState): StUserProfile {
+    val activeSlotId = state.avatarSlotId.ifBlank { workingProfile.resolvedUserAvatarId() }
+    val baseProfile = workingProfile.ensureSlot(activeSlotId)
+    val resolvedDefaultPersonaId =
+      when {
+        state.defaultPersonaEnabled -> activeSlotId
+        baseProfile.defaultPersonaId == activeSlotId -> null
+        else -> baseProfile.defaultPersonaId
+      }
+    val depthFallback = baseProfile.personaDescriptions[activeSlotId]?.depth ?: baseProfile.personaDescriptionDepth
+    return baseProfile
+      .copy(
+        userAvatarId = activeSlotId,
+        defaultPersonaId = resolvedDefaultPersonaId,
+      )
+      .withActivePersona(
+        name = state.personaName.trim(),
+        title = state.personaTitle.trim(),
+        description = state.personaDescription.trim(),
+        position = state.personaPosition,
+        depth = state.personaDepth.toIntOrNull()?.coerceAtLeast(0) ?: depthFallback,
+        role = state.personaRole,
+        lorebook = baseProfile.personaDescriptionLorebook,
+        avatarUri = baseProfile.activeAvatarUri,
+      )
+      .ensureDefaults()
   }
 }
 
-private fun StUserProfile.toUiState(): MyProfileUiState {
+private fun StUserProfile.toUiState(savedProfile: StUserProfile): MyProfileUiState {
+  val activeSlotId = resolvedUserAvatarId()
   return MyProfileUiState(
+    availableSlotIds = availableSlotIds(activeSlotId),
     personaName = userName,
     personaTitle = personaTitle,
     personaDescription = personaDescription,
     personaPosition = personaDescriptionPosition,
     personaDepth = personaDescriptionDepth.toString(),
     personaRole = personaDescriptionRole,
-    avatarSlotId = resolvedUserAvatarId(),
-    defaultPersonaEnabled = defaultPersonaId == resolvedUserAvatarId(),
-    dirty = false,
+    avatarSlotId = activeSlotId,
+    defaultPersonaEnabled = defaultPersonaId == activeSlotId,
+    dirty = this != savedProfile,
   )
+}
+
+private fun StUserProfile.availableSlotIds(activeSlotId: String): List<String> {
+  return buildSet {
+    add(activeSlotId)
+    addAll(personas.keys)
+    addAll(personaDescriptions.keys)
+  }
+    .filter { it.isNotBlank() }
+    .sorted()
+}
+
+private fun StUserProfile.ensureSlot(slotId: String): StUserProfile {
+  val normalizedSlotId = slotId.trim()
+  if (normalizedSlotId.isBlank()) {
+    return ensureDefaults()
+  }
+  return copy(
+    personas =
+      personas.toMutableMap().apply {
+        putIfAbsent(normalizedSlotId, DEFAULT_ST_USER_NAME)
+      },
+    personaDescriptions =
+      personaDescriptions.toMutableMap().apply {
+        putIfAbsent(normalizedSlotId, StPersonaDescriptor())
+      },
+  ).ensureDefaults()
 }

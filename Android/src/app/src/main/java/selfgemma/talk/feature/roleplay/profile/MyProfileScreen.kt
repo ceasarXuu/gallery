@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +29,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -53,6 +57,9 @@ fun MyProfileScreen(
   viewModel: MyProfileViewModel = hiltViewModel(),
 ) {
   val uiState by viewModel.uiState.collectAsState()
+  var showSlotDialog by rememberSaveable { mutableStateOf(false) }
+  var selectedSlotId by rememberSaveable { mutableStateOf("") }
+  var newSlotId by rememberSaveable { mutableStateOf("") }
   val handleNavigateUp: () -> Unit = {
     Log.d(TAG, "navigate up from my profile")
     navigateUp()
@@ -91,9 +98,15 @@ fun MyProfileScreen(
           .padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-      ReadOnlyInfoCard(
+      ClickableInfoCard(
         title = stringResource(R.string.my_profile_avatar_slot_title),
         value = uiState.avatarSlotId,
+        summary = stringResource(R.string.my_profile_avatar_slot_summary),
+        onClick = {
+          selectedSlotId = uiState.avatarSlotId
+          newSlotId = ""
+          showSlotDialog = true
+        },
       )
       EditorCard(title = stringResource(R.string.my_profile_persona_name_title)) {
         OutlinedTextField(
@@ -162,6 +175,25 @@ fun MyProfileScreen(
           Text(stringResource(R.string.my_profile_save))
         }
       }
+    }
+
+    if (showSlotDialog) {
+      PersonaSlotDialog(
+        availableSlotIds = uiState.availableSlotIds,
+        selectedSlotId = selectedSlotId,
+        newSlotId = newSlotId,
+        onSelectedSlotChange = { selectedSlotId = it },
+        onNewSlotIdChange = { newSlotId = it },
+        onDismiss = { showSlotDialog = false },
+        onConfirmSelection = {
+          viewModel.selectAvatarSlot(selectedSlotId)
+          showSlotDialog = false
+        },
+        onCreateSlot = {
+          viewModel.createAvatarSlot(newSlotId)
+          showSlotDialog = false
+        },
+      )
     }
   }
 }
@@ -282,13 +314,20 @@ private fun EditorCard(
 }
 
 @Composable
-private fun ReadOnlyInfoCard(
+private fun ClickableInfoCard(
   title: String,
   value: String,
+  summary: String?,
+  onClick: () -> Unit,
+  enabled: Boolean = true,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(
-      modifier = Modifier.fillMaxWidth().padding(16.dp),
+      modifier =
+        Modifier
+          .fillMaxWidth()
+          .clickable(enabled = enabled, onClick = onClick)
+          .padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
       Text(text = title, style = MaterialTheme.typography.titleMedium)
@@ -297,8 +336,76 @@ private fun ReadOnlyInfoCard(
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
+      if (!summary.isNullOrBlank()) {
+        Text(
+          text = summary,
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
     }
   }
+}
+
+@Composable
+private fun PersonaSlotDialog(
+  availableSlotIds: List<String>,
+  selectedSlotId: String,
+  newSlotId: String,
+  onSelectedSlotChange: (String) -> Unit,
+  onNewSlotIdChange: (String) -> Unit,
+  onDismiss: () -> Unit,
+  onConfirmSelection: () -> Unit,
+  onCreateSlot: () -> Unit,
+) {
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(stringResource(R.string.my_profile_avatar_slot_dialog_title)) },
+    text = {
+      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+          modifier = Modifier.selectableGroup(),
+          verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+          availableSlotIds.forEach { slotId ->
+            PositionOptionRow(
+              label = slotId,
+              selected = slotId == selectedSlotId,
+              onClick = { onSelectedSlotChange(slotId) },
+            )
+          }
+        }
+        OutlinedTextField(
+          value = newSlotId,
+          onValueChange = onNewSlotIdChange,
+          modifier = Modifier.fillMaxWidth(),
+          singleLine = true,
+          label = { Text(stringResource(R.string.my_profile_avatar_slot_new_label)) },
+        )
+      }
+    },
+    confirmButton = {
+      TextButton(
+        enabled = selectedSlotId.isNotBlank(),
+        onClick = onConfirmSelection,
+      ) {
+        Text(stringResource(R.string.my_profile_avatar_slot_use_selected))
+      }
+    },
+    dismissButton = {
+      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TextButton(
+          enabled = newSlotId.trim().isNotBlank(),
+          onClick = onCreateSlot,
+        ) {
+          Text(stringResource(R.string.create))
+        }
+        TextButton(onClick = onDismiss) {
+          Text(stringResource(R.string.cancel))
+        }
+      }
+    },
+  )
 }
 
 @Composable
