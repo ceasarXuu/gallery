@@ -78,6 +78,33 @@ Notes:
 - The last remaining persona should not be deletable from the list. Disable the destructive action instead of allowing the delete flow to recreate a synthetic fallback slot behind the user's back.
 - Multi-language layout validation matters here because the row now holds three actions. Check at least `values`, `values-en`, `values-zh-rCN`, `values-ja`, and `values-ko` before shipping to device.
 
+## 2026-04-11 Persona editor help and length-budget note
+
+- Goal: align the `鎴戠殑 / Me` persona editor with the role editor's field guidance pattern without pulling in the role editor's heavier AI-compression workflow.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat --stop
+.\gradlew.bat :app:compileDebugKotlin --no-daemon
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.feature.roleplay.profile.MyProfileViewModelTest" --no-daemon
+.\gradlew.bat :app:assembleDebug --no-daemon
+adb install -r D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk
+adb shell am force-stop selfgemma.talk
+adb shell am start -W -n selfgemma.talk/.MainActivity
+adb shell uiautomator dump /sdcard/ui.xml
+adb shell cat /sdcard/ui.xml | Select-String -Pattern '帮助|4/120|0/600|Persona 名称|Persona 描述'
+```
+
+Notes:
+
+- For mobile persona editing, reuse the role editor's two lightweight patterns only: field help dialogs and character-count budgets. Do not copy the role editor's AI compression controls into the persona page unless the product explicitly asks for it.
+- Put the help button inside the same header row as the field title. This keeps the card shape stable and makes the UI tree easy to verify with `uiautomator dump`.
+- Character counters should reuse the shared `role_editor_character_count_with_limit` and `role_editor_character_count_without_limit` strings so count formatting stays consistent across editors.
+- Current persona budgets are intentionally small and UI-driven: name `120`, description `600`, depth `4`. These are editor guidance limits, not a hard ST runtime schema.
+- When validating on device, verify one help dialog opens end-to-end and that at least one populated and one empty field show counts, for example `4/120` and `0/600`. This catches both header wiring and supporting-text rendering regressions.
+
 ## 2026-04-11 Top app bar overflow menu anchor note
 
 - Symptom on device: the roleplay chat page top-right overflow menu opened on top of the menu trigger, so the popup visually covered the three-dot button and felt misaligned compared with the role tab menu.

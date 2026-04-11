@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,11 +24,15 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -37,6 +42,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +65,30 @@ import selfgemma.talk.feature.roleplay.common.RoleAvatar
 import selfgemma.talk.ui.common.TopBarOverflowMenuButton
 
 private const val TAG = "MyProfileScreen"
+private const val PERSONA_NAME_MAX_CHARS = 120
+private const val PERSONA_DESCRIPTION_MAX_CHARS = 600
+private const val PERSONA_DEPTH_MAX_CHARS = 4
+
+private data class PersonaTextFieldSpec(
+  val maxChars: Int? = null,
+)
+
+private enum class PersonaHelpTopic(val titleRes: Int, val bodyRes: Int) {
+  AVATAR(R.string.my_profile_avatar_title, R.string.my_profile_help_avatar_body),
+  NAME(R.string.my_profile_persona_name_title, R.string.my_profile_help_name_body),
+  DESCRIPTION(R.string.my_profile_persona_description_title, R.string.my_profile_help_description_body),
+  POSITION(R.string.my_profile_persona_position_title, R.string.my_profile_help_position_body),
+  DEPTH(R.string.my_profile_persona_depth_title, R.string.my_profile_help_depth_body),
+  ROLE(R.string.my_profile_persona_role_title, R.string.my_profile_help_role_body),
+}
+
+private fun personaTextFieldSpec(topic: PersonaHelpTopic?): PersonaTextFieldSpec? =
+  when (topic) {
+    PersonaHelpTopic.NAME -> PersonaTextFieldSpec(maxChars = PERSONA_NAME_MAX_CHARS)
+    PersonaHelpTopic.DESCRIPTION -> PersonaTextFieldSpec(maxChars = PERSONA_DESCRIPTION_MAX_CHARS)
+    PersonaHelpTopic.DEPTH -> PersonaTextFieldSpec(maxChars = PERSONA_DEPTH_MAX_CHARS)
+    else -> null
+  }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +106,7 @@ fun MyProfileScreen(
   var newSlotId by rememberSaveable { mutableStateOf("") }
   var showMenu by rememberSaveable { mutableStateOf(false) }
   var pendingDeleteSlotId by rememberSaveable { mutableStateOf<String?>(null) }
+  var activeHelpTopic by rememberSaveable { mutableStateOf<PersonaHelpTopic?>(null) }
   val isEditing = editingSlotId != null
   val avatarLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -170,13 +201,16 @@ fun MyProfileScreen(
         uiState = uiState,
         contentPadding = combinedPadding,
         onPersonaNameChange = viewModel::updatePersonaName,
-        onPersonaTitleChange = viewModel::updatePersonaTitle,
         onPersonaDescriptionChange = viewModel::updatePersonaDescription,
         onAvatarPick = { avatarLauncher.launch(arrayOf("image/*")) },
         onAvatarClear = { viewModel.updateAvatarUri(null) },
         onPersonaPositionChange = viewModel::updatePersonaPosition,
         onPersonaDepthChange = viewModel::updatePersonaDepth,
         onPersonaRoleChange = viewModel::updatePersonaRole,
+        onShowHelp = { topic ->
+          Log.d(TAG, "open persona help topic=$topic")
+          activeHelpTopic = topic
+        },
       )
     } else {
       MyProfileListContent(
@@ -217,6 +251,14 @@ fun MyProfileScreen(
           viewModel.deleteAvatarSlot(personaToDelete.slotId)
           pendingDeleteSlotId = null
         },
+      )
+    }
+
+    val helpTopic = activeHelpTopic
+    if (helpTopic != null) {
+      PersonaHelpDialog(
+        topic = helpTopic,
+        onDismiss = { activeHelpTopic = null },
       )
     }
   }
@@ -358,13 +400,13 @@ private fun MyProfileEditorContent(
   uiState: MyProfileUiState,
   contentPadding: PaddingValues,
   onPersonaNameChange: (String) -> Unit,
-  onPersonaTitleChange: (String) -> Unit,
   onPersonaDescriptionChange: (String) -> Unit,
   onAvatarPick: () -> Unit,
   onAvatarClear: () -> Unit,
   onPersonaPositionChange: (StPersonaDescriptionPosition) -> Unit,
   onPersonaDepthChange: (String) -> Unit,
   onPersonaRoleChange: (Int) -> Unit,
+  onShowHelp: (PersonaHelpTopic) -> Unit,
 ) {
   Column(
     modifier =
@@ -380,40 +422,60 @@ private fun MyProfileEditorContent(
       avatarUri = uiState.avatarUri,
       onPickAvatar = onAvatarPick,
       onClearAvatar = onAvatarClear,
+      helpTopic = PersonaHelpTopic.AVATAR,
+      onShowHelp = onShowHelp,
     )
-    EditorCard(title = stringResource(R.string.my_profile_persona_name_title)) {
-      OutlinedTextField(
+    EditorCard(
+      title = stringResource(R.string.my_profile_persona_name_title),
+      helpTopic = PersonaHelpTopic.NAME,
+      onShowHelp = onShowHelp,
+    ) {
+      PersonaOutlinedTextField(
         value = uiState.personaName,
         onValueChange = onPersonaNameChange,
         modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
+        maxLines = 1,
+        helpTopic = PersonaHelpTopic.NAME,
       )
     }
-    EditorCard(title = stringResource(R.string.my_profile_persona_description_title)) {
-      OutlinedTextField(
+    EditorCard(
+      title = stringResource(R.string.my_profile_persona_description_title),
+      helpTopic = PersonaHelpTopic.DESCRIPTION,
+      onShowHelp = onShowHelp,
+    ) {
+      PersonaOutlinedTextField(
         value = uiState.personaDescription,
         onValueChange = onPersonaDescriptionChange,
         modifier = Modifier.fillMaxWidth(),
         minLines = 4,
+        maxLines = 8,
+        helpTopic = PersonaHelpTopic.DESCRIPTION,
       )
     }
     PersonaPositionCard(
       selected = uiState.personaPosition,
       onSelected = onPersonaPositionChange,
+      onShowHelp = onShowHelp,
     )
     if (uiState.personaPosition == StPersonaDescriptionPosition.AT_DEPTH) {
-      EditorCard(title = stringResource(R.string.my_profile_persona_depth_title)) {
-        OutlinedTextField(
+      EditorCard(
+        title = stringResource(R.string.my_profile_persona_depth_title),
+        helpTopic = PersonaHelpTopic.DEPTH,
+        onShowHelp = onShowHelp,
+      ) {
+        PersonaOutlinedTextField(
           value = uiState.personaDepth,
           onValueChange = onPersonaDepthChange,
           modifier = Modifier.fillMaxWidth(),
-          singleLine = true,
+          maxLines = 1,
+          helpTopic = PersonaHelpTopic.DEPTH,
           keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
       }
       PersonaRoleCard(
         selectedRole = uiState.personaRole,
         onSelected = onPersonaRoleChange,
+        onShowHelp = onShowHelp,
       )
     }
   }
@@ -460,15 +522,17 @@ private fun CreatePersonaSlotDialog(
 private fun PersonaPositionCard(
   selected: StPersonaDescriptionPosition,
   onSelected: (StPersonaDescriptionPosition) -> Unit,
+  onShowHelp: (PersonaHelpTopic) -> Unit,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(
       modifier = Modifier.fillMaxWidth().padding(16.dp).selectableGroup(),
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      Text(
-        text = stringResource(R.string.my_profile_persona_position_title),
-        style = MaterialTheme.typography.titleMedium,
+      PersonaFieldHeader(
+        title = stringResource(R.string.my_profile_persona_position_title),
+        helpTopic = PersonaHelpTopic.POSITION,
+        onShowHelp = onShowHelp,
       )
       PositionOptionRow(
         label = stringResource(R.string.my_profile_persona_position_in_prompt),
@@ -503,15 +567,17 @@ private fun PersonaPositionCard(
 private fun PersonaRoleCard(
   selectedRole: Int,
   onSelected: (Int) -> Unit,
+  onShowHelp: (PersonaHelpTopic) -> Unit,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(
       modifier = Modifier.fillMaxWidth().padding(16.dp).selectableGroup(),
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      Text(
-        text = stringResource(R.string.my_profile_persona_role_title),
-        style = MaterialTheme.typography.titleMedium,
+      PersonaFieldHeader(
+        title = stringResource(R.string.my_profile_persona_role_title),
+        helpTopic = PersonaHelpTopic.ROLE,
+        onShowHelp = onShowHelp,
       )
       PositionOptionRow(
         label = stringResource(R.string.my_profile_persona_role_system),
@@ -558,6 +624,8 @@ private fun PositionOptionRow(
 @Composable
 private fun EditorCard(
   title: String,
+  helpTopic: PersonaHelpTopic? = null,
+  onShowHelp: ((PersonaHelpTopic) -> Unit)? = null,
   content: @Composable () -> Unit,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
@@ -565,7 +633,11 @@ private fun EditorCard(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-      Text(text = title, style = MaterialTheme.typography.titleMedium)
+      PersonaFieldHeader(
+        title = title,
+        helpTopic = helpTopic,
+        onShowHelp = onShowHelp,
+      )
       content()
     }
   }
@@ -577,6 +649,8 @@ private fun PersonaAvatarCard(
   avatarUri: String?,
   onPickAvatar: () -> Unit,
   onClearAvatar: () -> Unit,
+  helpTopic: PersonaHelpTopic,
+  onShowHelp: (PersonaHelpTopic) -> Unit,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(
@@ -584,6 +658,11 @@ private fun PersonaAvatarCard(
       verticalArrangement = Arrangement.spacedBy(12.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+      PersonaFieldHeader(
+        title = stringResource(R.string.my_profile_avatar_title),
+        helpTopic = helpTopic,
+        onShowHelp = onShowHelp,
+      )
       RoleAvatar(
         name = name,
         avatarUri = avatarUri,
@@ -607,6 +686,113 @@ private fun PersonaAvatarCard(
       }
     }
   }
+}
+
+@Composable
+private fun PersonaFieldHeader(
+  title: String,
+  helpTopic: PersonaHelpTopic? = null,
+  onShowHelp: ((PersonaHelpTopic) -> Unit)? = null,
+) {
+  Row(
+    modifier = Modifier.fillMaxWidth(),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(8.dp),
+  ) {
+    Text(
+      text = title,
+      style = MaterialTheme.typography.titleMedium,
+      modifier = Modifier.weight(1f),
+    )
+    if (helpTopic != null && onShowHelp != null) {
+      IconButton(onClick = { onShowHelp(helpTopic) }) {
+        Icon(
+          imageVector = Icons.Outlined.HelpOutline,
+          contentDescription = stringResource(R.string.cd_help),
+        )
+      }
+    }
+  }
+}
+
+@Composable
+private fun PersonaHelpDialog(
+  topic: PersonaHelpTopic,
+  onDismiss: () -> Unit,
+) {
+  val paragraphs = stringResource(topic.bodyRes).split("\n\n")
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(stringResource(topic.titleRes)) },
+    text = {
+      LazyColumn(
+        modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+      ) {
+        items(paragraphs) { paragraph ->
+          Text(paragraph, style = MaterialTheme.typography.bodyMedium)
+        }
+      }
+    },
+    confirmButton = {
+      FilledTonalButton(onClick = onDismiss) {
+        Text(stringResource(R.string.ok))
+      }
+    },
+  )
+}
+
+@Composable
+private fun PersonaOutlinedTextField(
+  value: String,
+  onValueChange: (String) -> Unit,
+  modifier: Modifier = Modifier,
+  minLines: Int = 1,
+  maxLines: Int = minLines,
+  helpTopic: PersonaHelpTopic? = null,
+  keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+) {
+  val fieldSpec = personaTextFieldSpec(helpTopic)
+  val currentCount = value.length
+  val maxChars = fieldSpec?.maxChars
+  val isOverLimit = maxChars != null && currentCount > maxChars
+  LaunchedEffect(isOverLimit, helpTopic, currentCount, maxChars) {
+    if (isOverLimit && helpTopic != null && maxChars != null) {
+      Log.w(TAG, "persona field exceeds budget topic=$helpTopic count=$currentCount limit=$maxChars")
+    }
+  }
+  OutlinedTextField(
+    value = value,
+    onValueChange = onValueChange,
+    modifier = modifier,
+    minLines = minLines,
+    maxLines = maxLines,
+    singleLine = maxLines == 1,
+    isError = isOverLimit,
+    keyboardOptions = keyboardOptions,
+    supportingText = {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End,
+      ) {
+        Text(
+          text =
+            if (maxChars != null) {
+              stringResource(R.string.role_editor_character_count_with_limit, currentCount, maxChars)
+            } else {
+              stringResource(R.string.role_editor_character_count_without_limit, currentCount)
+            },
+          style = MaterialTheme.typography.labelSmall,
+          color =
+            if (isOverLimit) {
+              MaterialTheme.colorScheme.error
+            } else {
+              MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+      }
+    },
+  )
 }
 
 private fun takeReadPermission(context: android.content.Context, uri: Uri) {

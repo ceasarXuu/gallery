@@ -73,6 +73,7 @@
   <string name="my_profile_persona_name_title">Persona 名称</string>
   <string name="my_profile_persona_title_title">Persona 标题</string>
   <string name="my_profile_persona_description_title">Persona 描述</string>
+  <string name="my_profile_avatar_title">头像</string>
   <string name="my_profile_persona_position_title">Persona 插入位置</string>
   <string name="my_profile_persona_position_in_prompt">放入 Prompt</string>
   <string name="my_profile_persona_position_top_an">置于作者注释前</string>
@@ -91,6 +92,12 @@
   <string name="my_profile_delete_content">确定要删除 Persona “%s” 吗？</string>
   <string name="my_profile_reset">重置 Persona</string>
   <string name="my_profile_save">保存 Persona</string>
+  <string name="my_profile_help_avatar_body">作用：\n头像会作为当前 Persona 在“我的”页面以及读取当前用户 Persona 的角色扮演流程中的展示头像。\n\n留空时：\n应用会回退到默认生成的占位头像。\n\n建议：\n使用清晰的方形头像或图标，方便快速区分不同 Persona。</string>
+  <string name="my_profile_help_name_body">作用：\nPersona 名称是这个 Persona 配置对用户可见的名字。\n\n留空时：\n应用会回退到默认用户名称。\n\n建议内容和长度：\n填写你希望在聊天相关界面显示的短名称。通常 2 到 20 个字符就够了。编辑器预算为 120 个字符。</string>
+  <string name="my_profile_help_description_body">作用：\nPersona 描述是当前用户 Persona 的主要自我描述注入内容，用来描述身份、语气、背景和希望助手感知到的特征。\n\n留空时：\nPersona 仍可使用，但聊天会丢失大部分个性化的用户上下文信号。\n\n建议内容和长度：\n写紧凑的人设简介，不要写成长篇传记。通常 80 到 300 个字符就够了。编辑器预算为 600 个字符。</string>
+  <string name="my_profile_help_position_body">作用：\n插入位置决定 Persona 描述会被放进最终 Prompt 的哪个位置。\n\n选择“放入 Prompt”时：\n描述会进入主 Prompt 正文。\n\n选择作者注释位置或按深度插入时：\n描述会更接近 ST 风格的作者注释链路。\n\n建议：\n默认优先使用“放入 Prompt”。只有在你明确要调运行时行为时，再改成作者注释或深度插入。</string>
+  <string name="my_profile_help_depth_body">作用：\n当插入位置设为“按深度插入”时，深度决定 Persona 描述在 Prompt 栈中后移多少层。\n\n数值较小时：\n描述会更靠近最新上下文。\n\n数值较大时：\n描述会被放得更靠后，对最新对话的竞争更小。\n\n范围建议：\n使用 1 到 4 这样的较小整数即可。输入预算为 4 个字符。</string>
+  <string name="my_profile_help_role_body">作用：\n当使用深度插入时，角色用于决定 Persona 描述会以哪种 ST 风格消息角色进入 Prompt。\n\nSystem：\n更适合高优先级约束。\n\nUser：\n最适合表示玩家自身的人设描述。\n\nAssistant：\n只在你明确希望这段 Persona 更像助手侧上下文时使用。\n\n建议：\n对大多数 Persona 来说，User 是最稳妥的默认选项。</string>
 
   <!-- Sessions Screen -->
   <string name="sessions_loading">加载会话中...</string>
