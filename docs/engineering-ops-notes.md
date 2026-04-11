@@ -1,3 +1,33 @@
+## 2026-04-11 Application Hilt members-injector startup crash note
+
+- Symptom on device: app crashed immediately on cold start with `java.lang.NoClassDefFoundError: selfgemma.talk.SelfGemmaTalkApplication_MembersInjector`.
+- Stack head:
+  `DaggerSelfGemmaTalkApplication_HiltComponents_SingletonC.injectSelfGemmaTalkApplication2`
+  `Hilt_SelfGemmaTalkApplication.onCreate`
+  `SelfGemmaTalkApplication.onCreate`
+- Root cause in this workspace: relying on `@Inject lateinit var dataStoreRepository` directly on `SelfGemmaTalkApplication` made startup depend on the generated Hilt members-injector class. Under the current Gradle/KAPT instability, that generated class path can drift or disappear at runtime even when the rest of the app builds.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat --stop
+.\gradlew.bat :app:compileDebugKotlin --no-daemon
+.\gradlew.bat :app:assembleDebug --no-daemon
+adb uninstall selfgemma.talk
+adb install D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk
+adb logcat -c
+adb shell am start -W -n selfgemma.talk/.MainActivity
+adb logcat -d -v time | Select-String -Pattern 'AndroidRuntime|SelfGemmaTalkApplication'
+```
+
+Notes:
+
+- For startup-only application dependencies, prefer a Hilt `@EntryPoint` lookup from `Application.onCreate()` over direct field injection on the `Application` class. It avoids binding the cold-start path to a generated `*_MembersInjector` class.
+- If the app crashes before the first activity with a missing generated Hilt class, inspect `Application` field injection first. This failure is often easier to remove by simplifying the startup dependency path than by chasing dex packaging details.
+- On this MIUI device, after a clean uninstall/install the first manual `am start` may race with the install flow and return `Error type 3`. Re-run `am start -W` once after package resolution settles before treating it as a manifest problem.
+- When changing startup injection, always verify with a clean reinstall, not only `install -r`. Device-side optimized artifacts can otherwise obscure whether the fix actually removed the bad startup path.
+
 ## 2026-04-11 Persona editor save-entry and default-toggle note
 
 - Goal: align the `我的 / Me` persona editor with the role editor interaction model, while keeping ST-style `default_persona` semantics on the outer persona list.

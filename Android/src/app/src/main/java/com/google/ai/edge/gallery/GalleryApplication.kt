@@ -17,23 +17,36 @@
 package selfgemma.talk
 
 import android.app.Application
+import android.util.Log
 import selfgemma.talk.data.DataStoreRepository
 import selfgemma.talk.ui.theme.ThemeSettings
 import com.google.firebase.FirebaseApp
+import dagger.hilt.EntryPoint
 import dagger.hilt.android.HiltAndroidApp
-import javax.inject.Inject
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 
 @HiltAndroidApp
 class SelfGemmaTalkApplication : Application() {
-
-  @Inject lateinit var dataStoreRepository: DataStoreRepository
 
   override fun onCreate() {
     super.onCreate()
 
     // Load saved theme.
-    ThemeSettings.themeOverride.value = dataStoreRepository.readTheme()
+    ThemeSettings.themeOverride.value =
+      EntryPointAccessors
+        .fromApplication(this, SelfGemmaTalkApplicationEntryPoint::class.java)
+        .dataStoreRepository()
+        .readTheme()
+    Log.d("SelfGemmaTalkApplication", "loaded theme from DataStore entry point")
 
     FirebaseApp.initializeApp(this)
   }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface SelfGemmaTalkApplicationEntryPoint {
+  fun dataStoreRepository(): DataStoreRepository
 }
