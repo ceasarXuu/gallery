@@ -71,6 +71,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -97,9 +98,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -121,6 +121,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -148,6 +149,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 private const val TAG = "AGMessageInputText"
+private val ComposerButtonSize = 44.dp
+private val ComposerIconSize = 20.dp
+private val ComposerInputMinHeight = 52.dp
+private val ComposerTrailingButtonSize = 40.dp
 
 /**
  * Composable function to display a text input field for composing chat messages.
@@ -377,8 +382,8 @@ fun MessageInputText(
               modifier =
                 Modifier.fillMaxWidth()
                   .padding(horizontal = 12.dp, vertical = 8.dp),
-              verticalAlignment = Alignment.Bottom,
-              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
               if (showAudioPicker) {
                 Surface(
@@ -390,7 +395,7 @@ fun MessageInputText(
                       MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f)
                     },
                   modifier =
-                    Modifier.size(46.dp).shadow(
+                    Modifier.size(ComposerButtonSize).shadow(
                       elevation = if (canRecordAudio) 4.dp else 1.dp,
                       shape = CircleShape,
                       ambientColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f),
@@ -422,19 +427,19 @@ fun MessageInputText(
                       } else {
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                       },
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(ComposerIconSize),
                   )
                 }
               }
 
               Surface(
                 shape = RoundedCornerShape(28.dp),
-                tonalElevation = 2.dp,
-                shadowElevation = 3.dp,
+                tonalElevation = 1.dp,
+                shadowElevation = 2.dp,
                 color = MaterialTheme.colorScheme.surface,
                 modifier =
                   Modifier.weight(1f).shadow(
-                    elevation = 4.dp,
+                    elevation = 3.dp,
                     shape = RoundedCornerShape(28.dp),
                     ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
                     spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.04f),
@@ -447,31 +452,38 @@ fun MessageInputText(
                 Row(
                   modifier =
                     Modifier.fillMaxWidth()
-                      .padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
-                  verticalAlignment = Alignment.Bottom,
-                  horizontalArrangement = Arrangement.spacedBy(2.dp),
+                      .heightIn(min = ComposerInputMinHeight)
+                      .padding(start = 16.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                   val cdPromptInput = stringResource(R.string.cd_prompt_input_text_field)
-                  TextField(
+                  BasicTextField(
                     value = curMessage,
+                    onValueChange = onValueChanged,
+                    textStyle = bodyLargeNarrow.copy(color = MaterialTheme.colorScheme.onSurface),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    modifier =
+                      Modifier.weight(1f)
+                        .padding(vertical = 10.dp)
+                        .semantics { contentDescription = cdPromptInput },
                     minLines = 1,
                     maxLines = 3,
-                    onValueChange = onValueChanged,
-                    colors =
-                      TextFieldDefaults.colors(
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        disabledContainerColor = Color.Transparent,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                      ),
-                    textStyle = bodyLargeNarrow,
-                    modifier = Modifier.weight(1f).semantics { contentDescription = cdPromptInput },
-                    placeholder = { Text(stringResource(textFieldPlaceHolderRes)) },
+                    decorationBox = { innerTextField ->
+                      Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart,
+                      ) {
+                        if (curMessage.isEmpty()) {
+                          Text(
+                            text = stringResource(textFieldPlaceHolderRes),
+                            style = bodyLargeNarrow,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                          )
+                        }
+                        innerTextField()
+                      }
+                    },
                   )
 
                   if (showSkillsPicker) {
@@ -480,34 +492,35 @@ fun MessageInputText(
                       color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f),
                       onClick = onSkillsClicked,
                       enabled = enableInputActions,
-                      modifier = Modifier.padding(bottom = 4.dp),
+                      modifier = Modifier.widthIn(max = 92.dp),
                     ) {
                       Text(
                         stringResource(R.string.skills),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                       )
                     }
                   }
 
-                  Box(modifier = Modifier.padding(bottom = 2.dp)) {
-                    IconButton(
+                  Box {
+                    Surface(
+                      shape = CircleShape,
+                      color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.72f),
                       onClick = { if (canOpenAddMenu) showAddContentMenu = true },
                       enabled = canOpenAddMenu,
-                      colors =
-                        IconButtonDefaults.iconButtonColors(
-                          containerColor = Color.Transparent,
-                          contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                          disabledContainerColor = Color.Transparent,
-                          disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                        ),
+                      modifier = Modifier.size(ComposerTrailingButtonSize),
                     ) {
                       Icon(
                         Icons.Outlined.Add,
                         contentDescription = stringResource(R.string.cd_add_content_icon),
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(ComposerIconSize),
+                        tint =
+                          if (canOpenAddMenu) MaterialTheme.colorScheme.onSurfaceVariant
+                          else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                       )
                     }
 
@@ -625,7 +638,7 @@ fun MessageInputText(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.secondaryContainer,
                     modifier =
-                      Modifier.size(46.dp).shadow(
+                      Modifier.size(ComposerButtonSize).shadow(
                         elevation = 4.dp,
                         shape = CircleShape,
                         ambientColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
@@ -637,7 +650,7 @@ fun MessageInputText(
                       Icons.Rounded.Stop,
                       contentDescription = stringResource(R.string.cd_stop_icon),
                       tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                      modifier = Modifier.size(22.dp),
+                      modifier = Modifier.size(ComposerIconSize),
                     )
                   }
                 }
@@ -651,7 +664,7 @@ fun MessageInputText(
                       getTaskIconColor(task = task).copy(alpha = 0.3f)
                     },
                   modifier =
-                    Modifier.size(46.dp).shadow(
+                    Modifier.size(ComposerButtonSize).shadow(
                       elevation = if (canSend) 6.dp else 2.dp,
                       shape = CircleShape,
                       ambientColor =
@@ -679,7 +692,7 @@ fun MessageInputText(
                   Icon(
                     Icons.AutoMirrored.Rounded.Send,
                     contentDescription = stringResource(R.string.cd_send_prompt_icon),
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(ComposerIconSize),
                     tint = Color.White,
                   )
                 }
