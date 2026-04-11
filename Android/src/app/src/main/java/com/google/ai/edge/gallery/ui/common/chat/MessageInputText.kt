@@ -431,7 +431,7 @@ fun MessageInputText(
                       } else {
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                       },
-                    modifier = Modifier.size(ComposerIconSize),
+                    modifier = Modifier.size(24.dp),
                   )
                 }
               }
@@ -513,20 +513,10 @@ fun MessageInputText(
                   Box {
                     Surface(
                       shape = CircleShape,
-                      color = MaterialTheme.colorScheme.surfaceContainerLow,
+                      color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.72f),
                       onClick = { if (canOpenAddMenu) showAddContentMenu = true },
                       enabled = canOpenAddMenu,
-                      modifier =
-                        Modifier.size(ComposerTrailingButtonSize).border(
-                          width = 1.dp,
-                          color =
-                            if (canOpenAddMenu) {
-                              MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.9f)
-                            } else {
-                              MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
-                            },
-                          shape = CircleShape,
-                        ),
+                      modifier = Modifier.size(ComposerTrailingButtonSize),
                     ) {
                       Icon(
                         Icons.Outlined.Add,
@@ -672,21 +662,12 @@ fun MessageInputText(
                   shape = CircleShape,
                   color =
                     if (canSend) {
-                      MaterialTheme.colorScheme.secondaryContainer
+                      getTaskIconColor(task = task)
                     } else {
-                      MaterialTheme.colorScheme.surfaceContainerLow
+                      getTaskIconColor(task = task).copy(alpha = 0.3f)
                     },
                   modifier =
-                    Modifier.size(ComposerButtonSize).border(
-                      width = 1.dp,
-                      color =
-                        if (canSend) {
-                          MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        } else {
-                          MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
-                        },
-                      shape = CircleShape,
-                    ),
+                    Modifier.size(ComposerButtonSize),
                   onClick = {
                     if (canSend) {
                       val message = curMessage.trim()
@@ -705,12 +686,12 @@ fun MessageInputText(
                   Icon(
                     Icons.AutoMirrored.Rounded.Send,
                     contentDescription = stringResource(R.string.cd_send_prompt_icon),
-                    modifier = Modifier.size(ComposerIconSize),
+                    modifier = Modifier.size(22.dp).offset(x = 1.dp),
                     tint =
                       if (canSend) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
+                        Color.White
                       } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                        Color.White.copy(alpha = 0.72f)
                       },
                   )
                 }
