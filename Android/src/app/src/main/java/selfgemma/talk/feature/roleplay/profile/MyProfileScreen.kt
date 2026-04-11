@@ -29,6 +29,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -74,6 +75,7 @@ fun MyProfileScreen(
   var showCreateDialog by rememberSaveable { mutableStateOf(false) }
   var newSlotId by rememberSaveable { mutableStateOf("") }
   var showMenu by rememberSaveable { mutableStateOf(false) }
+  var pendingDeleteSlotId by rememberSaveable { mutableStateOf<String?>(null) }
   val isEditing = editingSlotId != null
   val avatarLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -184,6 +186,7 @@ fun MyProfileScreen(
           viewModel.selectAvatarSlot(slotId)
           editingSlotId = slotId
         },
+        onDeleteSlot = { slotId -> pendingDeleteSlotId = slotId },
         onDefaultPersonaChange = viewModel::setDefaultPersona,
       )
     }
@@ -204,6 +207,18 @@ fun MyProfileScreen(
         },
       )
     }
+
+    val personaToDelete = uiState.personaCards.firstOrNull { it.slotId == pendingDeleteSlotId }
+    if (personaToDelete != null) {
+      ConfirmDeletePersonaDialog(
+        personaName = personaToDelete.personaName,
+        onDismiss = { pendingDeleteSlotId = null },
+        onConfirm = {
+          viewModel.deleteAvatarSlot(personaToDelete.slotId)
+          pendingDeleteSlotId = null
+        },
+      )
+    }
   }
 }
 
@@ -212,6 +227,7 @@ private fun MyProfileListContent(
   uiState: MyProfileUiState,
   contentPadding: PaddingValues,
   onEditSlot: (String) -> Unit,
+  onDeleteSlot: (String) -> Unit,
   onDefaultPersonaChange: (String, Boolean) -> Unit,
 ) {
   LazyColumn(
@@ -223,7 +239,9 @@ private fun MyProfileListContent(
       PersonaCardItem(
         persona = persona,
         onEdit = { onEditSlot(persona.slotId) },
+        onDelete = { onDeleteSlot(persona.slotId) },
         onDefaultPersonaChange = { enabled -> onDefaultPersonaChange(persona.slotId, enabled) },
+        deleteEnabled = uiState.personaCards.size > 1,
       )
     }
   }
@@ -233,11 +251,11 @@ private fun MyProfileListContent(
 private fun PersonaCardItem(
   persona: PersonaSlotCardUiState,
   onEdit: () -> Unit,
+  onDelete: () -> Unit,
   onDefaultPersonaChange: (Boolean) -> Unit,
+  deleteEnabled: Boolean,
 ) {
-  Card(
-    modifier = Modifier.fillMaxWidth().clickable(onClick = onEdit),
-  ) {
+  Card(modifier = Modifier.fillMaxWidth()) {
     Column(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -272,13 +290,6 @@ private fun PersonaCardItem(
           }
         }
       }
-      Text(
-        text = "${stringResource(R.string.my_profile_avatar_slot_title)}: ${persona.slotId}",
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
       if (persona.personaDescription.isNotBlank()) {
         Text(
           text = persona.personaDescription,
@@ -287,19 +298,62 @@ private fun PersonaCardItem(
           overflow = TextOverflow.Ellipsis,
         )
       }
-      ToggleCard(
-        title = stringResource(R.string.my_profile_default_persona_title),
-        summary = stringResource(R.string.my_profile_default_persona_summary),
-        checked = persona.isDefault,
-        onCheckedChange = onDefaultPersonaChange,
-      )
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        FilledTonalButton(onClick = onEdit) {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        FilledTonalButton(
+          modifier = Modifier.weight(1f),
+          onClick = onEdit,
+        ) {
           Text(stringResource(R.string.edit))
         }
+        OutlinedButton(
+          modifier = Modifier.weight(1f),
+          enabled = deleteEnabled,
+          onClick = onDelete,
+        ) {
+          Text(stringResource(R.string.delete))
+        }
+        DefaultPersonaAction(
+          modifier = Modifier.weight(1f),
+          checked = persona.isDefault,
+          onCheckedChange = onDefaultPersonaChange,
+        )
       }
     }
   }
+}
+
+@Composable
+private fun ConfirmDeletePersonaDialog(
+  personaName: String,
+  onDismiss: () -> Unit,
+  onConfirm: () -> Unit,
+) {
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(stringResource(R.string.my_profile_delete_title)) },
+    text = {
+      Text(
+        stringResource(
+          R.string.my_profile_delete_content,
+          personaName,
+        ),
+      )
+    },
+    confirmButton = {
+      TextButton(onClick = onConfirm) {
+        Text(stringResource(R.string.delete))
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) {
+        Text(stringResource(R.string.cancel))
+      }
+    },
+  )
 }
 
 @Composable
@@ -576,35 +630,29 @@ private fun takeReadPermission(context: android.content.Context, uri: Uri) {
 }
 
 @Composable
-private fun ToggleCard(
-  title: String,
-  summary: String,
+private fun DefaultPersonaAction(
+  modifier: Modifier = Modifier,
   checked: Boolean,
   onCheckedChange: (Boolean) -> Unit,
 ) {
-  Card(
-    modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) },
+  Row(
+    modifier =
+      modifier
+        .clickable { onCheckedChange(!checked) }
+        .padding(horizontal = 8.dp, vertical = 4.dp),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically,
   ) {
-    Row(
-      modifier = Modifier.fillMaxWidth().padding(16.dp),
-      horizontalArrangement = Arrangement.spacedBy(12.dp),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Column(
-        modifier = Modifier.weight(1f),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-      ) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
-        Text(
-          summary,
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
-      Switch(
-        checked = checked,
-        onCheckedChange = onCheckedChange,
-      )
-    }
+    Text(
+      modifier = Modifier.weight(1f),
+      text = stringResource(R.string.my_profile_set_default_action),
+      style = MaterialTheme.typography.labelLarge,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+    )
+    Switch(
+      checked = checked,
+      onCheckedChange = onCheckedChange,
+    )
   }
 }

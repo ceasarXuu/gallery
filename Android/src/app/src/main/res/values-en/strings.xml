@@ -90,6 +90,9 @@
   <string name="my_profile_persona_role_assistant">Assistant</string>
   <string name="my_profile_default_persona_title">Use As Default Persona</string>
   <string name="my_profile_default_persona_summary">Apply this persona to new roleplay chats by default.</string>
+  <string name="my_profile_set_default_action">Set As Default</string>
+  <string name="my_profile_delete_title">Delete Persona</string>
+  <string name="my_profile_delete_content">Are you sure you want to delete persona \"%s\"?</string>
   <string name="my_profile_reset">Reset Persona</string>
   <string name="my_profile_save">Save Persona</string>
 

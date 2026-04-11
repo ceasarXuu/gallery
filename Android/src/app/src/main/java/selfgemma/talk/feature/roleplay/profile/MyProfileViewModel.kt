@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import selfgemma.talk.data.DataStoreRepository
+import selfgemma.talk.domain.roleplay.model.DEFAULT_ST_USER_AVATAR_ID
 import selfgemma.talk.domain.roleplay.model.DEFAULT_ST_USER_NAME
 import selfgemma.talk.domain.roleplay.model.StPersonaDescriptionPosition
 import selfgemma.talk.domain.roleplay.model.StPersonaDescriptor
@@ -153,6 +154,25 @@ constructor(
     debugLog("set default persona avatarId=$normalizedSlotId enabled=$enabled dirty=${_uiState.value.dirty}")
   }
 
+  fun deleteAvatarSlot(slotId: String) {
+    val normalizedSlotId = slotId.trim()
+    if (normalizedSlotId.isBlank()) {
+      return
+    }
+
+    val draftProfile = buildProfileFromUiState(_uiState.value)
+    val nextWorkingProfile = draftProfile.removeSlot(normalizedSlotId)
+    val nextSavedProfile = savedProfile.removeSlot(normalizedSlotId)
+
+    dataStoreRepository.setStUserProfile(nextSavedProfile)
+    savedProfile = nextSavedProfile
+    workingProfile = nextWorkingProfile
+    _uiState.value = workingProfile.toUiState(savedProfile)
+    debugLog(
+      "deleted persona slot avatarId=$normalizedSlotId active=${_uiState.value.avatarSlotId} totalSlots=${_uiState.value.personaCards.size}",
+    )
+  }
+
   fun resetProfile() {
     val defaultProfile = StUserProfile().ensureDefaults()
     dataStoreRepository.setStUserProfile(defaultProfile)
@@ -254,4 +274,38 @@ private fun StUserProfile.ensureSlot(slotId: String): StUserProfile {
         putIfAbsent(normalizedSlotId, StPersonaDescriptor())
       },
   ).ensureDefaults()
+}
+
+private fun StUserProfile.removeSlot(slotId: String): StUserProfile {
+  val normalizedSlotId = slotId.trim()
+  if (normalizedSlotId.isBlank()) {
+    return ensureDefaults()
+  }
+
+  val updatedPersonas = personas.toMutableMap().apply { remove(normalizedSlotId) }
+  val updatedDescriptors = personaDescriptions.toMutableMap().apply { remove(normalizedSlotId) }
+  val remainingSlotIds = buildSet {
+    addAll(updatedPersonas.keys)
+    addAll(updatedDescriptors.keys)
+  }.filter { it.isNotBlank() }
+
+  val fallbackSlotId =
+    when {
+      remainingSlotIds.contains(userAvatarId) && userAvatarId != normalizedSlotId -> userAvatarId
+      defaultPersonaId != null && defaultPersonaId != normalizedSlotId && remainingSlotIds.contains(defaultPersonaId) -> defaultPersonaId
+      remainingSlotIds.isNotEmpty() -> remainingSlotIds.sorted().first()
+      else -> DEFAULT_ST_USER_AVATAR_ID
+    }
+
+  return copy(
+    userAvatarId = fallbackSlotId,
+    defaultPersonaId =
+      when {
+        defaultPersonaId == normalizedSlotId -> null
+        defaultPersonaId != null && remainingSlotIds.contains(defaultPersonaId) -> defaultPersonaId
+        else -> null
+      },
+    personas = updatedPersonas,
+    personaDescriptions = updatedDescriptors,
+  ).ensureSlot(fallbackSlotId)
 }

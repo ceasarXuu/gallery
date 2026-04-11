@@ -86,6 +86,9 @@
   <string name="my_profile_persona_role_assistant">助手</string>
   <string name="my_profile_default_persona_title">设为默认 Persona</string>
   <string name="my_profile_default_persona_summary">默认应用到新的角色扮演会话。</string>
+  <string name="my_profile_set_default_action">设为默认</string>
+  <string name="my_profile_delete_title">删除 Persona</string>
+  <string name="my_profile_delete_content">确定要删除 Persona “%s” 吗？</string>
   <string name="my_profile_reset">重置 Persona</string>
   <string name="my_profile_save">保存 Persona</string>
 

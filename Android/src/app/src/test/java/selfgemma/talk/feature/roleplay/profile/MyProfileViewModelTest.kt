@@ -139,4 +139,38 @@ class MyProfileViewModelTest {
     assertTrue(slotBCard.isDefault)
     assertTrue(viewModel.uiState.value.dirty)
   }
+
+  @Test
+  fun deletingActiveDefaultPersona_removesSlotAndFallsBackToRemainingPersona() {
+    val dataStoreRepository =
+      FakeDataStoreRepository(
+        stUserProfile =
+          StUserProfile(
+            userAvatarId = "slot-a",
+            defaultPersonaId = "slot-a",
+            personas =
+              mapOf(
+                "slot-a" to "Alice",
+                "slot-b" to "Bob",
+              ),
+            personaDescriptions =
+              mapOf(
+                "slot-a" to StPersonaDescriptor(description = "alpha"),
+                "slot-b" to StPersonaDescriptor(description = "beta"),
+              ),
+          ).ensureDefaults(),
+      )
+    val viewModel = MyProfileViewModel(dataStoreRepository)
+
+    viewModel.deleteAvatarSlot("slot-a")
+
+    val savedProfile = dataStoreRepository.getStUserProfile()
+    assertEquals("slot-b", savedProfile.userAvatarId)
+    assertEquals(null, savedProfile.defaultPersonaId)
+    assertEquals(null, savedProfile.personas["slot-a"])
+    assertEquals("Bob", savedProfile.personas["slot-b"])
+    assertEquals("slot-b", viewModel.uiState.value.avatarSlotId)
+    assertEquals(1, viewModel.uiState.value.personaCards.size)
+    assertEquals("slot-b", viewModel.uiState.value.personaCards.single().slotId)
+  }
 }

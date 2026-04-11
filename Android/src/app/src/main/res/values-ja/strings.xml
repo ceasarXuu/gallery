@@ -86,6 +86,9 @@
   <string name="my_profile_persona_role_assistant">アシスタント</string>
   <string name="my_profile_default_persona_title">既定のペルソナにする</string>
   <string name="my_profile_default_persona_summary">新しいロールプレイ会話にこのペルソナを既定で適用します。</string>
+  <string name="my_profile_set_default_action">デフォルトに設定</string>
+  <string name="my_profile_delete_title">ペルソナを削除</string>
+  <string name="my_profile_delete_content">ペルソナ「%s」を削除してもよろしいですか？</string>
   <string name="my_profile_reset">ペルソナをリセット</string>
   <string name="my_profile_save">ペルソナを保存</string>
 

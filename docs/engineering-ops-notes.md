@@ -55,6 +55,28 @@ Notes:
 - When adding a list-level default toggle, test the failure mode where a user has unsaved persona edits and then changes the default slot. That action must not silently persist other draft fields.
 - This workspace still benefits from running `.\gradlew.bat --stop` before focused Kotlin/test commands when builds previously hung. It is faster than waiting for a daemon timeout and often avoids the known KAPT cache-lock path altogether.
 
+## 2026-04-11 Persona list card presentation note
+
+- Goal: keep persona cards user-facing and stop leaking internal slot/file concepts into the `鎴戠殑 / Me` list UI.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat --stop
+.\gradlew.bat :app:compileDebugKotlin --no-daemon
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.feature.roleplay.profile.MyProfileViewModelTest" --no-daemon
+.\gradlew.bat :app:assembleDebug --no-daemon
+adb install -r D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk
+```
+
+Notes:
+
+- The persona list card should expose only user-meaningful fields: avatar, persona name, optional title, optional description, and bottom actions. Do not render internal `slotId`, generated file names, or fallback asset names on the card face.
+- Keep the bottom action area as one horizontal row: `Edit`, `Delete`, and `Set As Default`. If the default action uses a switch, the label should stay compact and not add a second explanatory summary line.
+- The last remaining persona should not be deletable from the list. Disable the destructive action instead of allowing the delete flow to recreate a synthetic fallback slot behind the user's back.
+- Multi-language layout validation matters here because the row now holds three actions. Check at least `values`, `values-en`, `values-zh-rCN`, `values-ja`, and `values-ko` before shipping to device.
+
 ## 2026-04-11 Top app bar overflow menu anchor note
 
 - Symptom on device: the roleplay chat page top-right overflow menu opened on top of the menu trigger, so the popup visually covered the three-dot button and felt misaligned compared with the role tab menu.
