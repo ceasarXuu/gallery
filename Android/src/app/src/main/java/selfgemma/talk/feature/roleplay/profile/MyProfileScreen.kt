@@ -46,7 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -104,12 +104,13 @@ fun MyProfileScreen(
   val context = LocalContext.current
   val focusManager = LocalFocusManager.current
   val keyboardController = LocalSoftwareKeyboardController.current
-  var editingSlotId by rememberSaveable { mutableStateOf<String?>(null) }
-  var showCreateDialog by rememberSaveable { mutableStateOf(false) }
-  var newSlotId by rememberSaveable { mutableStateOf("") }
-  var showMenu by rememberSaveable { mutableStateOf(false) }
-  var pendingDeleteSlotId by rememberSaveable { mutableStateOf<String?>(null) }
-  var activeHelpTopic by rememberSaveable { mutableStateOf<PersonaHelpTopic?>(null) }
+  // Keep editor affordances transient so process/task recreation re-enters from persisted profile state.
+  var editingSlotId by remember { mutableStateOf<String?>(null) }
+  var showCreateDialog by remember { mutableStateOf(false) }
+  var newSlotId by remember { mutableStateOf("") }
+  var showMenu by remember { mutableStateOf(false) }
+  var pendingDeleteSlotId by remember { mutableStateOf<String?>(null) }
+  var activeHelpTopic by remember { mutableStateOf<PersonaHelpTopic?>(null) }
   val isEditing = editingSlotId != null
   val avatarLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->

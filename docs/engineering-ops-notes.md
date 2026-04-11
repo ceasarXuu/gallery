@@ -1038,3 +1038,8 @@ Notes:
 - When the primary save affordance lives in the top app bar, clear focus before saving. This gives the active text field a chance to commit IME composition state before the ViewModel snapshots the form.
 - Persona save logs should include `avatarId`, `name`, `avatarUri`, and slot count. Those four values are enough to distinguish “UI did not commit” from “DataStore round-trip lost data”.
 - This workspace's Kotlin daemon still intermittently fails while closing incremental caches. If the command falls back and then succeeds, treat it as infrastructure noise rather than a source-level regression.
+## 2026-04-11 Persona restart recovery note
+
+- The persona editor's `editingSlotId`, create-dialog visibility, delete-confirm dialog, and help-dialog visibility are transient UI state. Do not keep them in `rememberSaveable` across task/process recreation, or the screen can reopen in editor mode while the `ViewModel` has already been rebuilt from persisted `StUserProfile`, which looks like the form was cleared.
+- `saveProfile()` should validate persisted reality, not only in-memory draft state. After `setStUserProfile(...)`, immediately read back `getStUserProfile()` and bind the UI to that result so restart-only drift is visible during the same save flow.
+- For persona persistence regressions, keep one real `DefaultDataStoreRepository + protobuf DataStore` round-trip test in addition to `FakeDataStoreRepository` tests. The fake repository only covers `ViewModel` logic and cannot prove the on-device proto file preserves `personas` and `personaDescriptions.avatarUri`.

@@ -13,6 +13,7 @@ import selfgemma.talk.domain.roleplay.model.DEFAULT_ST_USER_NAME
 import selfgemma.talk.domain.roleplay.model.StPersonaDescriptionPosition
 import selfgemma.talk.domain.roleplay.model.StPersonaDescriptor
 import selfgemma.talk.domain.roleplay.model.StUserProfile
+import selfgemma.talk.domain.roleplay.model.availablePersonaSlotIds
 
 private const val TAG = "MyProfileViewModel"
 
@@ -49,6 +50,10 @@ constructor(
   private var workingProfile: StUserProfile = savedProfile
   private val _uiState = MutableStateFlow(workingProfile.toUiState(savedProfile))
   val uiState: StateFlow<MyProfileUiState> = _uiState.asStateFlow()
+
+  init {
+    debugProfile("loaded ST user persona profile", savedProfile)
+  }
 
   fun updatePersonaName(value: String) {
     updateUiState { it.copy(personaName = value) }
@@ -109,12 +114,11 @@ constructor(
   fun saveProfile() {
     val updatedProfile = buildProfileFromUiState(_uiState.value).ensureDefaults()
     dataStoreRepository.setStUserProfile(updatedProfile)
-    savedProfile = updatedProfile
-    workingProfile = updatedProfile
-    _uiState.value = updatedProfile.toUiState(savedProfile)
-    debugLog(
-      "saved ST user persona avatarId=${updatedProfile.resolvedUserAvatarId()} name=${updatedProfile.userName} avatarUri=${updatedProfile.activeAvatarUri} slotCount=${updatedProfile.personas.size} position=${updatedProfile.personaDescriptionPosition.rawValue}",
-    )
+    val persistedProfile = dataStoreRepository.getStUserProfile().ensureDefaults()
+    savedProfile = persistedProfile
+    workingProfile = persistedProfile
+    _uiState.value = persistedProfile.toUiState(savedProfile)
+    debugProfile("saved ST user persona profile", persistedProfile)
   }
 
   fun setDefaultPersona(
@@ -212,6 +216,15 @@ constructor(
 
 private fun debugLog(message: String) {
   runCatching { Log.d(TAG, message) }
+}
+
+private fun debugProfile(
+  prefix: String,
+  profile: StUserProfile,
+) {
+  debugLog(
+    "$prefix avatarId=${profile.resolvedUserAvatarId()} default=${profile.defaultPersonaId} name=${profile.userName} avatarUri=${profile.activeAvatarUri} slots=${profile.availablePersonaSlotIds()} personas=${profile.personas} personaAvatarUris=${profile.personaDescriptions.mapValues { (_, descriptor) -> descriptor.avatarUri }} position=${profile.personaDescriptionPosition.rawValue}",
+  )
 }
 
 private fun StUserProfile.toUiState(savedProfile: StUserProfile): MyProfileUiState {

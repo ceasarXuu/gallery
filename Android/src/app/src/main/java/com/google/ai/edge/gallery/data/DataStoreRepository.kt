@@ -572,37 +572,39 @@ class DefaultDataStoreRepository(
 }
 
 private fun StUserProfile.toProto(): StUserProfileSettings {
+  val profile = this
   val personaDescriptionSettings = mutableMapOf<String, StPersonaDescriptorSettings>()
-  personaDescriptions.forEach { (key, descriptorValue) ->
+  profile.personaDescriptions.forEach { (key, descriptorValue) ->
     val descriptor: StPersonaDescriptor = descriptorValue
     personaDescriptionSettings[key] = descriptor.toProto()
   }
   return StUserProfileSettings.newBuilder()
-    .setUserAvatarId(resolvedUserAvatarId())
+    .setUserAvatarId(profile.resolvedUserAvatarId())
     .apply {
-      defaultPersonaId?.takeIf { it.isNotBlank() }?.let(::setDefaultPersonaId)
-      putAllPersonas(personas)
+      profile.defaultPersonaId?.takeIf { it.isNotBlank() }?.let(::setDefaultPersonaId)
+      putAllPersonas(profile.personas)
       putAllPersonaDescriptions(personaDescriptionSettings)
     }
     .build()
 }
 
 private fun StPersonaDescriptor.toProto(): StPersonaDescriptorSettings {
+  val descriptor = this
   return StPersonaDescriptorSettings.newBuilder()
-    .setDescription(description)
-    .setTitle(title)
-    .setPosition(position.rawValue)
-    .setDepth(depth)
-    .setRole(role)
-    .setLorebook(lorebook)
+    .setDescription(descriptor.description)
+    .setTitle(descriptor.title)
+    .setPosition(descriptor.position.rawValue)
+    .setDepth(descriptor.depth)
+    .setRole(descriptor.role)
+    .setLorebook(descriptor.lorebook)
     .apply {
-      addAllConnections(connections.map { connection ->
+      addAllConnections(descriptor.connections.map { connection ->
         StPersonaConnectionSettings.newBuilder()
           .setType(connection.type)
           .setId(connection.id)
           .build()
       })
-      avatarUri?.takeIf { it.isNotBlank() }?.let(::setAvatarUri)
+      descriptor.avatarUri?.takeIf { it.isNotBlank() }?.let(::setAvatarUri)
     }
     .build()
 }
