@@ -19,6 +19,7 @@ import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.model.StUserProfile
 import selfgemma.talk.domain.roleplay.usecase.toStMacroContext
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
@@ -186,7 +187,7 @@ private class SampleSessionSeedConversationRepository : ConversationRepository {
 
   override suspend fun getSession(sessionId: String): Session? = sessions[sessionId]
 
-  override suspend fun createSession(roleId: String, modelId: String): Session {
+  override suspend fun createSession(roleId: String, modelId: String, userProfile: StUserProfile?): Session {
     val session =
       Session(
         id = "session-$roleId",
@@ -196,6 +197,7 @@ private class SampleSessionSeedConversationRepository : ConversationRepository {
         createdAt = 100L,
         updatedAt = 100L,
         lastMessageAt = 100L,
+        sessionUserProfile = userProfile,
       )
     sessions[session.id] = session
     return session

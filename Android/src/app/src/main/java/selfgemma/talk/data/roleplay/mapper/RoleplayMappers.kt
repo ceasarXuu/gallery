@@ -107,6 +107,7 @@ fun SessionEntity.toDomain(): Session {
     summaryVersion = summaryVersion,
     draftInput = draftInput,
     interopChatMetadataJson = interopChatMetadataJson,
+    sessionUserProfile = RoleplayInteropJsonCodec.decodeStUserProfile(sessionUserProfileJson),
   )
 }
 
@@ -128,6 +129,7 @@ fun Session.toEntity(): SessionEntity {
     summaryVersion = summaryVersion,
     draftInput = draftInput,
     interopChatMetadataJson = interopChatMetadataJson,
+    sessionUserProfileJson = RoleplayInteropJsonCodec.encodeStUserProfile(sessionUserProfile),
   )
 }
 

@@ -7,6 +7,7 @@ import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.model.StUserProfile
 
 interface ConversationRepository {
   fun observeSessions(): Flow<List<Session>>
@@ -17,7 +18,7 @@ interface ConversationRepository {
 
   suspend fun getSession(sessionId: String): Session?
 
-  suspend fun createSession(roleId: String, modelId: String): Session
+  suspend fun createSession(roleId: String, modelId: String, userProfile: StUserProfile? = null): Session
 
   suspend fun updateSession(session: Session)
 

@@ -10,6 +10,7 @@ import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionEventType
 import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.model.resolveUserProfile
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 
 private const val SUMMARY_RECENT_MESSAGE_COUNT = 8
@@ -24,6 +25,7 @@ constructor(
   private val tokenEstimator: TokenEstimator,
 ) {
   suspend operator fun invoke(sessionId: String) {
+    val session = conversationRepository.getSession(sessionId) ?: return
     val existingSummary = conversationRepository.getSummary(sessionId)
     val relevantMessages =
       conversationRepository.observeMessages(sessionId).first().filter { message ->
@@ -39,7 +41,8 @@ constructor(
 
     val recentMessages = relevantMessages.takeLast(SUMMARY_RECENT_MESSAGE_COUNT)
     val now = System.currentTimeMillis()
-    val summaryText = buildSummary(existingSummary?.summaryText, recentMessages)
+    val userName = session.resolveUserProfile(dataStoreRepository.getStUserProfile()).userName
+    val summaryText = buildSummary(existingSummary?.summaryText, recentMessages, userName = userName)
     val summary =
       SessionSummary(
         sessionId = sessionId,
@@ -63,7 +66,11 @@ constructor(
     )
   }
 
-  private fun buildSummary(previousSummary: String?, recentMessages: List<selfgemma.talk.domain.roleplay.model.Message>): String {
+  private fun buildSummary(
+    previousSummary: String?,
+    recentMessages: List<selfgemma.talk.domain.roleplay.model.Message>,
+    userName: String,
+  ): String {
     return buildString {
       if (!previousSummary.isNullOrBlank()) {
         appendLine("Earlier summary:")
@@ -74,7 +81,7 @@ constructor(
       appendLine("Recent developments:")
       recentMessages.forEach { message ->
         appendLine(
-          "- ${message.side.toSpeakerLabel()}: ${message.content.toSummaryLine(SUMMARY_MESSAGE_LINE_LENGTH)}"
+          "- ${message.side.toSpeakerLabel(userName)}: ${message.content.toSummaryLine(SUMMARY_MESSAGE_LINE_LENGTH)}"
         )
       }
     }
@@ -85,8 +92,7 @@ constructor(
     return trim().replace(WHITESPACE_REGEX, " ").take(maxLength)
   }
 
-  private fun MessageSide.toSpeakerLabel(): String {
-    val userName = dataStoreRepository.getStUserProfile().userName
+  private fun MessageSide.toSpeakerLabel(userName: String): String {
     return when (this) {
       MessageSide.USER -> userName
       MessageSide.ASSISTANT -> "Assistant"

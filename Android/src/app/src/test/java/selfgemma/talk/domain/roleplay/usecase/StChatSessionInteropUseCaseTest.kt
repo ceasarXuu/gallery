@@ -11,6 +11,8 @@ import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.model.StUserProfile
+import selfgemma.talk.domain.roleplay.model.snapshotSelectedPersona
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
 import selfgemma.talk.domain.roleplay.repository.RoleplayInteropDocumentMetadata
@@ -72,6 +74,10 @@ class StChatSessionInteropUseCaseTest {
         updatedAt = 1L,
         lastMessageAt = 1L,
         interopChatMetadataJson = """{"source":"st"}""",
+        sessionUserProfile =
+          StUserProfile(
+            personas = mapOf("session-persona" to "Session Bob"),
+          ).snapshotSelectedPersona("session-persona"),
       )
     val messages =
       listOf(
@@ -89,7 +95,13 @@ class StChatSessionInteropUseCaseTest {
     val documentRepository = FakeDocumentRepository()
     val exportUseCase =
       ExportStChatJsonlFromSessionUseCase(
-        dataStoreRepository = FakeDataStoreRepository(),
+        dataStoreRepository =
+          FakeDataStoreRepository(
+            stUserProfile =
+              StUserProfile(
+                personas = mapOf("global-persona" to "Global User"),
+              ).snapshotSelectedPersona("global-persona"),
+          ),
         conversationRepository = repository,
         roleRepository = FakeRoleRepository(),
         exportStChatJsonlToUriUseCase =
@@ -104,6 +116,7 @@ class StChatSessionInteropUseCaseTest {
     val output = documentRepository.writes["content://out.jsonl"]
     requireNotNull(output)
     assertEquals(true, output.contains(""""source":"st""""))
+    assertEquals(true, output.contains(""""name":"Session Bob""""))
     assertEquals(true, output.contains(""""mes":"Hi""""))
   }
 }
@@ -122,7 +135,7 @@ private class StChatFakeConversationRepository(
 
   override suspend fun getSession(sessionId: String): Session? = session?.takeIf { it.id == sessionId }
 
-  override suspend fun createSession(roleId: String, modelId: String): Session = error("Not used")
+  override suspend fun createSession(roleId: String, modelId: String, userProfile: StUserProfile?): Session = error("Not used")
 
   override suspend fun updateSession(session: Session) {
     this.session = session

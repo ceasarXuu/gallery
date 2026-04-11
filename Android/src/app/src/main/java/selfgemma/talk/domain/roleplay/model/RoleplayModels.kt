@@ -179,6 +179,7 @@ data class Session(
   val summaryVersion: Int = 0,
   val draftInput: String = "",
   val interopChatMetadataJson: String? = null,
+  val sessionUserProfile: StUserProfile? = null,
 )
 
 data class Message(
@@ -336,3 +337,7 @@ fun RoleCard.resolvedOpeningLine(): String = stCard.resolvedFirstMessage()
 fun RoleCard.resolvedExampleDialogues(): List<String> = exampleDialogues
 
 fun RoleCard.resolvedTags(): List<String> = stCard.resolvedTags()
+
+fun Session.resolveUserProfile(fallback: StUserProfile = StUserProfile()): StUserProfile {
+  return sessionUserProfile?.ensureDefaults() ?: fallback.ensureDefaults()
+}

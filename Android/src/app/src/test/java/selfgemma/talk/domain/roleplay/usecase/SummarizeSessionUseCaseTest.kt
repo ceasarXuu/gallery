@@ -13,6 +13,8 @@ import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.model.StUserProfile
+import selfgemma.talk.domain.roleplay.model.snapshotSelectedPersona
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.testing.FakeDataStoreRepository
 
@@ -32,6 +34,10 @@ class SummarizeSessionUseCaseTest {
               createdAt = now,
               updatedAt = now,
               lastMessageAt = now,
+              sessionUserProfile =
+                StUserProfile(
+                  personas = mapOf("captain" to "Captain Mae"),
+                ).snapshotSelectedPersona("captain"),
             ),
           messages =
             listOf(
@@ -63,7 +69,7 @@ class SummarizeSessionUseCaseTest {
       val summary = conversationRepository.savedSummary
       assertNotNull(summary)
       assertTrue(summary!!.summaryText.contains("Recent developments:"))
-      assertTrue(summary.summaryText.contains("User: We need a clean exit route."))
+      assertTrue(summary.summaryText.contains("Captain Mae: We need a clean exit route."))
       assertTrue(summary.summaryText.contains("Assistant: The cargo elevator still works if we move now."))
       assertEquals(1, summary.version)
       assertEquals(1, conversationRepository.events.size)
@@ -94,7 +100,7 @@ private class FakeConversationRepository(
     return session.takeIf { it.id == sessionId }
   }
 
-  override suspend fun createSession(roleId: String, modelId: String): Session {
+  override suspend fun createSession(roleId: String, modelId: String, userProfile: StUserProfile?): Session {
     error("Not needed in this test")
   }
 

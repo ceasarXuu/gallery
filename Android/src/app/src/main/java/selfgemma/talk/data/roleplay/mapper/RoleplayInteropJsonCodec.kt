@@ -6,6 +6,7 @@ import selfgemma.talk.domain.roleplay.model.RoleInteropState
 import selfgemma.talk.domain.roleplay.model.RoleMediaProfile
 import selfgemma.talk.domain.roleplay.model.RoleRuntimeProfile
 import selfgemma.talk.domain.roleplay.model.StCharacterCard
+import selfgemma.talk.domain.roleplay.model.StUserProfile
 
 object RoleplayInteropJsonCodec {
   private val gson: Gson = GsonBuilder().create()
@@ -52,5 +53,16 @@ object RoleplayInteropJsonCodec {
       return null
     }
     return gson.fromJson(value, RoleMediaProfile::class.java)
+  }
+
+  fun encodeStUserProfile(value: StUserProfile?): String? {
+    return value?.let(gson::toJson)
+  }
+
+  fun decodeStUserProfile(value: String?): StUserProfile? {
+    if (value.isNullOrBlank()) {
+      return null
+    }
+    return gson.fromJson(value, StUserProfile::class.java)
   }
 }

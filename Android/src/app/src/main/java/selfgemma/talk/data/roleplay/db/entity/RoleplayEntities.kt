@@ -84,6 +84,7 @@ data class SessionEntity(
   val summaryVersion: Int = 0,
   val draftInput: String = "",
   val interopChatMetadataJson: String? = null,
+  val sessionUserProfileJson: String? = null,
 )
 
 @Entity(

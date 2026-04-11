@@ -127,6 +127,43 @@ data class StUserProfile(
   }
 }
 
+fun StUserProfile.availablePersonaSlotIds(): List<String> {
+  return buildSet {
+    add(resolvedUserAvatarId())
+    addAll(personas.keys)
+    addAll(personaDescriptions.keys)
+  }.filter { it.isNotBlank() }
+}
+
+fun StUserProfile.resolvedPersonaSlotId(preferredSlotId: String? = null): String {
+  val availableSlots = availablePersonaSlotIds()
+  val normalizedPreferredSlotId = preferredSlotId?.trim().orEmpty()
+  return when {
+    normalizedPreferredSlotId.isNotBlank() && normalizedPreferredSlotId in availableSlots -> normalizedPreferredSlotId
+    !defaultPersonaId.isNullOrBlank() && defaultPersonaId in availableSlots -> defaultPersonaId
+    resolvedUserAvatarId() in availableSlots -> resolvedUserAvatarId()
+    availableSlots.isNotEmpty() -> availableSlots.sorted().first()
+    else -> DEFAULT_ST_USER_AVATAR_ID
+  }
+}
+
+fun StUserProfile.selectPersonaSlot(slotId: String?): StUserProfile {
+  val normalizedProfile = ensureDefaults()
+  val resolvedSlotId = normalizedProfile.resolvedPersonaSlotId(slotId)
+  return normalizedProfile.copy(userAvatarId = resolvedSlotId).ensureDefaults()
+}
+
+fun StUserProfile.snapshotSelectedPersona(slotId: String? = null): StUserProfile {
+  val selectedProfile = selectPersonaSlot(slotId)
+  val selectedSlotId = selectedProfile.resolvedUserAvatarId()
+  return StUserProfile(
+    userAvatarId = selectedSlotId,
+    defaultPersonaId = selectedSlotId,
+    personas = mapOf(selectedSlotId to selectedProfile.userName),
+    personaDescriptions = mapOf(selectedSlotId to selectedProfile.activePersonaDescriptor()),
+  ).ensureDefaults()
+}
+
 fun StUserProfile.personaDescriptionInPrompt(): String {
   return if (personaDescriptionPosition == StPersonaDescriptionPosition.IN_PROMPT) {
     personaDescription.trim()

@@ -18,6 +18,7 @@ import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.model.StUserProfile
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 
 private const val DEFAULT_SESSION_TITLE = "New Session"
@@ -50,7 +51,7 @@ constructor(
     return sessionDao.getById(sessionId)?.toDomain()
   }
 
-  override suspend fun createSession(roleId: String, modelId: String): Session {
+  override suspend fun createSession(roleId: String, modelId: String, userProfile: StUserProfile?): Session {
     val now = System.currentTimeMillis()
     val session =
       Session(
@@ -61,6 +62,7 @@ constructor(
         createdAt = now,
         updatedAt = now,
         lastMessageAt = now,
+        sessionUserProfile = userProfile?.ensureDefaults(),
       )
     sessionDao.upsert(session.toEntity())
     return session

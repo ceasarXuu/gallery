@@ -22,6 +22,7 @@ import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionEventType
+import selfgemma.talk.domain.roleplay.model.resolveUserProfile
 import selfgemma.talk.domain.roleplay.model.toStChatRuntimeRole
 import selfgemma.talk.domain.roleplay.model.toStChatRuntimeSession
 import selfgemma.talk.domain.roleplay.model.toModelContextProfile
@@ -219,7 +220,10 @@ constructor(
       memoryRepository.markUsed(relevantMemories.map { it.id }, System.currentTimeMillis())
     }
 
-    val runtimeRole = role.toStChatRuntimeRole(userProfile = dataStoreRepository.getStUserProfile())
+    val runtimeRole =
+      role.toStChatRuntimeRole(
+        userProfile = session.resolveUserProfile(dataStoreRepository.getStUserProfile()),
+      )
     val runtimeSession = session.toStChatRuntimeSession(generationTrigger = "normal")
     val contextProfile = model.toModelContextProfile()
     var attemptMode = PromptBudgetMode.FULL

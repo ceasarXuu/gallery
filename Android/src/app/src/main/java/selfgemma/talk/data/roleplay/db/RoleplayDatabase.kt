@@ -26,7 +26,7 @@ import selfgemma.talk.data.roleplay.db.entity.SessionSummaryEntity
     MemoryEntity::class,
     SessionEventEntity::class,
   ],
-  version = 4,
+  version = 5,
   exportSchema = true,
 )
 @TypeConverters(RoleplayConverters::class)

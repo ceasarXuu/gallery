@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 4,
-    "identityHash": "d3a450eda3cdf3ae52d47c40f28b8465",
+    "version": 5,
+    "identityHash": "47a1f490504fa608c115669e74134eb2",
     "entities": [
       {
         "tableName": "roles",
@@ -214,7 +214,7 @@
       },
       {
         "tableName": "sessions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `roleId` TEXT NOT NULL, `title` TEXT NOT NULL, `activeModelId` TEXT NOT NULL, `pinned` INTEGER NOT NULL, `archived` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `lastMessageAt` INTEGER NOT NULL, `lastSummary` TEXT, `lastUserMessageExcerpt` TEXT, `lastAssistantMessageExcerpt` TEXT, `turnCount` INTEGER NOT NULL, `summaryVersion` INTEGER NOT NULL, `draftInput` TEXT NOT NULL, `interopChatMetadataJson` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`roleId`) REFERENCES `roles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `roleId` TEXT NOT NULL, `title` TEXT NOT NULL, `activeModelId` TEXT NOT NULL, `pinned` INTEGER NOT NULL, `archived` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `lastMessageAt` INTEGER NOT NULL, `lastSummary` TEXT, `lastUserMessageExcerpt` TEXT, `lastAssistantMessageExcerpt` TEXT, `turnCount` INTEGER NOT NULL, `summaryVersion` INTEGER NOT NULL, `draftInput` TEXT NOT NULL, `interopChatMetadataJson` TEXT, `sessionUserProfileJson` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`roleId`) REFERENCES `roles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -306,6 +306,11 @@
           {
             "fieldPath": "interopChatMetadataJson",
             "columnName": "interopChatMetadataJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sessionUserProfileJson",
+            "columnName": "sessionUserProfileJson",
             "affinity": "TEXT"
           }
         ],
@@ -830,7 +835,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd3a450eda3cdf3ae52d47c40f28b8465')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '47a1f490504fa608c115669e74134eb2')"
     ]
   }
 }

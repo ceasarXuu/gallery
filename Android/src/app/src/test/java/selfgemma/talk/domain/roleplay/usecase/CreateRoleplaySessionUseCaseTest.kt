@@ -15,6 +15,9 @@ import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionSummary
 import selfgemma.talk.domain.roleplay.model.StCharacterCard
 import selfgemma.talk.domain.roleplay.model.StCharacterCardData
+import selfgemma.talk.domain.roleplay.model.StPersonaDescriptor
+import selfgemma.talk.domain.roleplay.model.StUserProfile
+import selfgemma.talk.domain.roleplay.model.snapshotSelectedPersona
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
 import selfgemma.talk.testing.FakeDataStoreRepository
@@ -158,6 +161,49 @@ class CreateRoleplaySessionUseCaseTest {
 
     assertEquals("User looks at Catty and User smiles back.", conversationRepository.messages.single().content)
   }
+
+  @Test
+  fun createSession_persistsSelectedPersonaSnapshotAndUsesItForMacros() = runBlocking {
+    val conversationRepository = SessionSeedConversationRepository()
+    val roleRepository =
+      SessionSeedRoleRepository(
+        RoleCard(
+          id = "role-6",
+          name = "Catty",
+          systemPrompt = "Stay in character.",
+          cardCore =
+            StCharacterCard(
+              name = "Catty",
+              data = StCharacterCardData(first_mes = "Hello {{user}}."),
+            ),
+          createdAt = 1L,
+          updatedAt = 1L,
+        )
+      )
+    val selectedPersona =
+      StUserProfile(
+        userAvatarId = "slot-a",
+        defaultPersonaId = "slot-b",
+        personas = mapOf("slot-a" to "Alice", "slot-b" to "Bob"),
+        personaDescriptions =
+          mapOf(
+            "slot-a" to StPersonaDescriptor(description = "alpha"),
+            "slot-b" to StPersonaDescriptor(description = "beta"),
+          ),
+      ).snapshotSelectedPersona("slot-b")
+
+    val session =
+      CreateRoleplaySessionUseCase(
+        dataStoreRepository = FakeDataStoreRepository(),
+        conversationRepository = conversationRepository,
+        roleRepository = roleRepository,
+      ).invoke(roleId = "role-6", modelId = "gemma", userProfile = selectedPersona)
+
+    assertEquals("Bob", session.sessionUserProfile?.userName)
+    assertEquals("slot-b", session.sessionUserProfile?.userAvatarId)
+    assertEquals(1, session.sessionUserProfile?.personas?.size)
+    assertEquals("Hello Bob.", conversationRepository.messages.single().content)
+  }
 }
 
 private class SessionSeedConversationRepository : ConversationRepository {
@@ -172,7 +218,11 @@ private class SessionSeedConversationRepository : ConversationRepository {
 
   override suspend fun getSession(sessionId: String): Session? = sessions[sessionId]
 
-  override suspend fun createSession(roleId: String, modelId: String): Session {
+  override suspend fun createSession(
+    roleId: String,
+    modelId: String,
+    userProfile: StUserProfile?,
+  ): Session {
     val session =
       Session(
         id = "session-1",
@@ -182,6 +232,7 @@ private class SessionSeedConversationRepository : ConversationRepository {
         createdAt = 10L,
         updatedAt = 10L,
         lastMessageAt = 10L,
+        sessionUserProfile = userProfile,
       )
     sessions[session.id] = session
     return session
