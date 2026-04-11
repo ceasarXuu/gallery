@@ -111,6 +111,20 @@ fun MyProfileScreen(
           } else {
             null
           },
+        rightAction =
+          if (isEditing) {
+            AppBarAction(
+              actionType = AppBarActionType.NAVIGATE_UP,
+              actionFn = {
+                viewModel.saveProfile()
+                Log.d(TAG, "saved persona and returned to persona list")
+                editingSlotId = null
+              },
+              label = stringResource(R.string.save),
+            )
+          } else {
+            null
+          },
         rightActionContent =
           if (!isEditing) {
             {
@@ -161,8 +175,6 @@ fun MyProfileScreen(
         onPersonaPositionChange = viewModel::updatePersonaPosition,
         onPersonaDepthChange = viewModel::updatePersonaDepth,
         onPersonaRoleChange = viewModel::updatePersonaRole,
-        onDefaultPersonaEnabledChange = viewModel::updateDefaultPersonaEnabled,
-        onSave = viewModel::saveProfile,
       )
     } else {
       MyProfileListContent(
@@ -172,6 +184,7 @@ fun MyProfileScreen(
           viewModel.selectAvatarSlot(slotId)
           editingSlotId = slotId
         },
+        onDefaultPersonaChange = viewModel::setDefaultPersona,
       )
     }
 
@@ -199,6 +212,7 @@ private fun MyProfileListContent(
   uiState: MyProfileUiState,
   contentPadding: PaddingValues,
   onEditSlot: (String) -> Unit,
+  onDefaultPersonaChange: (String, Boolean) -> Unit,
 ) {
   LazyColumn(
     modifier = Modifier.fillMaxSize().padding(contentPadding),
@@ -209,6 +223,7 @@ private fun MyProfileListContent(
       PersonaCardItem(
         persona = persona,
         onEdit = { onEditSlot(persona.slotId) },
+        onDefaultPersonaChange = { enabled -> onDefaultPersonaChange(persona.slotId, enabled) },
       )
     }
   }
@@ -218,6 +233,7 @@ private fun MyProfileListContent(
 private fun PersonaCardItem(
   persona: PersonaSlotCardUiState,
   onEdit: () -> Unit,
+  onDefaultPersonaChange: (Boolean) -> Unit,
 ) {
   Card(
     modifier = Modifier.fillMaxWidth().clickable(onClick = onEdit),
@@ -271,15 +287,12 @@ private fun PersonaCardItem(
           overflow = TextOverflow.Ellipsis,
         )
       }
-      if (persona.isDefault) {
-        Text(
-          text = stringResource(R.string.my_profile_default_persona_title),
-          style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.secondary,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
-      }
+      ToggleCard(
+        title = stringResource(R.string.my_profile_default_persona_title),
+        summary = stringResource(R.string.my_profile_default_persona_summary),
+        checked = persona.isDefault,
+        onCheckedChange = onDefaultPersonaChange,
+      )
       Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         FilledTonalButton(onClick = onEdit) {
           Text(stringResource(R.string.edit))
@@ -301,8 +314,6 @@ private fun MyProfileEditorContent(
   onPersonaPositionChange: (StPersonaDescriptionPosition) -> Unit,
   onPersonaDepthChange: (String) -> Unit,
   onPersonaRoleChange: (Int) -> Unit,
-  onDefaultPersonaEnabledChange: (Boolean) -> Unit,
-  onSave: () -> Unit,
 ) {
   Column(
     modifier =
@@ -361,19 +372,6 @@ private fun MyProfileEditorContent(
         selectedRole = uiState.personaRole,
         onSelected = onPersonaRoleChange,
       )
-    }
-    ToggleCard(
-      title = stringResource(R.string.my_profile_default_persona_title),
-      summary = stringResource(R.string.my_profile_default_persona_summary),
-      checked = uiState.defaultPersonaEnabled,
-      onCheckedChange = onDefaultPersonaEnabledChange,
-    )
-    FilledTonalButton(
-      modifier = Modifier.fillMaxWidth(),
-      enabled = uiState.dirty,
-      onClick = onSave,
-    ) {
-      Text(stringResource(R.string.my_profile_save))
     }
   }
 }

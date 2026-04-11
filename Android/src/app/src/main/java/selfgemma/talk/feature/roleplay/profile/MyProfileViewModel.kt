@@ -35,7 +35,6 @@ data class MyProfileUiState(
   val personaDepth: String = "2",
   val personaRole: Int = 0,
   val avatarSlotId: String = "",
-  val defaultPersonaEnabled: Boolean = true,
   val dirty: Boolean = false,
 )
 
@@ -72,10 +71,6 @@ constructor(
 
   fun updatePersonaRole(value: Int) {
     updateUiState { it.copy(personaRole = value) }
-  }
-
-  fun updateDefaultPersonaEnabled(enabled: Boolean) {
-    updateUiState { it.copy(defaultPersonaEnabled = enabled) }
   }
 
   fun updateAvatarUri(value: String?) {
@@ -121,6 +116,43 @@ constructor(
     )
   }
 
+  fun setDefaultPersona(
+    slotId: String,
+    enabled: Boolean,
+  ) {
+    val normalizedSlotId = slotId.trim()
+    if (normalizedSlotId.isBlank()) {
+      return
+    }
+    val nextSavedProfile =
+      savedProfile
+        .ensureSlot(normalizedSlotId)
+        .copy(
+          defaultPersonaId =
+            when {
+              enabled -> normalizedSlotId
+              savedProfile.defaultPersonaId == normalizedSlotId -> null
+              else -> savedProfile.defaultPersonaId
+            },
+        ).ensureDefaults()
+    val nextWorkingProfile =
+      workingProfile
+        .ensureSlot(normalizedSlotId)
+        .copy(
+          defaultPersonaId =
+            when {
+              enabled -> normalizedSlotId
+              workingProfile.defaultPersonaId == normalizedSlotId -> null
+              else -> workingProfile.defaultPersonaId
+            },
+        ).ensureDefaults()
+    dataStoreRepository.setStUserProfile(nextSavedProfile)
+    savedProfile = nextSavedProfile
+    workingProfile = nextWorkingProfile
+    _uiState.value = workingProfile.toUiState(savedProfile)
+    debugLog("set default persona avatarId=$normalizedSlotId enabled=$enabled dirty=${_uiState.value.dirty}")
+  }
+
   fun resetProfile() {
     val defaultProfile = StUserProfile().ensureDefaults()
     dataStoreRepository.setStUserProfile(defaultProfile)
@@ -139,17 +171,10 @@ constructor(
   private fun buildProfileFromUiState(state: MyProfileUiState): StUserProfile {
     val activeSlotId = state.avatarSlotId.ifBlank { workingProfile.resolvedUserAvatarId() }
     val baseProfile = workingProfile.ensureSlot(activeSlotId)
-    val resolvedDefaultPersonaId =
-      when {
-        state.defaultPersonaEnabled -> activeSlotId
-        baseProfile.defaultPersonaId == activeSlotId -> null
-        else -> baseProfile.defaultPersonaId
-      }
     val depthFallback = baseProfile.personaDescriptions[activeSlotId]?.depth ?: baseProfile.personaDescriptionDepth
     return baseProfile
       .copy(
         userAvatarId = activeSlotId,
-        defaultPersonaId = resolvedDefaultPersonaId,
       )
       .withActivePersona(
         name = state.personaName.trim(),
@@ -181,7 +206,6 @@ private fun StUserProfile.toUiState(savedProfile: StUserProfile): MyProfileUiSta
     personaDepth = personaDescriptionDepth.toString(),
     personaRole = personaDescriptionRole,
     avatarSlotId = activeSlotId,
-    defaultPersonaEnabled = defaultPersonaId == activeSlotId,
     dirty = this != savedProfile,
   )
 }

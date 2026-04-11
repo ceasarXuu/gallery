@@ -1,3 +1,30 @@
+## 2026-04-11 Persona editor save-entry and default-toggle note
+
+- Goal: align the `我的 / Me` persona editor with the role editor interaction model, while keeping ST-style `default_persona` semantics on the outer persona list.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat --stop
+.\gradlew.bat :app:compileDebugKotlin --no-daemon
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.feature.roleplay.profile.MyProfileViewModelTest" --no-daemon
+.\gradlew.bat :app:assembleDebug --no-daemon
+adb install -r D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk
+```
+
+Notes:
+
+- If the persona editor is meant to mirror the role editor, move the primary save affordance into `AppTopBar.rightAction` and remove the duplicate bottom button. The shared top bar currently supports a text action via `AppBarAction(..., label = ...)`, but it does not expose an `enabled` state.
+- `default_persona` should not be treated as part of the slot editor draft. Putting that switch inside the editor mixes two lifecycles:
+  slot-local draft fields and profile-level default selection.
+- The safer model is:
+  editor fields write into `workingProfile`
+  list-card default toggle persists `defaultPersonaId` immediately
+  unsaved draft field edits stay dirty until the user explicitly saves the editor.
+- When adding a list-level default toggle, test the failure mode where a user has unsaved persona edits and then changes the default slot. That action must not silently persist other draft fields.
+- This workspace still benefits from running `.\gradlew.bat --stop` before focused Kotlin/test commands when builds previously hung. It is faster than waiting for a daemon timeout and often avoids the known KAPT cache-lock path altogether.
+
 ## 2026-04-11 Top app bar overflow menu anchor note
 
 - Symptom on device: the roleplay chat page top-right overflow menu opened on top of the menu trigger, so the popup visually covered the three-dot button and felt misaligned compared with the role tab menu.

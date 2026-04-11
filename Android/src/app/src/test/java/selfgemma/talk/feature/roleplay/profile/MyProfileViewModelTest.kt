@@ -66,7 +66,7 @@ class MyProfileViewModelTest {
     viewModel.createAvatarSlot("slot-b")
     viewModel.updatePersonaName("Bob")
     viewModel.updatePersonaDescription("traveler")
-    viewModel.updateDefaultPersonaEnabled(true)
+    viewModel.setDefaultPersona("slot-b", true)
     viewModel.saveProfile()
 
     val savedProfile = dataStoreRepository.getStUserProfile()
@@ -102,5 +102,41 @@ class MyProfileViewModelTest {
     assertEquals("keeps the crew calm", updatedCard.personaDescription)
     assertEquals("content://persona/avatar-a", updatedCard.avatarUri)
     assertEquals("content://persona/avatar-a", viewModel.uiState.value.avatarUri)
+  }
+
+  @Test
+  fun settingDefaultPersona_isMutuallyExclusiveAndDoesNotPersistUnsavedDraftFields() {
+    val dataStoreRepository =
+      FakeDataStoreRepository(
+        stUserProfile =
+          StUserProfile(
+            userAvatarId = "slot-a",
+            defaultPersonaId = "slot-a",
+            personas = mapOf("slot-a" to "Alice"),
+            personaDescriptions =
+              mapOf(
+                "slot-a" to StPersonaDescriptor(description = "old description"),
+              ),
+          ).ensureDefaults(),
+      )
+    val viewModel = MyProfileViewModel(dataStoreRepository)
+
+    viewModel.updatePersonaDescription("draft description")
+    viewModel.createAvatarSlot("slot-b")
+    viewModel.updatePersonaName("Bob Draft")
+    viewModel.setDefaultPersona("slot-b", true)
+
+    val savedProfile = dataStoreRepository.getStUserProfile()
+    assertEquals("slot-b", savedProfile.defaultPersonaId)
+    assertEquals("old description", savedProfile.personaDescriptions["slot-a"]?.description)
+    assertEquals(DEFAULT_ST_USER_NAME, savedProfile.personas["slot-b"])
+
+    val slotACard = viewModel.uiState.value.personaCards.first { it.slotId == "slot-a" }
+    val slotBCard = viewModel.uiState.value.personaCards.first { it.slotId == "slot-b" }
+    assertEquals("draft description", slotACard.personaDescription)
+    assertEquals("Bob Draft", slotBCard.personaName)
+    assertTrue(!slotACard.isDefault)
+    assertTrue(slotBCard.isDefault)
+    assertTrue(viewModel.uiState.value.dirty)
   }
 }
