@@ -107,13 +107,13 @@ constructor(
   }
 
   fun saveProfile() {
-    val updatedProfile = buildProfileFromUiState(_uiState.value)
+    val updatedProfile = buildProfileFromUiState(_uiState.value).ensureDefaults()
     dataStoreRepository.setStUserProfile(updatedProfile)
     savedProfile = updatedProfile
     workingProfile = updatedProfile
     _uiState.value = updatedProfile.toUiState(savedProfile)
     debugLog(
-      "saved ST user persona avatarId=${updatedProfile.resolvedUserAvatarId()} name=${updatedProfile.userName} position=${updatedProfile.personaDescriptionPosition.rawValue}",
+      "saved ST user persona avatarId=${updatedProfile.resolvedUserAvatarId()} name=${updatedProfile.userName} avatarUri=${updatedProfile.activeAvatarUri} slotCount=${updatedProfile.personas.size} position=${updatedProfile.personaDescriptionPosition.rawValue}",
     )
   }
 

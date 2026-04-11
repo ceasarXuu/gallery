@@ -1016,3 +1016,25 @@ Notes:
   one persona => start chat directly
   multiple personas => show picker with default persona first
   chat page => persona banner plus user-side avatar/name both reflect the chosen session snapshot.
+
+## 2026-04-11 Persona save focus-commit note
+
+- Symptom: after editing persona name/avatar and tapping the top-right save action, users could re-enter and find the persona looking like it had reverted or dropped back to fallback values.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat --stop
+Remove-Item -Recurse -Force app\build\tmp\hiltJavaCompileDebug, app\build\tmp\kapt3 -ErrorAction SilentlyContinue
+.\gradlew.bat :app:compileDebugKotlin --no-daemon
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.feature.roleplay.profile.MyProfileViewModelTest" --no-daemon
+.\gradlew.bat :app:assembleDebug --no-daemon
+adb install -r D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk
+```
+
+Notes:
+
+- When the primary save affordance lives in the top app bar, clear focus before saving. This gives the active text field a chance to commit IME composition state before the ViewModel snapshots the form.
+- Persona save logs should include `avatarId`, `name`, `avatarUri`, and slot count. Those four values are enough to distinguish “UI did not commit” from “DataStore round-trip lost data”.
+- This workspace's Kotlin daemon still intermittently fails while closing incremental caches. If the command falls back and then succeeds, treat it as infrastructure noise rather than a source-level regression.

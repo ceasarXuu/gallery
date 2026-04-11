@@ -78,6 +78,44 @@ class MyProfileViewModelTest {
   }
 
   @Test
+  fun saveProfile_roundTripsPersonaNameAndAvatarAfterReload() {
+    val dataStoreRepository =
+      FakeDataStoreRepository(
+        stUserProfile =
+          StUserProfile(
+            userAvatarId = "slot-a",
+            defaultPersonaId = "slot-a",
+            personas =
+              mapOf(
+                "slot-a" to "Alice",
+                "slot-b" to "Bob",
+              ),
+            personaDescriptions =
+              mapOf(
+                "slot-a" to StPersonaDescriptor(description = "alpha"),
+                "slot-b" to StPersonaDescriptor(description = "beta"),
+              ),
+          ).ensureDefaults(),
+      )
+    val viewModel = MyProfileViewModel(dataStoreRepository)
+
+    viewModel.selectAvatarSlot("slot-b")
+    viewModel.updatePersonaName("Bob Reloaded")
+    viewModel.updateAvatarUri("content://persona/avatar-b")
+    viewModel.saveProfile()
+
+    val reloadedViewModel = MyProfileViewModel(dataStoreRepository)
+    assertEquals("slot-b", reloadedViewModel.uiState.value.avatarSlotId)
+    assertEquals("Bob Reloaded", reloadedViewModel.uiState.value.personaName)
+    assertEquals("content://persona/avatar-b", reloadedViewModel.uiState.value.avatarUri)
+
+    reloadedViewModel.selectAvatarSlot("slot-b")
+    val reloadedCard = reloadedViewModel.uiState.value.personaCards.first { it.slotId == "slot-b" }
+    assertEquals("Bob Reloaded", reloadedCard.personaName)
+    assertEquals("content://persona/avatar-b", reloadedCard.avatarUri)
+  }
+
+  @Test
   fun updatingPersonaFields_refreshesCardSummariesFromDraftProfile() {
     val viewModel =
       MyProfileViewModel(

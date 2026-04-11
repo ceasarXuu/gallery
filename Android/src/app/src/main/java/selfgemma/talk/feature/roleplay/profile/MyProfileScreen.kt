@@ -51,6 +51,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -100,6 +102,8 @@ fun MyProfileScreen(
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val context = LocalContext.current
+  val focusManager = LocalFocusManager.current
+  val keyboardController = LocalSoftwareKeyboardController.current
   var editingSlotId by rememberSaveable { mutableStateOf<String?>(null) }
   var showCreateDialog by rememberSaveable { mutableStateOf(false) }
   var newSlotId by rememberSaveable { mutableStateOf("") }
@@ -148,6 +152,8 @@ fun MyProfileScreen(
             AppBarAction(
               actionType = AppBarActionType.NAVIGATE_UP,
               actionFn = {
+                focusManager.clearFocus(force = true)
+                keyboardController?.hide()
                 viewModel.saveProfile()
                 Log.d(TAG, "saved persona and returned to persona list")
                 editingSlotId = null
