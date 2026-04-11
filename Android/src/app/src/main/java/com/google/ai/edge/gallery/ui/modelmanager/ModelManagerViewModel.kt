@@ -140,6 +140,7 @@ data class ModelManagerUiState(
 
   /** The history of text inputs entered by the user. */
   val textInputHistory: List<String> = listOf(),
+  val settingsUpdateTrigger: Long = 0L,
   val configValuesUpdateTrigger: Long = 0L,
   // Updated when model is imported of an imported model is deleted.
   val modelImportingUpdateTrigger: Long = 0L,
@@ -268,6 +269,10 @@ constructor(
 
   fun updateConfigValuesUpdateTrigger() {
     _uiState.update { _uiState.value.copy(configValuesUpdateTrigger = System.currentTimeMillis()) }
+  }
+
+  fun updateSettingsUpdateTrigger() {
+    _uiState.update { _uiState.value.copy(settingsUpdateTrigger = System.currentTimeMillis()) }
   }
 
   fun selectModel(model: Model) {
@@ -541,6 +546,26 @@ constructor(
 
   fun saveThemeOverride(theme: Theme) {
     dataStoreRepository.saveTheme(theme = theme)
+  }
+
+  fun setLiveTokenSpeedEnabled(enabled: Boolean) {
+    Log.d(TAG, "Updating live token speed visibility enabled=$enabled")
+    dataStoreRepository.setLiveTokenSpeedEnabled(enabled)
+    updateSettingsUpdateTrigger()
+  }
+
+  fun isLiveTokenSpeedEnabled(): Boolean {
+    return dataStoreRepository.isLiveTokenSpeedEnabled()
+  }
+
+  fun setStreamingOutputEnabled(enabled: Boolean) {
+    Log.d(TAG, "Updating streaming output enabled=$enabled")
+    dataStoreRepository.setStreamingOutputEnabled(enabled)
+    updateSettingsUpdateTrigger()
+  }
+
+  fun isStreamingOutputEnabled(): Boolean {
+    return dataStoreRepository.isStreamingOutputEnabled()
   }
 
   fun getModelUrlResponse(model: Model, accessToken: String? = null): Int {

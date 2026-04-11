@@ -167,6 +167,10 @@ fun HomeScreen(
   gm4: Boolean = false,
 ) {
   val uiState by modelManagerViewModel.uiState.collectAsState()
+  // NOTE:
+  // This dialog is the home-screen drawer settings entry for the legacy gallery surface.
+  // It is NOT the settings page shown by the roleplay bottom "Settings" tab.
+  // Roleplay tab settings are rendered by selfgemma.talk.feature.roleplay.settings.RoleplaySettingsScreen.
   var showSettingsDialog by remember { mutableStateOf(false) }
   var showTosDialog by remember { mutableStateOf(!tosViewModel.getIsTosAccepted()) }
   val scope = rememberCoroutineScope()

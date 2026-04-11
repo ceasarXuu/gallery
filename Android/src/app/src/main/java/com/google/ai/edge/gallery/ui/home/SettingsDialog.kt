@@ -50,6 +50,7 @@ import androidx.compose.material3.MultiChoiceSegmentedButtonRow
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -95,6 +96,8 @@ fun SettingsDialog(
   onDismissed: () -> Unit,
 ) {
   var selectedTheme by remember { mutableStateOf(curThemeOverride) }
+  var showLiveTokenSpeed by remember { mutableStateOf(modelManagerViewModel.isLiveTokenSpeedEnabled()) }
+  var enableStreamingOutput by remember { mutableStateOf(modelManagerViewModel.isStreamingOutputEnabled()) }
   var hfToken by remember { mutableStateOf(modelManagerViewModel.getTokenStatusAndData().data) }
   val dateFormatter = remember {
     DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -184,6 +187,60 @@ fun SettingsDialog(
                   label = { Text(themeLabel(theme)) },
                 )
               }
+            }
+          }
+
+          Column(modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(12.dp),
+              verticalAlignment = Alignment.CenterVertically,
+            ) {
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  stringResource(R.string.settings_dialog_live_token_speed_title),
+                  style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium),
+                )
+                Text(
+                  stringResource(R.string.settings_dialog_live_token_speed_summary),
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+              }
+              Switch(
+                checked = showLiveTokenSpeed,
+                onCheckedChange = { enabled ->
+                  showLiveTokenSpeed = enabled
+                  modelManagerViewModel.setLiveTokenSpeedEnabled(enabled)
+                },
+              )
+            }
+          }
+
+          Column(modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(12.dp),
+              verticalAlignment = Alignment.CenterVertically,
+            ) {
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  stringResource(R.string.settings_dialog_streaming_output_title),
+                  style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium),
+                )
+                Text(
+                  stringResource(R.string.settings_dialog_streaming_output_summary),
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+              }
+              Switch(
+                checked = enableStreamingOutput,
+                onCheckedChange = { enabled ->
+                  enableStreamingOutput = enabled
+                  modelManagerViewModel.setStreamingOutputEnabled(enabled)
+                },
+              )
             }
           }
 

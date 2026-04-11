@@ -113,6 +113,34 @@ fun ChatView(
   val uiState by viewModel.uiState.collectAsState()
   val modelManagerUiState by modelManagerViewModel.uiState.collectAsState()
   val selectedModel = modelManagerUiState.selectedModel
+  val showLiveTokenSpeed =
+    remember(modelManagerUiState.settingsUpdateTrigger) {
+      modelManagerViewModel.isLiveTokenSpeedEnabled()
+    }
+  val selectedModelMessages = uiState.messagesByModel[selectedModel.name].orEmpty()
+  val activeStreamingText =
+    remember(selectedModelMessages, uiState.inProgress) {
+      val lastMessage = selectedModelMessages.lastOrNull()
+      if (
+        uiState.inProgress &&
+          lastMessage is ChatMessageText &&
+          lastMessage.side == ChatSide.AGENT
+      ) {
+        lastMessage.content
+      } else {
+        ""
+      }
+    }
+  val tokenSpeed =
+    rememberStreamingTokenSpeed(
+      streamingText = activeStreamingText,
+      isStreaming = showLiveTokenSpeed && uiState.inProgress,
+    )
+  val tokenSpeedSubtitle =
+    tokenSpeed
+      ?.takeIf { showLiveTokenSpeed }
+      ?.let { stringResource(R.string.chat_token_speed_format, it) }
+      .orEmpty()
 
   // Image viewer related.
   var selectedImageIndex by remember { mutableIntStateOf(-1) }
@@ -199,6 +227,7 @@ fun ChatView(
         allowEditingSystemPrompt = allowEditingSystemPrompt,
         curSystemPrompt = curSystemPrompt,
         onSystemPromptChanged = onSystemPromptChanged,
+        subtitle = tokenSpeedSubtitle,
       )
     },
   ) { innerPadding ->

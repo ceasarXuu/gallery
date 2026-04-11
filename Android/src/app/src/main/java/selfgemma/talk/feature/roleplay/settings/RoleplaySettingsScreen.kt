@@ -57,6 +57,11 @@ fun RoleplaySettingsScreen(
   contentPadding: PaddingValues = PaddingValues(0.dp),
   viewModel: RoleplaySettingsViewModel = hiltViewModel(),
 ) {
+  // NOTE:
+  // This is the canonical settings screen for the roleplay experience:
+  // - bottom "Settings" tab in MainTabScreen
+  // - RoleplayRoutes.SETTINGS in GalleryNavGraph
+  // Keep roleplay-facing settings toggles here so they match what the user sees in the tab UI.
   var showLanguageDialog by remember { mutableStateOf(false) }
   var showAssistantModelDialog by remember { mutableStateOf(false) }
   val currentLocaleTag = AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore(',')
@@ -116,6 +121,18 @@ fun RoleplaySettingsScreen(
         summary = stringResource(R.string.settings_message_sounds_summary),
         checked = uiState.messageSoundsEnabled,
         onCheckedChange = viewModel::setMessageSoundsEnabled,
+      )
+      ToggleSettingsCard(
+        title = stringResource(R.string.settings_dialog_live_token_speed_title),
+        summary = stringResource(R.string.settings_dialog_live_token_speed_summary),
+        checked = uiState.liveTokenSpeedEnabled,
+        onCheckedChange = viewModel::setLiveTokenSpeedEnabled,
+      )
+      ToggleSettingsCard(
+        title = stringResource(R.string.settings_dialog_streaming_output_title),
+        summary = stringResource(R.string.settings_dialog_streaming_output_summary),
+        checked = uiState.streamingOutputEnabled,
+        onCheckedChange = viewModel::setStreamingOutputEnabled,
       )
       SettingsCard(
         title = stringResource(R.string.settings_model_library_title),

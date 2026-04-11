@@ -100,3 +100,21 @@ adb shell dumpsys activity activities | Select-String -Pattern 'topResumedActivi
 adb logcat -c
 adb logcat -d -s RoleplayChatViewModel SendRoleplayMessage AndroidRuntime
 ```
+
+### Device identity note for explicit reinstall
+
+Reusable commands:
+
+```powershell
+adb devices -l
+adb -s ONNZ95CAEMMZSKTS install -r D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk
+adb -s ONNZ95CAEMMZSKTS shell am force-stop selfgemma.talk
+adb -s ONNZ95CAEMMZSKTS shell am start -n selfgemma.talk/.MainActivity
+adb -s ONNZ95CAEMMZSKTS shell dumpsys activity activities | Select-String -Pattern 'topResumedActivity|selfgemma.talk/.MainActivity'
+```
+
+Notes:
+
+- `adb devices -l` showed serial `ONNZ95CAEMMZSKTS` with model `23078RKD5C`. Gradle install output may print the model label (`23078RKD5C - 16`) instead of the adb serial, which can look like a different device even when it is the same phone.
+- When install target certainty matters, prefer explicit `adb -s <serial> install -r ...` after build output is produced.
+- Treat `installDebug` success alone as insufficient when device identity is ambiguous; verify with a serial-pinned launch plus `dumpsys activity` resumed-state check.

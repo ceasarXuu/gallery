@@ -13,6 +13,8 @@ private const val TAG = "RoleplaySettingsViewModel"
 
 data class RoleplaySettingsUiState(
   val messageSoundsEnabled: Boolean = true,
+  val liveTokenSpeedEnabled: Boolean = true,
+  val streamingOutputEnabled: Boolean = true,
   val roleEditorAssistantModelId: String? = null,
 )
 
@@ -26,6 +28,8 @@ constructor(
     MutableStateFlow(
       RoleplaySettingsUiState(
         messageSoundsEnabled = dataStoreRepository.areMessageSoundsEnabled(),
+        liveTokenSpeedEnabled = dataStoreRepository.isLiveTokenSpeedEnabled(),
+        streamingOutputEnabled = dataStoreRepository.isStreamingOutputEnabled(),
         roleEditorAssistantModelId = dataStoreRepository.getRoleEditorAssistantModelId(),
       )
     )
@@ -35,6 +39,18 @@ constructor(
     dataStoreRepository.setMessageSoundsEnabled(enabled)
     _uiState.value = _uiState.value.copy(messageSoundsEnabled = enabled)
     Log.d(TAG, "message sounds updated enabled=$enabled")
+  }
+
+  fun setLiveTokenSpeedEnabled(enabled: Boolean) {
+    dataStoreRepository.setLiveTokenSpeedEnabled(enabled)
+    _uiState.value = _uiState.value.copy(liveTokenSpeedEnabled = enabled)
+    Log.d(TAG, "live token speed updated enabled=$enabled")
+  }
+
+  fun setStreamingOutputEnabled(enabled: Boolean) {
+    dataStoreRepository.setStreamingOutputEnabled(enabled)
+    _uiState.value = _uiState.value.copy(streamingOutputEnabled = enabled)
+    Log.d(TAG, "streaming output updated enabled=$enabled")
   }
 
   fun setRoleEditorAssistantModelId(modelId: String?) {

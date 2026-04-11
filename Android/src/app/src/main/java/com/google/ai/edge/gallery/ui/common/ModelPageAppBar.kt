@@ -82,6 +82,7 @@ fun ModelPageAppBar(
   allowEditingSystemPrompt: Boolean = false,
   curSystemPrompt: String = "",
   onSystemPromptChanged: (String) -> Unit = {},
+  subtitle: String = "",
 ) {
   var showConfigDialog by remember { mutableStateOf(false) }
   val modelManagerUiState by modelManagerViewModel.uiState.collectAsState()
@@ -125,6 +126,14 @@ fun ModelPageAppBar(
             initialModel = model,
             modelManagerViewModel = modelManagerViewModel,
             onModelSelected = onModelSelected,
+          )
+        }
+
+        if (subtitle.isNotEmpty()) {
+          Text(
+            text = subtitle,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.secondary,
           )
         }
       }

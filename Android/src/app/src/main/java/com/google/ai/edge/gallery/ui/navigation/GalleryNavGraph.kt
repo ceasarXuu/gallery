@@ -317,6 +317,9 @@ composable(route = RoleplayRoutes.ROLE_CATALOG, enterTransition = { slideEnter()
     }
 
     composable(route = RoleplayRoutes.SETTINGS, enterTransition = { slideUpEnter() }, exitTransition = { slideDownExit() }) {
+      // NOTE:
+      // This route uses the same RoleplaySettingsScreen as the roleplay bottom "Settings" tab.
+      // There is also a separate legacy home SettingsDialog used by HomeScreen drawer actions.
       RoleplaySettingsScreen(
         modelManagerViewModel = modelManagerViewModel,
         navigateUp = { navController.navigateUp() },
