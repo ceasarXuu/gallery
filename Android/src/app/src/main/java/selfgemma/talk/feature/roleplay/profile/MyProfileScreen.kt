@@ -255,7 +255,10 @@ private fun PersonaCardItem(
   onDefaultPersonaChange: (Boolean) -> Unit,
   deleteEnabled: Boolean,
 ) {
-  Card(modifier = Modifier.fillMaxWidth()) {
+  Card(
+    modifier = Modifier.fillMaxWidth(),
+    onClick = onEdit,
+  ) {
     Column(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -300,15 +303,9 @@ private fun PersonaCardItem(
       }
       Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        FilledTonalButton(
-          modifier = Modifier.weight(1f),
-          onClick = onEdit,
-        ) {
-          Text(stringResource(R.string.edit))
-        }
         OutlinedButton(
           modifier = Modifier.weight(1f),
           enabled = deleteEnabled,
