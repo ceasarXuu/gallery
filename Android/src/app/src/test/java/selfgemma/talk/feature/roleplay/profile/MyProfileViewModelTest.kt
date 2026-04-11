@@ -94,10 +94,13 @@ class MyProfileViewModelTest {
     viewModel.updatePersonaName("Alice Draft")
     viewModel.updatePersonaTitle("Captain")
     viewModel.updatePersonaDescription("keeps the crew calm")
+    viewModel.updateAvatarUri("content://persona/avatar-a")
 
     val updatedCard = viewModel.uiState.value.personaCards.first { it.slotId == "slot-a" }
     assertEquals("Alice Draft", updatedCard.personaName)
     assertEquals("Captain", updatedCard.personaTitle)
     assertEquals("keeps the crew calm", updatedCard.personaDescription)
+    assertEquals("content://persona/avatar-a", updatedCard.avatarUri)
+    assertEquals("content://persona/avatar-a", viewModel.uiState.value.avatarUri)
   }
 }

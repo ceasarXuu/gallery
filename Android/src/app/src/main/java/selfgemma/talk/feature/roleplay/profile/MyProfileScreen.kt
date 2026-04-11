@@ -1,7 +1,11 @@
 package selfgemma.talk.feature.roleplay.profile
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -39,6 +43,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,11 +69,19 @@ fun MyProfileScreen(
   viewModel: MyProfileViewModel = hiltViewModel(),
 ) {
   val uiState by viewModel.uiState.collectAsState()
+  val context = LocalContext.current
   var editingSlotId by rememberSaveable { mutableStateOf<String?>(null) }
   var showCreateDialog by rememberSaveable { mutableStateOf(false) }
   var newSlotId by rememberSaveable { mutableStateOf("") }
   var showMenu by rememberSaveable { mutableStateOf(false) }
   val isEditing = editingSlotId != null
+  val avatarLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+      if (uri != null) {
+        takeReadPermission(context = context, uri = uri)
+      }
+      viewModel.updateAvatarUri(uri?.toString())
+    }
   val handleNavigateUp: () -> Unit = {
     if (isEditing) {
       Log.d(TAG, "return from persona editor to persona list")
@@ -143,6 +156,8 @@ fun MyProfileScreen(
         onPersonaNameChange = viewModel::updatePersonaName,
         onPersonaTitleChange = viewModel::updatePersonaTitle,
         onPersonaDescriptionChange = viewModel::updatePersonaDescription,
+        onAvatarPick = { avatarLauncher.launch(arrayOf("image/*")) },
+        onAvatarClear = { viewModel.updateAvatarUri(null) },
         onPersonaPositionChange = viewModel::updatePersonaPosition,
         onPersonaDepthChange = viewModel::updatePersonaDepth,
         onPersonaRoleChange = viewModel::updatePersonaRole,
@@ -281,6 +296,8 @@ private fun MyProfileEditorContent(
   onPersonaNameChange: (String) -> Unit,
   onPersonaTitleChange: (String) -> Unit,
   onPersonaDescriptionChange: (String) -> Unit,
+  onAvatarPick: () -> Unit,
+  onAvatarClear: () -> Unit,
   onPersonaPositionChange: (StPersonaDescriptionPosition) -> Unit,
   onPersonaDepthChange: (String) -> Unit,
   onPersonaRoleChange: (Int) -> Unit,
@@ -296,9 +313,12 @@ private fun MyProfileEditorContent(
         .padding(16.dp),
     verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {
-    InfoCard(
-      title = stringResource(R.string.my_profile_avatar_slot_title),
-      value = uiState.avatarSlotId,
+    PersonaAvatarCard(
+      name = uiState.personaName,
+      avatarUri = uiState.avatarUri,
+      slotId = uiState.avatarSlotId,
+      onPickAvatar = onAvatarPick,
+      onClearAvatar = onAvatarClear,
     )
     EditorCard(title = stringResource(R.string.my_profile_persona_name_title)) {
       OutlinedTextField(
@@ -512,22 +532,77 @@ private fun EditorCard(
 }
 
 @Composable
-private fun InfoCard(
-  title: String,
-  value: String,
+private fun PersonaAvatarCard(
+  name: String,
+  avatarUri: String?,
+  slotId: String,
+  onPickAvatar: () -> Unit,
+  onClearAvatar: () -> Unit,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(6.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-      Text(text = title, style = MaterialTheme.typography.titleMedium)
-      Text(
-        text = value,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
+      Row(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        RoleAvatar(
+          name = name.ifBlank { slotId },
+          avatarUri = avatarUri,
+          modifier = Modifier.size(88.dp),
+        )
+        Column(
+          modifier = Modifier.weight(1f),
+          verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+          Text(
+            text = stringResource(R.string.role_editor_avatar_title),
+            style = MaterialTheme.typography.titleMedium,
+          )
+          Text(
+            text = "${stringResource(R.string.my_profile_avatar_slot_title)}: $slotId",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+          if (avatarUri.isNullOrBlank()) {
+            Text(
+              text = stringResource(R.string.role_editor_avatar_empty),
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          }
+        }
+      }
+      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        FilledTonalButton(onClick = onPickAvatar) {
+          Text(
+            if (avatarUri.isNullOrBlank()) {
+              stringResource(R.string.role_editor_media_add)
+            } else {
+              stringResource(R.string.role_editor_media_replace)
+            },
+          )
+        }
+        if (!avatarUri.isNullOrBlank()) {
+          TextButton(onClick = onClearAvatar) {
+            Text(stringResource(R.string.role_editor_media_clear))
+          }
+        }
+      }
     }
+  }
+}
+
+private fun takeReadPermission(context: android.content.Context, uri: Uri) {
+  runCatching {
+    context.contentResolver.takePersistableUriPermission(
+      uri,
+      Intent.FLAG_GRANT_READ_URI_PERMISSION,
+    )
   }
 }
 

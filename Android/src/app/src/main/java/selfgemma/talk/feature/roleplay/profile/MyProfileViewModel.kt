@@ -27,6 +27,7 @@ data class PersonaSlotCardUiState(
 
 data class MyProfileUiState(
   val personaCards: List<PersonaSlotCardUiState> = emptyList(),
+  val avatarUri: String? = null,
   val personaName: String = "",
   val personaTitle: String = "",
   val personaDescription: String = "",
@@ -75,6 +76,10 @@ constructor(
 
   fun updateDefaultPersonaEnabled(enabled: Boolean) {
     updateUiState { it.copy(defaultPersonaEnabled = enabled) }
+  }
+
+  fun updateAvatarUri(value: String?) {
+    updateUiState { it.copy(avatarUri = value?.takeIf(String::isNotBlank)) }
   }
 
   fun selectAvatarSlot(slotId: String) {
@@ -154,7 +159,7 @@ constructor(
         depth = state.personaDepth.toIntOrNull()?.coerceAtLeast(0) ?: depthFallback,
         role = state.personaRole,
         lorebook = baseProfile.personaDescriptionLorebook,
-        avatarUri = baseProfile.activeAvatarUri,
+        avatarUri = state.avatarUri?.takeIf(String::isNotBlank),
       )
       .ensureDefaults()
   }
@@ -168,6 +173,7 @@ private fun StUserProfile.toUiState(savedProfile: StUserProfile): MyProfileUiSta
   val activeSlotId = resolvedUserAvatarId()
   return MyProfileUiState(
     personaCards = personaCards(activeSlotId),
+    avatarUri = activeAvatarUri,
     personaName = userName,
     personaTitle = personaTitle,
     personaDescription = personaDescription,
