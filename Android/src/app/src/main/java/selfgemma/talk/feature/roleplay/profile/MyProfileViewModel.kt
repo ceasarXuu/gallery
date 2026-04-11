@@ -23,6 +23,10 @@ data class PersonaSlotCardUiState(
   val personaTitle: String,
   val personaDescription: String,
   val avatarUri: String? = null,
+  val avatarEditorSourceUri: String? = null,
+  val avatarCropZoom: Float = 1f,
+  val avatarCropOffsetX: Float = 0f,
+  val avatarCropOffsetY: Float = 0f,
   val isDefault: Boolean = false,
   val isSelected: Boolean = false,
 )
@@ -30,6 +34,10 @@ data class PersonaSlotCardUiState(
 data class MyProfileUiState(
   val personaCards: List<PersonaSlotCardUiState> = emptyList(),
   val avatarUri: String? = null,
+  val avatarEditorSourceUri: String? = null,
+  val avatarCropZoom: Float = 1f,
+  val avatarCropOffsetX: Float = 0f,
+  val avatarCropOffsetY: Float = 0f,
   val personaName: String = "",
   val personaTitle: String = "",
   val personaDescription: String = "",
@@ -81,6 +89,24 @@ constructor(
 
   fun updateAvatarUri(value: String?) {
     updateUiState { it.copy(avatarUri = value?.takeIf(String::isNotBlank)) }
+  }
+
+  fun updateAvatarEditState(
+    avatarUri: String?,
+    avatarEditorSourceUri: String?,
+    avatarCropZoom: Float,
+    avatarCropOffsetX: Float,
+    avatarCropOffsetY: Float,
+  ) {
+    updateUiState {
+      it.copy(
+        avatarUri = avatarUri?.takeIf(String::isNotBlank),
+        avatarEditorSourceUri = avatarEditorSourceUri?.takeIf(String::isNotBlank),
+        avatarCropZoom = avatarCropZoom,
+        avatarCropOffsetX = avatarCropOffsetX,
+        avatarCropOffsetY = avatarCropOffsetY,
+      )
+    }
   }
 
   fun selectAvatarSlot(slotId: String) {
@@ -209,6 +235,10 @@ constructor(
         role = state.personaRole,
         lorebook = baseProfile.personaDescriptionLorebook,
         avatarUri = state.avatarUri?.takeIf(String::isNotBlank),
+        avatarEditorSourceUri = state.avatarEditorSourceUri?.takeIf(String::isNotBlank),
+        avatarCropZoom = state.avatarCropZoom,
+        avatarCropOffsetX = state.avatarCropOffsetX,
+        avatarCropOffsetY = state.avatarCropOffsetY,
       )
       .ensureDefaults()
   }
@@ -223,7 +253,7 @@ private fun debugProfile(
   profile: StUserProfile,
 ) {
   debugLog(
-    "$prefix avatarId=${profile.resolvedUserAvatarId()} default=${profile.defaultPersonaId} name=${profile.userName} avatarUri=${profile.activeAvatarUri} slots=${profile.availablePersonaSlotIds()} personas=${profile.personas} personaAvatarUris=${profile.personaDescriptions.mapValues { (_, descriptor) -> descriptor.avatarUri }} position=${profile.personaDescriptionPosition.rawValue}",
+    "$prefix avatarId=${profile.resolvedUserAvatarId()} default=${profile.defaultPersonaId} name=${profile.userName} avatarUri=${profile.activeAvatarUri} avatarSourceUri=${profile.activeAvatarEditorSourceUri} cropZoom=${profile.activeAvatarCropZoom} cropOffsetX=${profile.activeAvatarCropOffsetX} cropOffsetY=${profile.activeAvatarCropOffsetY} slots=${profile.availablePersonaSlotIds()} personas=${profile.personas} personaAvatarUris=${profile.personaDescriptions.mapValues { (_, descriptor) -> descriptor.avatarUri }} position=${profile.personaDescriptionPosition.rawValue}",
   )
 }
 
@@ -232,6 +262,10 @@ private fun StUserProfile.toUiState(savedProfile: StUserProfile): MyProfileUiSta
   return MyProfileUiState(
     personaCards = personaCards(activeSlotId),
     avatarUri = activeAvatarUri,
+    avatarEditorSourceUri = activeAvatarEditorSourceUri,
+    avatarCropZoom = activeAvatarCropZoom,
+    avatarCropOffsetX = activeAvatarCropOffsetX,
+    avatarCropOffsetY = activeAvatarCropOffsetY,
     personaName = userName,
     personaTitle = personaTitle,
     personaDescription = personaDescription,
@@ -253,6 +287,10 @@ private fun StUserProfile.personaCards(activeSlotId: String): List<PersonaSlotCa
         personaTitle = descriptor.title,
         personaDescription = descriptor.description,
         avatarUri = descriptor.avatarUri,
+        avatarEditorSourceUri = descriptor.avatarEditorSourceUri?.takeIf { it.isNotBlank() } ?: descriptor.avatarUri,
+        avatarCropZoom = descriptor.avatarCropZoom,
+        avatarCropOffsetX = descriptor.avatarCropOffsetX,
+        avatarCropOffsetY = descriptor.avatarCropOffsetY,
         isDefault = defaultPersonaId == slotId,
         isSelected = activeSlotId == slotId,
       )

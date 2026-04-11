@@ -35,6 +35,10 @@ data class StPersonaDescriptor(
   val lorebook: String = "",
   val connections: List<StPersonaConnection> = emptyList(),
   val avatarUri: String? = null,
+  val avatarEditorSourceUri: String? = null,
+  val avatarCropZoom: Float = 1f,
+  val avatarCropOffsetX: Float = 0f,
+  val avatarCropOffsetY: Float = 0f,
 )
 
 data class StUserProfile(
@@ -67,6 +71,18 @@ data class StUserProfile(
 
   val activeAvatarUri: String?
     get() = activePersonaDescriptor().avatarUri
+
+  val activeAvatarEditorSourceUri: String?
+    get() = activePersonaDescriptor().avatarEditorSourceUri?.takeIf { it.isNotBlank() } ?: activeAvatarUri
+
+  val activeAvatarCropZoom: Float
+    get() = activePersonaDescriptor().avatarCropZoom
+
+  val activeAvatarCropOffsetX: Float
+    get() = activePersonaDescriptor().avatarCropOffsetX
+
+  val activeAvatarCropOffsetY: Float
+    get() = activePersonaDescriptor().avatarCropOffsetY
 
   fun activePersonaDescriptor(): StPersonaDescriptor {
     return personaDescriptions[resolvedUserAvatarId()] ?: StPersonaDescriptor()
@@ -103,6 +119,10 @@ data class StUserProfile(
     role: Int = personaDescriptionRole,
     lorebook: String = personaDescriptionLorebook,
     avatarUri: String? = activeAvatarUri,
+    avatarEditorSourceUri: String? = activeAvatarEditorSourceUri,
+    avatarCropZoom: Float = activeAvatarCropZoom,
+    avatarCropOffsetX: Float = activeAvatarCropOffsetX,
+    avatarCropOffsetY: Float = activeAvatarCropOffsetY,
   ): StUserProfile {
     val resolvedAvatarId = resolvedUserAvatarId()
     val currentDescriptor = activePersonaDescriptor()
@@ -121,6 +141,10 @@ data class StUserProfile(
                 role = role,
                 lorebook = lorebook,
                 avatarUri = avatarUri,
+                avatarEditorSourceUri = avatarEditorSourceUri?.takeIf { it.isNotBlank() },
+                avatarCropZoom = avatarCropZoom,
+                avatarCropOffsetX = avatarCropOffsetX,
+                avatarCropOffsetY = avatarCropOffsetY,
               )
           },
     ).ensureDefaults()

@@ -101,18 +101,29 @@ class MyProfileViewModelTest {
 
     viewModel.selectAvatarSlot("slot-b")
     viewModel.updatePersonaName("Bob Reloaded")
-    viewModel.updateAvatarUri("content://persona/avatar-b")
+    viewModel.updateAvatarEditState(
+      avatarUri = "content://persona/avatar-b",
+      avatarEditorSourceUri = "content://persona/source-b",
+      avatarCropZoom = 1.8f,
+      avatarCropOffsetX = 0.12f,
+      avatarCropOffsetY = -0.08f,
+    )
     viewModel.saveProfile()
 
     val reloadedViewModel = MyProfileViewModel(dataStoreRepository)
     assertEquals("slot-b", reloadedViewModel.uiState.value.avatarSlotId)
     assertEquals("Bob Reloaded", reloadedViewModel.uiState.value.personaName)
     assertEquals("content://persona/avatar-b", reloadedViewModel.uiState.value.avatarUri)
+    assertEquals("content://persona/source-b", reloadedViewModel.uiState.value.avatarEditorSourceUri)
+    assertEquals(1.8f, reloadedViewModel.uiState.value.avatarCropZoom, 0.001f)
+    assertEquals(0.12f, reloadedViewModel.uiState.value.avatarCropOffsetX, 0.001f)
+    assertEquals(-0.08f, reloadedViewModel.uiState.value.avatarCropOffsetY, 0.001f)
 
     reloadedViewModel.selectAvatarSlot("slot-b")
     val reloadedCard = reloadedViewModel.uiState.value.personaCards.first { it.slotId == "slot-b" }
     assertEquals("Bob Reloaded", reloadedCard.personaName)
     assertEquals("content://persona/avatar-b", reloadedCard.avatarUri)
+    assertEquals("content://persona/source-b", reloadedCard.avatarEditorSourceUri)
   }
 
   @Test

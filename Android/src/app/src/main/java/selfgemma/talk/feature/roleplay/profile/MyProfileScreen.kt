@@ -219,13 +219,29 @@ fun MyProfileScreen(
             Log.d(TAG, "open persona avatar picker for empty avatar slot=${uiState.avatarSlotId}")
             avatarLauncher.launch(arrayOf("image/*"))
           } else {
-            Log.d(TAG, "open persona avatar editor slot=${uiState.avatarSlotId} uri=$currentAvatarUri")
-            avatarEditorDraft = PersonaAvatarEditorDraft(sourceUri = currentAvatarUri)
+            val sourceUri = uiState.avatarEditorSourceUri ?: currentAvatarUri
+            Log.d(
+              TAG,
+              "open persona avatar editor slot=${uiState.avatarSlotId} uri=$currentAvatarUri sourceUri=$sourceUri zoom=${uiState.avatarCropZoom}",
+            )
+            avatarEditorDraft =
+              PersonaAvatarEditorDraft(
+                sourceUri = sourceUri,
+                zoom = uiState.avatarCropZoom,
+                offsetX = uiState.avatarCropOffsetX,
+                offsetY = uiState.avatarCropOffsetY,
+              )
           }
         },
         onAvatarClear = {
           Log.d(TAG, "clear persona avatar slot=${uiState.avatarSlotId}")
-          viewModel.updateAvatarUri(null)
+          viewModel.updateAvatarEditState(
+            avatarUri = null,
+            avatarEditorSourceUri = null,
+            avatarCropZoom = 1f,
+            avatarCropOffsetX = 0f,
+            avatarCropOffsetY = 0f,
+          )
         },
         onPersonaPositionChange = viewModel::updatePersonaPosition,
         onPersonaDepthChange = viewModel::updatePersonaDepth,
@@ -292,12 +308,24 @@ fun MyProfileScreen(
         onDismiss = { avatarEditorDraft = null },
         onPickReplacement = { avatarLauncher.launch(arrayOf("image/*")) },
         onClearAvatar = {
-          viewModel.updateAvatarUri(null)
+          viewModel.updateAvatarEditState(
+            avatarUri = null,
+            avatarEditorSourceUri = null,
+            avatarCropZoom = 1f,
+            avatarCropOffsetX = 0f,
+            avatarCropOffsetY = 0f,
+          )
           avatarEditorDraft = null
         },
-        onSave = { bitmap ->
+        onSave = { bitmap, savedDraft ->
           val savedUri = savePersonaAvatarBitmap(context, uiState.avatarSlotId, bitmap)
-          viewModel.updateAvatarUri(savedUri)
+          viewModel.updateAvatarEditState(
+            avatarUri = savedUri,
+            avatarEditorSourceUri = savedDraft.sourceUri,
+            avatarCropZoom = savedDraft.zoom,
+            avatarCropOffsetX = savedDraft.offsetX,
+            avatarCropOffsetY = savedDraft.offsetY,
+          )
           avatarEditorDraft = null
         },
       )

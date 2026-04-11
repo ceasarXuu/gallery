@@ -75,6 +75,10 @@ message StPersonaDescriptorSettings {
   string lorebook = 6;
   repeated StPersonaConnectionSettings connections = 7;
   string avatar_uri = 8;
+  string avatar_editor_source_uri = 9;
+  float avatar_crop_zoom = 10;
+  float avatar_crop_offset_x = 11;
+  float avatar_crop_offset_y = 12;
 }
 
 message StUserProfileSettings {

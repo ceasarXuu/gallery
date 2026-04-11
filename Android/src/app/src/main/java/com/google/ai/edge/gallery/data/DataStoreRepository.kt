@@ -605,6 +605,10 @@ private fun StPersonaDescriptor.toProto(): StPersonaDescriptorSettings {
           .build()
       })
       descriptor.avatarUri?.takeIf { it.isNotBlank() }?.let(::setAvatarUri)
+      descriptor.avatarEditorSourceUri?.takeIf { it.isNotBlank() }?.let(::setAvatarEditorSourceUri)
+      setAvatarCropZoom(descriptor.avatarCropZoom)
+      setAvatarCropOffsetX(descriptor.avatarCropOffsetX)
+      setAvatarCropOffsetY(descriptor.avatarCropOffsetY)
     }
     .build()
 }
@@ -628,6 +632,10 @@ private fun StUserProfileSettings.toDomain(): StUserProfile {
               StPersonaConnection(type = connection.type, id = connection.id)
             },
           avatarUri = descriptor.avatarUri.takeIf { it.isNotBlank() },
+          avatarEditorSourceUri = descriptor.avatarEditorSourceUri.takeIf { it.isNotBlank() },
+          avatarCropZoom = descriptor.avatarCropZoom.takeIf { it > 0f } ?: 1f,
+          avatarCropOffsetX = descriptor.avatarCropOffsetX,
+          avatarCropOffsetY = descriptor.avatarCropOffsetY,
         )
       },
   ).ensureDefaults()

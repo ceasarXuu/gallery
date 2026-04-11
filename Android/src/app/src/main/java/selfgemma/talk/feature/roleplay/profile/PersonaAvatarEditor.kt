@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas as AndroidCanvas
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.RectF
 import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.Canvas
@@ -35,6 +36,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,11 +46,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -58,6 +60,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import selfgemma.talk.R
@@ -89,7 +92,7 @@ internal fun PersonaAvatarEditorDialog(
   onDismiss: () -> Unit,
   onPickReplacement: () -> Unit,
   onClearAvatar: () -> Unit,
-  onSave: suspend (Bitmap) -> Unit,
+  onSave: suspend (Bitmap, PersonaAvatarEditorDraft) -> Unit,
 ) {
   val context = LocalContext.current
   val bitmapState =
@@ -104,11 +107,16 @@ internal fun PersonaAvatarEditorDialog(
   val bitmap = bitmapState.value
   LaunchedEffect(bitmap, draft.sourceUri) {
     if (bitmap != null) {
-      val squareSizePx = AVATAR_OUTPUT_SIZE.toFloat()
-      val baseScale = calculateBaseScale(bitmap = bitmap, squareSizePx = squareSizePx)
-      val clampedOffset = clampOffset(bitmap, squareSizePx, baseScale * zoom, offsetX, offsetY)
-      offsetX = clampedOffset.first
-      offsetY = clampedOffset.second
+      val clampedOffsetRatio =
+        clampOffsetRatio(
+          bitmap = bitmap,
+          squareSizePx = AVATAR_OUTPUT_SIZE.toFloat(),
+          zoom = zoom,
+          offsetXRatio = offsetX,
+          offsetYRatio = offsetY,
+        )
+      offsetX = clampedOffsetRatio.first
+      offsetY = clampedOffsetRatio.second
     }
   }
 
@@ -199,12 +207,19 @@ internal fun PersonaAvatarEditorDialog(
       cropAvatarBitmap(
         bitmap = bitmap,
         zoom = zoom,
-        offsetX = offsetX,
-        offsetY = offsetY,
+        offsetX = offsetX * AVATAR_OUTPUT_SIZE,
+        offsetY = offsetY * AVATAR_OUTPUT_SIZE,
         outputSize = AVATAR_OUTPUT_SIZE,
       )
     runCatching {
-      onSave(croppedBitmap)
+      onSave(
+        croppedBitmap,
+        draft.copy(
+          zoom = zoom,
+          offsetX = offsetX,
+          offsetY = offsetY,
+        ),
+      )
       Log.d(TAG, "saved cropped persona avatar source=${draft.sourceUri} zoom=$zoom offsetX=$offsetX offsetY=$offsetY")
     }.onFailure { error ->
       Log.e(TAG, "failed to save cropped persona avatar source=${draft.sourceUri}", error)
@@ -234,41 +249,52 @@ private fun PersonaAvatarCropSurface(
     val squareSizePx = with(density) { squareSizeDp.toPx() }
     val baseScale = remember(bitmap, squareSizePx) { calculateBaseScale(bitmap = bitmap, squareSizePx = squareSizePx) }
     val actualScale = baseScale * zoom
+    val offsetXPx = offsetX * squareSizePx
+    val offsetYPx = offsetY * squareSizePx
+    val currentZoom by rememberUpdatedState(zoom)
+    val currentOffsetX by rememberUpdatedState(offsetX)
+    val currentOffsetY by rememberUpdatedState(offsetY)
+    val currentOnTransform by rememberUpdatedState(onTransform)
+    val previewPaint =
+      remember {
+        Paint(android.graphics.Paint.ANTI_ALIAS_FLAG or android.graphics.Paint.FILTER_BITMAP_FLAG)
+      }
 
     Box(
       modifier =
         Modifier
           .align(Alignment.Center)
           .size(squareSizeDp)
-          .pointerInput(bitmap, zoom, offsetX, offsetY) {
+          .pointerInput(bitmap, squareSizePx) {
             detectTransformGestures { _, pan, gestureZoom, _ ->
-              val nextZoom = (zoom * gestureZoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
-              val nextActualScale = baseScale * nextZoom
+              val nextZoom = (currentZoom * gestureZoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
               val nextOffset =
-                clampOffset(
+                clampOffsetRatio(
                   bitmap = bitmap,
                   squareSizePx = squareSizePx,
-                  actualScale = nextActualScale,
-                  offsetX = offsetX + pan.x,
-                  offsetY = offsetY + pan.y,
+                  zoom = nextZoom,
+                  offsetXRatio = currentOffsetX + (pan.x / squareSizePx),
+                  offsetYRatio = currentOffsetY + (pan.y / squareSizePx),
                 )
-              onTransform(nextZoom, nextOffset.first, nextOffset.second)
+              currentOnTransform(nextZoom, nextOffset.first, nextOffset.second)
             }
           },
       contentAlignment = Alignment.Center,
     ) {
-      androidx.compose.foundation.Image(
-        bitmap = bitmap.asImageBitmap(),
-        contentDescription = null,
-        contentScale = ContentScale.Fit,
-        modifier =
-          Modifier.graphicsLayer {
-            scaleX = actualScale
-            scaleY = actualScale
-            translationX = offsetX
-            translationY = offsetY
-          },
-      )
+      Canvas(modifier = Modifier.fillMaxSize()) {
+        val drawWidth = bitmap.width * actualScale
+        val drawHeight = bitmap.height * actualScale
+        val left = (size.width - drawWidth) / 2f + offsetXPx
+        val top = (size.height - drawHeight) / 2f + offsetYPx
+        drawIntoCanvas { canvas ->
+          canvas.nativeCanvas.drawBitmap(
+            bitmap,
+            null,
+            RectF(left, top, left + drawWidth, top + drawHeight),
+            previewPaint,
+          )
+        }
+      }
       Canvas(
         modifier =
           Modifier
@@ -340,8 +366,12 @@ private fun loadEditableBitmap(
       inputStream?.use { stream ->
         ExifInterface(stream).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
       } ?: ExifInterface.ORIENTATION_NORMAL
-    decodeSampledBitmapFromUri(context, uri, 2048, 2048)?.let { originalBitmap ->
-      rotateBitmap(originalBitmap, orientation)
+    val decodedBitmap = decodeSampledBitmapFromUri(context, uri, 2048, 2048)
+    if (decodedBitmap == null) {
+      Log.w(TAG, "editable avatar decode returned null uri=$avatarUri")
+      null
+    } else {
+      rotateBitmap(decodedBitmap, orientation)
     }
   }.onFailure { error ->
     Log.e(TAG, "failed to decode editable avatar uri=$avatarUri", error)
@@ -365,6 +395,25 @@ private fun clampOffset(
   return offsetX.coerceIn(-halfOverflowX, halfOverflowX) to offsetY.coerceIn(-halfOverflowY, halfOverflowY)
 }
 
+private fun clampOffsetRatio(
+  bitmap: Bitmap,
+  squareSizePx: Float,
+  zoom: Float,
+  offsetXRatio: Float,
+  offsetYRatio: Float,
+): Pair<Float, Float> {
+  val actualScale = calculateBaseScale(bitmap = bitmap, squareSizePx = squareSizePx) * zoom.coerceIn(MIN_ZOOM, MAX_ZOOM)
+  val clampedOffset =
+    clampOffset(
+      bitmap = bitmap,
+      squareSizePx = squareSizePx,
+      actualScale = actualScale,
+      offsetX = offsetXRatio * squareSizePx,
+      offsetY = offsetYRatio * squareSizePx,
+    )
+  return clampedOffset.first / squareSizePx to clampedOffset.second / squareSizePx
+}
+
 internal fun cropAvatarBitmap(
   bitmap: Bitmap,
   zoom: Float,
@@ -386,10 +435,10 @@ internal fun cropAvatarBitmap(
     val canvas = AndroidCanvas(output)
     val sourceRectInt =
       Rect(
-        sourceRect.left.toInt(),
-        sourceRect.top.toInt(),
-        sourceRect.right.toInt(),
-        sourceRect.bottom.toInt(),
+        sourceRect.left.roundToInt(),
+        sourceRect.top.roundToInt(),
+        sourceRect.right.roundToInt(),
+        sourceRect.bottom.roundToInt(),
       )
     val destRect = Rect(0, 0, outputSize, outputSize)
     canvas.drawBitmap(bitmap, sourceRectInt, destRect, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))

@@ -1067,5 +1067,7 @@ Notes:
 - Keep the avatar entry itself as the primary affordance. If the user already has an avatar, tapping the circle should open the crop dialog instead of launching the picker immediately.
 - Social-style avatar editing is easier to reason about when the crop dialog works on a square export and only uses the circle as a framing mask. Persist a real square PNG and let display surfaces keep using `CircleShape`.
 - Clamp drag offsets against the scaled image bounds before exporting. Otherwise users can pan the image past the crop frame and save transparent or empty edges even though the preview looked acceptable.
+- Store drag offsets as ratios of the crop square, not raw preview pixels. The editor preview and exported bitmap usually use different square sizes; raw pixel offsets make the saved crop drift away from what the user saw.
+- Do not overwrite the only avatar source with the cropped export. Persist the display avatar URI separately from the editor source URI and crop state, or second-pass edits will reopen a previously cropped bitmap with no framing headroom left.
 - For Android document URIs, read EXIF orientation from a separate stream before decoding the bitmap used by the editor. Some camera/gallery images will otherwise open rotated and users will compensate with a bad crop.
 - Persist the cropped avatar into app-private storage, not only the original gallery `content://` URI. This keeps the persona avatar stable after grant loss, gallery cleanup, or device reboot.
