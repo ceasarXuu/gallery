@@ -150,7 +150,7 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "AGMessageInputText"
 private val ComposerButtonSize = 44.dp
-private val ComposerIconSize = 20.dp
+private val ComposerIconSize = 18.dp
 private val ComposerInputMinHeight = 52.dp
 private val ComposerTrailingButtonSize = 40.dp
 
@@ -431,7 +431,7 @@ fun MessageInputText(
                       } else {
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                       },
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(20.dp),
                   )
                 }
               }
@@ -686,7 +686,7 @@ fun MessageInputText(
                   Icon(
                     Icons.AutoMirrored.Rounded.Send,
                     contentDescription = stringResource(R.string.cd_send_prompt_icon),
-                    modifier = Modifier.size(22.dp).offset(x = 1.dp),
+                    modifier = Modifier.size(20.dp).offset(x = 1.dp),
                     tint =
                       if (canSend) {
                         Color.White
