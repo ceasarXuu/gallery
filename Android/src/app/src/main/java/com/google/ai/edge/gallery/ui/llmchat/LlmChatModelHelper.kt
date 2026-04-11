@@ -61,6 +61,8 @@ data class LlmModelInstance(
   val engine: Engine,
   var conversation: Conversation,
   var sessionConfig: LlmConversationSessionConfig = LlmConversationSessionConfig(),
+  val supportImage: Boolean = false,
+  val supportAudio: Boolean = false,
 )
 
 object LlmChatModelHelper : LlmModelHelper {
@@ -169,6 +171,8 @@ object LlmChatModelHelper : LlmModelHelper {
           engine = engine,
           conversation = conversation,
           sessionConfig = sessionConfig,
+          supportImage = shouldEnableImage,
+          supportAudio = shouldEnableAudio,
         )
     } catch (e: Exception) {
       try {

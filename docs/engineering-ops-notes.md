@@ -1071,3 +1071,34 @@ Notes:
 - Do not overwrite the only avatar source with the cropped export. Persist the display avatar URI separately from the editor source URI and crop state, or second-pass edits will reopen a previously cropped bitmap with no framing headroom left.
 - For Android document URIs, read EXIF orientation from a separate stream before decoding the bitmap used by the editor. Some camera/gallery images will otherwise open rotated and users will compensate with a bad crop.
 - Persist the cropped avatar into app-private storage, not only the original gallery `content://` URI. This keeps the persona avatar stable after grant loss, gallery cleanup, or device reboot.
+
+## 2026-04-12 Roleplay multimodal chat note
+
+- Goal: add image send and voice-note send to the roleplay chat screen without forking a second attachment stack.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat --stop
+Remove-Item -Recurse -Force app\build\tmp\hiltJavaCompileDebug, app\build\tmp\kapt3 -ErrorAction SilentlyContinue
+.\gradlew.bat :app:compileDebugKotlin :app:compileDebugUnitTestKotlin --no-daemon
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.PromptAssemblerTest" --tests "selfgemma.talk.domain.roleplay.model.RoleplayMessageMediaModelsTest" --no-daemon
+.\gradlew.bat :app:assembleDebug --no-daemon
+adb install -r D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk
+adb shell am force-stop selfgemma.talk
+adb shell am start -W -n selfgemma.talk/.MainActivity
+adb logcat -d -v time | Select-String -Pattern 'RoleplayChatScreen|RoleplayChatViewModel|SendRoleplayMessage'
+```
+
+Notes:
+
+- Reuse `MessageInputText` for picker/record interactions, but do not assume a model marked `INITIALIZED` was initialized with image/audio backends. Roleplay model initialization should follow the outgoing message payload, not the screen entry.
+- Forcing image/audio backends as soon as the chat screen opens can regress plain text reply generation or make assistant bubbles stay empty; keep text chat on the normal path and only reinitialize when the current send actually contains media.
+- Persist outgoing chat attachments into app-private files before enqueueing the message. UI pickers can return transient `Bitmap`/PCM objects; without a durable file path, the roleplay timeline cannot survive process death or conversation reload.
+- Store audio clips as raw PCM plus `sampleRate` metadata if you want both playback and inference reuse. `AudioPlaybackPanel` wants PCM, while LiteRT LM audio input wants a WAV wrapper; wrapping PCM into WAV on demand keeps one source of truth.
+- Keep multimodal history visible to prompt assembly through short textual placeholders such as `Shared 2 image(s).` and `Shared an audio clip.`. Otherwise future turns lose the fact that the user already sent media.
+- For chat composer layout refreshes, keep the transport logic inside `MessageInputText` but flatten the control hierarchy to a single row. A separate outer record button and an inner attachment menu read much closer to mainstream chat apps than a stacked two-row toolbar, and this can be done without rewriting media picker state.
+- For single-line chat composers, avoid `TextField` when the trailing action area must align pixel-perfectly with outer circular buttons. `BasicTextField` plus an explicit min-height row gives better control over baseline, touch target, and trailing icon spacing, and prevents the default Material paddings from causing visual drift or icon overflow.
+- Icon language matters more than geometry when a composer feels “out of app.” If the surrounding app uses restrained `surfaceContainerLow + outlineVariant` controls, do not introduce shadow-heavy floating circles for mic/add/send. Keep secondary actions as ghost buttons and reserve filled emphasis only for the primary action state.
+- Do not over-normalize all composer icons into one visual treatment. If the existing add button already feels native, keep it stable and only fix the offending controls. In chat UIs, `add` is usually a low-priority utility action, while `send` is the primary CTA and `mic` is a mode/transport action; forcing them into the same visual weight makes the bar feel less intentional, not more coherent.

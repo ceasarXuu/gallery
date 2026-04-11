@@ -199,7 +199,9 @@ class PromptAssembler @Inject constructor(private val tokenEstimator: TokenEstim
   private fun selectRecentMessages(messages: List<Message>): List<Message> {
     val filtered =
       messages.filter { message ->
-        message.kind == MessageKind.TEXT &&
+        (message.kind == MessageKind.TEXT ||
+          message.kind == MessageKind.IMAGE ||
+          message.kind == MessageKind.AUDIO) &&
           message.side != MessageSide.SYSTEM &&
           message.status != MessageStatus.FAILED &&
           message.content.isNotBlank()

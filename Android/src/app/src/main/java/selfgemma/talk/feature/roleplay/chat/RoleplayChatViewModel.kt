@@ -1,6 +1,7 @@
 package selfgemma.talk.feature.roleplay.chat
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.os.SystemClock
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -8,6 +9,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -23,18 +26,24 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import selfgemma.talk.data.ConfigKeys
 import selfgemma.talk.data.DataStoreRepository
 import selfgemma.talk.data.Model
 import selfgemma.talk.domain.roleplay.model.MemoryCategory
 import selfgemma.talk.domain.roleplay.model.MemoryItem
 import selfgemma.talk.domain.roleplay.model.Message
+import selfgemma.talk.domain.roleplay.model.MessageKind
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
+import selfgemma.talk.domain.roleplay.model.RoleplayMessageAttachment
+import selfgemma.talk.domain.roleplay.model.RoleplayMessageAttachmentType
+import selfgemma.talk.domain.roleplay.model.RoleplayMessageMediaPayload
 import selfgemma.talk.domain.roleplay.model.RoleCard
 import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionEventType
+import selfgemma.talk.domain.roleplay.model.encodeRoleplayMessageMediaPayload
 import selfgemma.talk.domain.roleplay.model.SessionSummary
 import selfgemma.talk.domain.roleplay.model.resolveUserProfile
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
@@ -44,6 +53,11 @@ import selfgemma.talk.domain.roleplay.usecase.ExtractMemoriesUseCase
 import selfgemma.talk.domain.roleplay.usecase.SendRoleplayMessageUseCase
 import selfgemma.talk.domain.roleplay.usecase.StagedRoleplayTurn
 import selfgemma.talk.runtime.runtimeHelper
+import selfgemma.talk.ui.common.chat.ChatMessage
+import selfgemma.talk.ui.common.chat.ChatMessageAudioClip
+import selfgemma.talk.ui.common.chat.ChatMessageImage
+import selfgemma.talk.ui.common.chat.ChatMessageText
+import selfgemma.talk.ui.common.chat.ChatSide
 
 data class RoleplayChatUiState(
   val loading: Boolean = true,
@@ -162,33 +176,66 @@ constructor(
     if (input.isBlank()) {
       return
     }
-
-    latestQueuedModel = model
-    draft.value = ""
-    lastDraftEditAtElapsed = SystemClock.elapsedRealtime()
-
-    val queuedMessage = stagePendingUserMessage(input = input)
-    metaState.update { current ->
-      current.copy(
-        pendingUserMessages = current.pendingUserMessages + queuedMessage,
-        errorMessage = null,
-      )
-    }
-    Log.d(
-      TAG,
-      "send accepted sessionId=$sessionId model=${model.name} inputLength=${input.length} pendingCount=${metaState.value.pendingUserMessages.size} messageId=${queuedMessage.message.id}",
+    sendChatMessages(
+      model = model,
+      messages = listOf(ChatMessageText(content = input, side = ChatSide.USER)),
+      clearDraft = true,
     )
+  }
 
-    viewModelScope.launch(Dispatchers.Default) {
-      playSendSound()
-    }
-
-    if (metaState.value.inProgress) {
-      requestMergeAndStop(model = model)
+  fun sendChatMessages(model: Model, messages: List<ChatMessage>, clearDraft: Boolean = false) {
+    val hasText = messages.filterIsInstance<ChatMessageText>().any { it.content.trim().isNotBlank() }
+    val hasImages = messages.any { it is ChatMessageImage && it.bitmaps.isNotEmpty() }
+    val hasAudio = messages.any { it is ChatMessageAudioClip }
+    if (!hasText && !hasImages && !hasAudio) {
       return
     }
 
-    scheduleDispatch(reason = "send accepted")
+    latestQueuedModel = model
+    if (clearDraft) {
+      draft.value = ""
+    }
+    lastDraftEditAtElapsed = SystemClock.elapsedRealtime()
+
+    viewModelScope.launch {
+      val queuedMessages =
+        withContext(Dispatchers.IO) {
+          runCatching {
+            stagePendingUserMessages(messages = messages)
+          }.onFailure { error ->
+            Log.e(TAG, "failed to stage multimodal roleplay messages sessionId=$sessionId", error)
+          }.getOrDefault(emptyList())
+        }
+      if (queuedMessages.isEmpty()) {
+        metaState.update { current ->
+          current.copy(errorMessage = "Failed to prepare the selected media.")
+        }
+        Log.w(TAG, "send ignored because no queued roleplay messages were produced sessionId=$sessionId")
+        return@launch
+      }
+
+      metaState.update { current ->
+        current.copy(
+          pendingUserMessages = current.pendingUserMessages + queuedMessages,
+          errorMessage = null,
+        )
+      }
+      Log.d(
+        TAG,
+        "send accepted sessionId=$sessionId model=${model.name} queuedCount=${queuedMessages.size} hasText=$hasText hasImages=$hasImages hasAudio=$hasAudio pendingCount=${metaState.value.pendingUserMessages.size}",
+      )
+
+      viewModelScope.launch(Dispatchers.Default) {
+        playSendSound()
+      }
+
+      if (metaState.value.inProgress) {
+        requestMergeAndStop(model = model)
+        return@launch
+      }
+
+      scheduleDispatch(reason = "send accepted")
+    }
   }
 
   fun switchModel(modelId: String) {
@@ -435,22 +482,90 @@ constructor(
       .take(8)
   }
 
-  private fun stagePendingUserMessage(input: String): QueuedUserMessage {
+  private fun stagePendingUserMessages(messages: List<ChatMessage>): List<QueuedUserMessage> {
     val now = System.currentTimeMillis()
-    val nextSeq = (uiState.value.messages.maxOfOrNull { it.seq } ?: 0) + 1
-    val userMessage =
-      Message(
-        id = UUID.randomUUID().toString(),
-        sessionId = sessionId,
-        seq = nextSeq,
-        side = MessageSide.USER,
-        status = MessageStatus.COMPLETED,
-        content = input,
-        createdAt = now,
-        updatedAt = now,
-      )
-    Log.d(TAG, "queued user draft sessionId=$sessionId seq=$nextSeq messageId=${userMessage.id}")
-    return QueuedUserMessage(message = userMessage)
+    var nextSeq = (uiState.value.messages.maxOfOrNull { it.seq } ?: 0) + 1
+    val queuedMessages = mutableListOf<QueuedUserMessage>()
+
+    messages.forEach { chatMessage ->
+      when (chatMessage) {
+        is ChatMessageText -> {
+          val input = chatMessage.content.trim()
+          if (input.isBlank()) {
+            return@forEach
+          }
+          val userMessage =
+            Message(
+              id = UUID.randomUUID().toString(),
+              sessionId = sessionId,
+              seq = nextSeq++,
+              side = MessageSide.USER,
+              kind = MessageKind.TEXT,
+              status = MessageStatus.COMPLETED,
+              content = input,
+              createdAt = now,
+              updatedAt = now,
+            )
+          queuedMessages += QueuedUserMessage(message = userMessage)
+          Log.d(TAG, "queued text draft sessionId=$sessionId seq=${userMessage.seq} messageId=${userMessage.id}")
+        }
+        is ChatMessageImage -> {
+          if (chatMessage.bitmaps.isEmpty()) {
+            return@forEach
+          }
+          val messageId = UUID.randomUUID().toString()
+          val payload = persistImagePayload(messageId = messageId, bitmaps = chatMessage.bitmaps)
+          val userMessage =
+            Message(
+              id = messageId,
+              sessionId = sessionId,
+              seq = nextSeq++,
+              side = MessageSide.USER,
+              kind = MessageKind.IMAGE,
+              status = MessageStatus.COMPLETED,
+              content = "Shared ${payload.attachments.size} image(s).",
+              metadataJson = encodeRoleplayMessageMediaPayload(payload),
+              createdAt = now,
+              updatedAt = now,
+            )
+          queuedMessages += QueuedUserMessage(message = userMessage)
+          Log.d(
+            TAG,
+            "queued image payload sessionId=$sessionId seq=${userMessage.seq} messageId=${userMessage.id} imageCount=${payload.attachments.size}",
+          )
+        }
+        is ChatMessageAudioClip -> {
+          val messageId = UUID.randomUUID().toString()
+          val payload =
+            persistAudioPayload(
+              messageId = messageId,
+              audioData = chatMessage.audioData,
+              sampleRate = chatMessage.sampleRate,
+            )
+          val userMessage =
+            Message(
+              id = messageId,
+              sessionId = sessionId,
+              seq = nextSeq++,
+              side = MessageSide.USER,
+              kind = MessageKind.AUDIO,
+              status = MessageStatus.COMPLETED,
+              content = "Shared an audio clip.",
+              metadataJson = encodeRoleplayMessageMediaPayload(payload),
+              createdAt = now,
+              updatedAt = now,
+            )
+          queuedMessages += QueuedUserMessage(message = userMessage)
+          Log.d(
+            TAG,
+            "queued audio payload sessionId=$sessionId seq=${userMessage.seq} messageId=${userMessage.id} sampleRate=${chatMessage.sampleRate}",
+          )
+        }
+        else -> Unit
+      }
+    }
+
+    return queuedMessages
   }
 
   private fun stageDispatchTurn(userMessages: List<Message>, model: Model): StagedRoleplayTurn {
@@ -475,8 +590,74 @@ constructor(
     return StagedRoleplayTurn(
       userMessages = userMessages,
       assistantMessage = assistantMessage,
-      combinedUserInput = userMessages.joinToString(separator = "\n\n") { it.content.trim() },
+      combinedUserInput =
+        userMessages
+          .filter { it.kind == MessageKind.TEXT }
+          .joinToString(separator = "\n\n") { it.content.trim() },
     )
+  }
+
+  private fun persistImagePayload(
+    messageId: String,
+    bitmaps: List<Bitmap>,
+  ): RoleplayMessageMediaPayload {
+    val attachments =
+      bitmaps.mapIndexed { index, bitmap ->
+        val targetFile = resolveAttachmentFile(messageId = messageId, fileName = "image-${index + 1}.png")
+        writeBitmapToFile(bitmap = bitmap, file = targetFile)
+        RoleplayMessageAttachment(
+          type = RoleplayMessageAttachmentType.IMAGE,
+          filePath = targetFile.absolutePath,
+          mimeType = "image/png",
+          width = bitmap.width,
+          height = bitmap.height,
+          fileSizeBytes = targetFile.length(),
+        )
+      }
+    return RoleplayMessageMediaPayload(attachments = attachments)
+  }
+
+  private fun persistAudioPayload(
+    messageId: String,
+    audioData: ByteArray,
+    sampleRate: Int,
+  ): RoleplayMessageMediaPayload {
+    val targetFile = resolveAttachmentFile(messageId = messageId, fileName = "audio-1.pcm")
+    targetFile.writeBytes(audioData)
+    val durationMs =
+      if (sampleRate > 0) {
+        ((audioData.size / 2.0) / sampleRate * 1000).toLong()
+      } else {
+        null
+      }
+    return RoleplayMessageMediaPayload(
+      attachments =
+        listOf(
+          RoleplayMessageAttachment(
+            type = RoleplayMessageAttachmentType.AUDIO,
+            filePath = targetFile.absolutePath,
+            mimeType = "audio/raw",
+            sampleRate = sampleRate,
+            durationMs = durationMs,
+            fileSizeBytes = targetFile.length(),
+          )
+        )
+    )
+  }
+
+  private fun resolveAttachmentFile(messageId: String, fileName: String): File {
+    val directory = File(appContext.filesDir, "roleplay-media/$sessionId/$messageId")
+    if (!directory.exists()) {
+      directory.mkdirs()
+    }
+    return File(directory, fileName)
+  }
+
+  private fun writeBitmapToFile(bitmap: Bitmap, file: File) {
+    FileOutputStream(file).use { output ->
+      bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
+      output.flush()
+    }
   }
 
   private fun remainingDispatchDelay(): Long {
