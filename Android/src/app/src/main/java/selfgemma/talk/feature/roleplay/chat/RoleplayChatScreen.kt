@@ -80,6 +80,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -95,6 +96,7 @@ import selfgemma.talk.domain.roleplay.model.Message
 import selfgemma.talk.domain.roleplay.model.MessageSide
 import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.performance.TrackPerformanceState
+import selfgemma.talk.ui.common.chat.rememberStreamingTokenSpeed
 import selfgemma.talk.ui.modelmanager.ModelInitializationStatusType
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import androidx.compose.ui.res.stringResource
@@ -121,6 +123,10 @@ fun RoleplayChatScreen(
   val keyboardController = LocalSoftwareKeyboardController.current
   val uiState by viewModel.uiState.collectAsState()
   val modelManagerUiState by modelManagerViewModel.uiState.collectAsState()
+  val showLiveTokenSpeed =
+    remember(modelManagerUiState.settingsUpdateTrigger) {
+      modelManagerViewModel.isLiveTokenSpeedEnabled()
+    }
   val activeModel = uiState.session?.activeModelId?.let(modelManagerViewModel::getModelByName)
   val downloadedModels =
     remember(
@@ -133,6 +139,41 @@ fun RoleplayChatScreen(
   val listState = rememberLazyListState()
   val lastMessage = uiState.messages.lastOrNull()
   val roleName = uiState.role?.name ?: stringResource(R.string.chat_assistant)
+  val userPersonaName = uiState.userPersonaName.ifBlank { stringResource(R.string.chat_you) }
+  val latestAssistantMessage =
+    remember(uiState.messages) {
+      uiState.messages.lastOrNull { it.side == MessageSide.ASSISTANT }
+    }
+  val streamingAssistantText =
+    remember(uiState.messages) {
+      uiState.messages
+        .lastOrNull { it.side == MessageSide.ASSISTANT && it.status == MessageStatus.STREAMING }
+        ?.content
+        .orEmpty()
+    }
+  val tokenSpeed =
+    rememberStreamingTokenSpeed(
+      streamingText = streamingAssistantText,
+      isStreaming = showLiveTokenSpeed && uiState.inProgress,
+      completedText =
+        latestAssistantMessage
+          ?.takeIf { it.status == MessageStatus.COMPLETED }
+          ?.content
+          .orEmpty(),
+      completedLatencyMs =
+        latestAssistantMessage
+          ?.takeIf { it.status == MessageStatus.COMPLETED }
+          ?.latencyMs,
+      completedAtEpochMs =
+        latestAssistantMessage
+          ?.takeIf { it.status == MessageStatus.COMPLETED }
+          ?.updatedAt,
+    )
+  val tokenSpeedSubtitle =
+    tokenSpeed
+      ?.takeIf { showLiveTokenSpeed }
+      ?.let { stringResource(R.string.chat_token_speed_format, it) }
+      .orEmpty()
   val imeBottom = WindowInsets.ime.getBottom(density)
   val screenOpenTimestamp = remember { SystemClock.elapsedRealtime() }
   var hasCompletedInitialPositioning by rememberSaveable(uiState.session?.id) { mutableStateOf(false) }
@@ -280,6 +321,7 @@ fun RoleplayChatScreen(
       topBar = {
         AppTopBar(
           title = uiState.role?.name ?: stringResource(R.string.chat_title),
+          subtitle = tokenSpeedSubtitle,
           leftAction = AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = handleNavigateUp),
           rightActionContent = {
             TopBarOverflowMenuButton(
@@ -373,12 +415,21 @@ fun RoleplayChatScreen(
         contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
       ) {
+        item {
+          ActivePersonaBanner(
+            name = userPersonaName,
+            avatarUri = uiState.userPersonaAvatarUri,
+            description = uiState.userPersonaDescription,
+          )
+        }
 
         items(uiState.messages, key = { it.id }) { message ->
           ChatMessageBubble(
             message = message,
             roleName = roleName,
             roleAvatarUri = uiState.role?.primaryAvatarUri(),
+            userName = userPersonaName,
+            userAvatarUri = uiState.userPersonaAvatarUri,
             animateOnEnter = hasCompletedInitialPositioning && message.id == lastMessage?.id,
           )
         }
@@ -413,7 +464,6 @@ fun RoleplayChatScreen(
       }
     }
   }
-
 
     if (showModelPicker && downloadedModels.isNotEmpty()) {
       AlertDialog(
@@ -467,6 +517,8 @@ private fun ChatMessageBubble(
   message: Message,
   roleName: String,
   roleAvatarUri: String?,
+  userName: String,
+  userAvatarUri: String?,
   animateOnEnter: Boolean,
 ) {
   val isUser = message.side == MessageSide.USER
@@ -476,7 +528,7 @@ private fun ChatMessageBubble(
       horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
     ) {
       Text(
-        text = if (isUser) stringResource(R.string.chat_you) else roleName,
+        text = if (isUser) userName else roleName,
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
         modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 6.dp),
@@ -518,7 +570,7 @@ private fun ChatMessageBubble(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
           ) {
-            if (message.status == MessageStatus.STREAMING) {
+            if (message.status == MessageStatus.STREAMING && message.content.isBlank()) {
               TypingIndicator()
             } else {
               RenderChatMessageText(
@@ -532,6 +584,15 @@ private fun ChatMessageBubble(
               )
             }
           }
+        }
+
+        if (isUser) {
+          Spacer(modifier = Modifier.width(8.dp))
+          RoleAvatar(
+            name = userName,
+            avatarUri = userAvatarUri,
+            modifier = Modifier.size(32.dp),
+          )
         }
       }
     }
@@ -564,6 +625,61 @@ private fun ChatMessageBubble(
     }
   } else {
     content()
+  }
+}
+
+@Composable
+private fun ActivePersonaBanner(
+  name: String,
+  avatarUri: String?,
+  description: String,
+) {
+  Surface(
+    modifier = Modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(18.dp),
+    tonalElevation = 1.dp,
+    color = MaterialTheme.colorScheme.surfaceContainerLow,
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+      horizontalArrangement = Arrangement.spacedBy(12.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      RoleAvatar(
+        name = name,
+        avatarUri = avatarUri,
+        modifier = Modifier.size(44.dp),
+      )
+      Column(
+        modifier = Modifier.weight(1f),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+      ) {
+        Text(
+          text = stringResource(R.string.chat_persona_label),
+          style = MaterialTheme.typography.labelMedium,
+          color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+          text = name,
+          style = MaterialTheme.typography.titleMedium,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+        description
+          .lineSequence()
+          .map(String::trim)
+          .firstOrNull { it.isNotBlank() }
+          ?.let { firstLine ->
+            Text(
+              text = firstLine,
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis,
+            )
+          }
+      }
+    }
   }
 }
 

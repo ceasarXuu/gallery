@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -35,6 +36,7 @@ import selfgemma.talk.domain.roleplay.model.Session
 import selfgemma.talk.domain.roleplay.model.SessionEvent
 import selfgemma.talk.domain.roleplay.model.SessionEventType
 import selfgemma.talk.domain.roleplay.model.SessionSummary
+import selfgemma.talk.domain.roleplay.model.resolveUserProfile
 import selfgemma.talk.domain.roleplay.repository.ConversationRepository
 import selfgemma.talk.domain.roleplay.repository.MemoryRepository
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
@@ -49,6 +51,9 @@ data class RoleplayChatUiState(
   val role: RoleCard? = null,
   val messages: List<Message> = emptyList(),
   val draft: String = "",
+  val userPersonaName: String = "",
+  val userPersonaAvatarUri: String? = null,
+  val userPersonaDescription: String = "",
   val summary: SessionSummary? = null,
   val pinnedMemories: List<MemoryItem> = emptyList(),
   val inProgress: Boolean = false,
@@ -111,12 +116,18 @@ constructor(
       draft,
       metaState,
     ) { session, messages, role, draftValue, meta ->
+      val userProfile =
+        session?.resolveUserProfile(dataStoreRepository.getStUserProfile())
+          ?: dataStoreRepository.getStUserProfile().ensureDefaults()
       RoleplayChatUiState(
         loading = session == null,
         session = session,
         role = role,
         messages = mergeMessages(messages = messages, queuedMessages = meta.pendingUserMessages),
         draft = draftValue,
+        userPersonaName = userProfile.userName,
+        userPersonaAvatarUri = userProfile.activeAvatarUri,
+        userPersonaDescription = userProfile.personaDescription,
         summary = meta.summary,
         pinnedMemories = meta.pinnedMemories,
         inProgress = meta.inProgress,
@@ -265,6 +276,11 @@ constructor(
       TAG,
       "send merge requested sessionId=$sessionId model=${model.name} pendingCount=${metaState.value.pendingUserMessages.size} activeAssistantMessageId=$activeAssistantMessageId",
     )
+    if (dataStoreRepository.isStreamingOutputEnabled()) {
+      viewModelScope.launch(Dispatchers.IO) {
+        retractActiveAssistantBubble()
+      }
+    }
     model.runtimeHelper.stopResponse(model)
   }
 
@@ -340,6 +356,7 @@ constructor(
         sendRoleplayMessageUseCase.completePendingMessage(
           pendingMessage = pendingMessage,
           model = model,
+          enableStreamingOutput = dataStoreRepository.isStreamingOutputEnabled(),
           isStopRequested = { stopRequested.value },
         )
       val superseded = activeDispatchSuperseded
@@ -465,6 +482,25 @@ constructor(
   private fun remainingDispatchDelay(): Long {
     val elapsed = SystemClock.elapsedRealtime() - lastDraftEditAtElapsed
     return (SEND_DISPATCH_DELAY_MS - elapsed).coerceAtLeast(0L)
+  }
+
+  private suspend fun retractActiveAssistantBubble() {
+    val assistantMessageId = activeAssistantMessageId ?: return
+    val message =
+      conversationRepository.observeMessages(sessionId).first().lastOrNull { it.id == assistantMessageId }
+        ?: return
+    if (message.side != MessageSide.ASSISTANT) {
+      return
+    }
+    conversationRepository.updateMessage(
+      message.copy(
+        content = "",
+        status = MessageStatus.INTERRUPTED,
+        errorMessage = null,
+        updatedAt = System.currentTimeMillis(),
+      )
+    )
+    Log.d(TAG, "retracted streaming assistant bubble sessionId=$sessionId messageId=$assistantMessageId")
   }
 
   private fun mergeMessages(messages: List<Message>, queuedMessages: List<QueuedUserMessage>): List<Message> {

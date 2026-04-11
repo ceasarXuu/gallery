@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
@@ -25,11 +26,13 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -39,6 +42,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import selfgemma.talk.AppTopBar
 import selfgemma.talk.R
@@ -52,6 +57,12 @@ import selfgemma.talk.feature.roleplay.common.RoleAvatar
 import selfgemma.talk.ui.common.TopBarOverflowMenuButton
 
 private const val TAG = "RoleCatalogScreen"
+
+private data class PendingPersonaSelectionState(
+  val roleId: String,
+  val modelId: String,
+  val personas: List<SessionPersonaOptionUiState>,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +85,7 @@ fun RoleCatalogScreen(
   var pendingDeleteRoleId by rememberSaveable { mutableStateOf<String?>(null) }
   val listState = rememberLazyListState()
   var showMenu by rememberSaveable { mutableStateOf(false) }
+  var pendingPersonaSelection by remember { mutableStateOf<PendingPersonaSelectionState?>(null) }
 
   val importLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -86,7 +98,10 @@ fun RoleCatalogScreen(
   )
 
   val handleNavigateUp: () -> Unit = {
-    if (pendingDeleteRoleId != null) {
+    if (pendingPersonaSelection != null) {
+      pendingPersonaSelection = null
+      Log.d(TAG, "dismiss persona picker before navigating up")
+    } else if (pendingDeleteRoleId != null) {
       pendingDeleteRoleId = null
       Log.d(TAG, "dismiss delete dialog before navigating up")
     } else {
@@ -97,6 +112,29 @@ fun RoleCatalogScreen(
 
   BackHandler(enabled = showNavigateUp) {
     handleNavigateUp()
+  }
+
+  val handleStartSession: (String, String) -> Unit = { roleId, modelId ->
+    val personaOptions = viewModel.getSessionPersonaOptions()
+    if (personaOptions.size <= 1) {
+      scope.launch {
+        val sessionId =
+          viewModel.createSession(
+            roleId = roleId,
+            modelId = modelId,
+            personaSlotId = personaOptions.firstOrNull()?.slotId,
+          )
+        onOpenChat(sessionId)
+      }
+    } else {
+      pendingPersonaSelection =
+        PendingPersonaSelectionState(
+          roleId = roleId,
+          modelId = modelId,
+          personas = personaOptions,
+        )
+      Log.d(TAG, "prompt persona picker roleId=$roleId modelId=$modelId personaCount=${personaOptions.size}")
+    }
   }
 
   Scaffold(
@@ -185,14 +223,7 @@ fun RoleCatalogScreen(
           onStart =
             if (defaultModelId != null) {
               {
-                scope.launch {
-                  val sessionId =
-                    viewModel.createSession(
-                      roleId = role.id,
-                      modelId = checkNotNull(preferredModelId),
-                    )
-                  onOpenChat(sessionId)
-                }
+                handleStartSession(role.id, checkNotNull(preferredModelId))
               }
             } else {
               null
@@ -217,14 +248,7 @@ fun RoleCatalogScreen(
           onStart =
             if (defaultModelId != null) {
               {
-                scope.launch {
-                  val sessionId =
-                    viewModel.createSession(
-                      roleId = role.id,
-                      modelId = checkNotNull(preferredModelId),
-                    )
-                  onOpenChat(sessionId)
-                }
+                handleStartSession(role.id, checkNotNull(preferredModelId))
               }
             } else {
               null
@@ -256,6 +280,26 @@ fun RoleCatalogScreen(
         dismissButton = {
           OutlinedButton(onClick = { pendingDeleteRoleId = null }) {
             Text(stringResource(R.string.cancel))
+          }
+        },
+      )
+    }
+
+    val personaSelection = pendingPersonaSelection
+    if (personaSelection != null) {
+      PersonaSelectionDialog(
+        personas = personaSelection.personas,
+        onDismiss = { pendingPersonaSelection = null },
+        onSelect = { slotId ->
+          pendingPersonaSelection = null
+          scope.launch {
+            val sessionId =
+              viewModel.createSession(
+                roleId = personaSelection.roleId,
+                modelId = personaSelection.modelId,
+                personaSlotId = slotId,
+              )
+            onOpenChat(sessionId)
           }
         },
       )
@@ -327,6 +371,101 @@ private fun RoleCardItem(
             Text(stringResource(R.string.delete))
           }
         }
+      }
+    }
+  }
+}
+
+@Composable
+private fun PersonaSelectionDialog(
+  personas: List<SessionPersonaOptionUiState>,
+  onDismiss: () -> Unit,
+  onSelect: (String) -> Unit,
+) {
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(stringResource(R.string.roles_persona_picker_title)) },
+    text = {
+      Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+          text = stringResource(R.string.roles_persona_picker_message),
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        LazyColumn(
+          modifier = Modifier.fillMaxWidth(),
+          verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+          items(personas, key = { it.slotId }) { persona ->
+            PersonaSelectionCard(
+              persona = persona,
+              onClick = { onSelect(persona.slotId) },
+            )
+          }
+        }
+      }
+    },
+    confirmButton = {},
+    dismissButton = {
+      OutlinedButton(onClick = onDismiss) {
+        Text(stringResource(R.string.cancel))
+      }
+    },
+  )
+}
+
+@Composable
+private fun PersonaSelectionCard(
+  persona: SessionPersonaOptionUiState,
+  onClick: () -> Unit,
+) {
+  Surface(
+    modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    shape = RoundedCornerShape(16.dp),
+    tonalElevation = if (persona.isDefault) 2.dp else 0.5.dp,
+    color =
+      if (persona.isDefault) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+      } else {
+        MaterialTheme.colorScheme.surfaceContainerLowest
+      },
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(14.dp),
+      horizontalArrangement = Arrangement.spacedBy(12.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      RoleAvatar(
+        name = persona.name,
+        avatarUri = persona.avatarUri,
+        modifier = Modifier.size(48.dp),
+      )
+      Column(
+        modifier = Modifier.weight(1f),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+      ) {
+        Text(
+          text = persona.name,
+          style = MaterialTheme.typography.titleMedium,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+        if (persona.descriptionPreview.isNotBlank()) {
+          Text(
+            text = persona.descriptionPreview,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+        }
+      }
+      if (persona.isDefault) {
+        Text(
+          text = stringResource(R.string.roles_persona_picker_default_badge),
+          style = MaterialTheme.typography.labelMedium,
+          color = MaterialTheme.colorScheme.primary,
+        )
       }
     }
   }

@@ -126,6 +126,9 @@
   <string name="roles_delete_title">역할 삭제</string>
   <string name="roles_delete_content">%s을(를) 삭제하면 세션과 저장된 메모리도 제거됩니다.</string>
   <string name="roles_start_session">세션 시작</string>
+  <string name="roles_persona_picker_title">페르소나 선택</string>
+  <string name="roles_persona_picker_message">이번 세션에 사용할 페르소나를 선택하세요.</string>
+  <string name="roles_persona_picker_default_badge">기본값</string>
   <string name="roles_no_model">모델 없음</string>
   <string name="roles_default_tag">롤플레이</string>
 
@@ -201,6 +204,7 @@
   <string name="chat_use_model">%s 사용</string>
   <string name="chat_open_model_library">모델 라이브러리 열기</string>
   <string name="chat_you">나</string>
+  <string name="chat_persona_label">페르소나</string>
   <string name="chat_assistant">어시스턴트</string>
   <string name="chat_message_placeholder">캐릭터에게 메시지 보내기...</string>
   <string name="chat_stop_response">응답 중지</string>

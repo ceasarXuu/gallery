@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,12 +16,18 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import selfgemma.talk.data.DataStoreRepository
 import selfgemma.talk.R
 import selfgemma.talk.domain.roleplay.model.RoleCard
+import selfgemma.talk.domain.roleplay.model.availablePersonaSlotIds
+import selfgemma.talk.domain.roleplay.model.selectPersonaSlot
+import selfgemma.talk.domain.roleplay.model.snapshotSelectedPersona
 import selfgemma.talk.domain.roleplay.repository.RoleRepository
 import selfgemma.talk.domain.roleplay.usecase.CompileRuntimeRoleProfileUseCase
 import selfgemma.talk.domain.roleplay.usecase.CreateRoleplaySessionUseCase
 import selfgemma.talk.domain.roleplay.usecase.ImportStRoleCardFromUriUseCase
+
+private const val TAG = "RoleCatalogViewModel"
 
 data class RoleCatalogUiState(
   val loading: Boolean = true,
@@ -30,11 +37,21 @@ data class RoleCatalogUiState(
   val errorMessage: String? = null,
 )
 
+data class SessionPersonaOptionUiState(
+  val slotId: String,
+  val name: String,
+  val descriptionPreview: String,
+  val avatarUri: String? = null,
+  val isDefault: Boolean = false,
+  val isCurrent: Boolean = false,
+)
+
 @HiltViewModel
 class RoleCatalogViewModel
 @Inject
 constructor(
   @ApplicationContext private val appContext: Context,
+  private val dataStoreRepository: DataStoreRepository,
   private val roleRepository: RoleRepository,
   private val createRoleplaySessionUseCase: CreateRoleplaySessionUseCase,
   private val importStRoleCardFromUriUseCase: ImportStRoleCardFromUriUseCase,
@@ -58,8 +75,42 @@ constructor(
         initialValue = RoleCatalogUiState(),
       )
 
-  suspend fun createSession(roleId: String, modelId: String): String {
-    return createRoleplaySessionUseCase(roleId = roleId, modelId = modelId).id
+  fun getSessionPersonaOptions(): List<SessionPersonaOptionUiState> {
+    val profile = dataStoreRepository.getStUserProfile().ensureDefaults()
+    val availableSlotIds = profile.availablePersonaSlotIds()
+    val defaultSlotId = profile.defaultPersonaId?.trim().takeUnless { it.isNullOrBlank() }
+    val currentSlotId = profile.resolvedUserAvatarId()
+    return availableSlotIds
+      .map { slotId ->
+        val slotProfile = profile.selectPersonaSlot(slotId)
+        SessionPersonaOptionUiState(
+          slotId = slotId,
+          name = slotProfile.userName,
+          descriptionPreview = slotProfile.personaDescription.firstNonBlankLine(),
+          avatarUri = slotProfile.activeAvatarUri,
+          isDefault = slotId == defaultSlotId,
+          isCurrent = slotId == currentSlotId,
+        )
+      }.sortedWith(
+        compareByDescending<SessionPersonaOptionUiState> { it.isDefault }
+          .thenByDescending { it.isCurrent }
+          .thenBy { it.name.lowercase() }
+          .thenBy { it.slotId },
+      )
+  }
+
+  suspend fun createSession(roleId: String, modelId: String, personaSlotId: String? = null): String {
+    val selectedPersonaProfile =
+      dataStoreRepository.getStUserProfile().snapshotSelectedPersona(personaSlotId)
+    Log.d(
+      TAG,
+      "create session roleId=$roleId modelId=$modelId personaSlotId=${selectedPersonaProfile.userAvatarId} personaName=${selectedPersonaProfile.userName}",
+    )
+    return createRoleplaySessionUseCase(
+      roleId = roleId,
+      modelId = modelId,
+      userProfile = selectedPersonaProfile,
+    ).id
   }
 
   fun deleteRole(roleId: String) {
@@ -96,4 +147,8 @@ constructor(
   private fun appString(@StringRes resId: Int, vararg args: Any): String {
     return appContext.getString(resId, *args)
   }
+}
+
+private fun String.firstNonBlankLine(): String {
+  return lineSequence().map(String::trim).firstOrNull { it.isNotBlank() }.orEmpty()
 }

@@ -129,6 +129,9 @@
   <string name="roles_delete_title">删除角色</string>
   <string name="roles_delete_content">删除%s将同时删除其会话和保存的记忆。</string>
   <string name="roles_start_session">开始会话</string>
+  <string name="roles_persona_picker_title">选择 Persona</string>
+  <string name="roles_persona_picker_message">选择本次会话要使用的 persona。</string>
+  <string name="roles_persona_picker_default_badge">默认</string>
   <string name="roles_no_model">无模型</string>
   <string name="roles_default_tag">角色扮演</string>
 
@@ -204,6 +207,7 @@
   <string name="chat_use_model">使用%s</string>
   <string name="chat_open_model_library">打开模型库</string>
   <string name="chat_you">你</string>
+  <string name="chat_persona_label">Persona</string>
   <string name="chat_assistant">助手</string>
   <string name="chat_message_placeholder">给角色发送消息...</string>
   <string name="chat_message_read">已读</string>

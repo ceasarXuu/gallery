@@ -130,6 +130,9 @@
   <string name="roles_delete_title">Delete role</string>
   <string name="roles_delete_content">Deleting %s will also remove its sessions and saved memories.</string>
   <string name="roles_start_session">Start Session</string>
+  <string name="roles_persona_picker_title">Choose Persona</string>
+  <string name="roles_persona_picker_message">Select which persona to use for this session.</string>
+  <string name="roles_persona_picker_default_badge">Default</string>
   <string name="roles_no_model">No model</string>
   <string name="roles_default_tag">roleplay</string>
 
@@ -205,6 +208,7 @@
   <string name="chat_use_model">Use %s</string>
   <string name="chat_open_model_library">Open Model Library</string>
   <string name="chat_you">You</string>
+  <string name="chat_persona_label">Persona</string>
   <string name="chat_assistant">Assistant</string>
   <string name="chat_message_placeholder">Message your character...</string>
   <string name="chat_stop_response">Stop response</string>

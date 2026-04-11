@@ -126,6 +126,9 @@
   <string name="roles_delete_title">ロールを削除</string>
   <string name="roles_delete_content">%sを削除すると、そのセッションと保存されたメモリも削除されます。</string>
   <string name="roles_start_session">セッションを開始</string>
+  <string name="roles_persona_picker_title">ペルソナを選択</string>
+  <string name="roles_persona_picker_message">このセッションで使うペルソナを選択してください。</string>
+  <string name="roles_persona_picker_default_badge">デフォルト</string>
   <string name="roles_no_model">モデルなし</string>
   <string name="roles_default_tag">ロールプレイ</string>
 
@@ -201,6 +204,7 @@
   <string name="chat_use_model">%sを使用</string>
   <string name="chat_open_model_library">モデルライブラリを開く</string>
   <string name="chat_you">あなた</string>
+  <string name="chat_persona_label">ペルソナ</string>
   <string name="chat_assistant">アシスタント</string>
   <string name="chat_message_placeholder">キャラクターにメッセージを送信...</string>
   <string name="chat_stop_response">応答を停止</string>

@@ -987,3 +987,32 @@ Notes:
   `.\gradlew.bat --stop`
   delete the locked cache/stub directories
   rerun the narrow command instead of a full clean build
+
+## 2026-04-11 Session-bound persona start flow note
+
+- Goal: when the user starts a roleplay session from the role catalog, the selected persona should become part of that session's runtime state instead of staying a floating global setting.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat --stop
+Remove-Item -Recurse -Force app\build\tmp\hiltJavaCompileDebug, app\build\tmp\kapt3 -ErrorAction SilentlyContinue
+.\gradlew.bat :app:compileDebugKotlin :app:compileDebugUnitTestKotlin --no-daemon
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.domain.roleplay.usecase.CreateRoleplaySessionUseCaseTest" --tests "selfgemma.talk.domain.roleplay.usecase.SummarizeSessionUseCaseTest" --tests "selfgemma.talk.domain.roleplay.usecase.StChatSessionInteropUseCaseTest" --tests "selfgemma.talk.domain.roleplay.usecase.StSampleCardsRegressionTest" --no-daemon
+.\gradlew.bat :app:assembleDebug --no-daemon
+adb install -r D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk
+adb shell am force-stop selfgemma.talk
+adb shell am start -W -n selfgemma.talk/.MainActivity
+```
+
+Notes:
+
+- If a session-start persona is selectable, bind it into the persisted `Session` record. Do not keep reading `DataStoreRepository.getStUserProfile()` on every send, export, or summary step, or old sessions will drift when the user later switches global persona.
+- The minimal safe snapshot is the selected ST persona itself, not the whole editable profile tree. This keeps opening-message macro substitution, prompt assembly, summary speaker labels, export user names, and chat UI display on the same source of truth.
+- For this workspace, focused unit tests can fail spuriously in Hilt/KAPT phases because of stale temp outputs, even after the Kotlin sources are correct. Deleting `app\build\tmp\hiltJavaCompileDebug` and `app\build\tmp\kapt3` before rerunning a narrow test command is currently faster and more reliable than a full `clean`.
+- A `Room` entity shape change here also requires a database version bump, even though the app currently uses `fallbackToDestructiveMigration(true)`. Without the version bump, overwrite installs can keep an incompatible on-device schema alive.
+- Device verification should cover the no-choice path and the choice path:
+  one persona => start chat directly
+  multiple personas => show picker with default persona first
+  chat page => persona banner plus user-side avatar/name both reflect the chosen session snapshot.
