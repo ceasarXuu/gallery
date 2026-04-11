@@ -853,3 +853,28 @@ Notes:
 - Persona-slot switching must first snapshot the current UI fields back into the in-memory `StUserProfile`, then switch `userAvatarId`; otherwise unsaved edits vanish as soon as the user changes slots.
 - Keep the dirty-state calculation against the last persisted profile, not only against the currently visible slot fields. Multi-slot editing is one logical draft.
 - For locale-heavy projects, adding new strings only to the base resource file is functionally safe because Android falls back automatically, but it should still be treated as temporary debt and filled into translated resource sets when the locale files are healthy.
+
+## 2026-04-11 Persona list/detail page note
+
+- Goal: make the `我的 / Me` tab follow the same mental model as the role tab: card list first, detail editor second, instead of exposing one large settings form on the root page.
+
+Reusable commands:
+
+```powershell
+Set-Location D:\gallery\Android\src
+.\gradlew.bat :app:compileDebugKotlin --no-daemon
+.\gradlew.bat :app:testDebugUnitTest --tests "selfgemma.talk.feature.roleplay.profile.MyProfileViewModelTest" --no-daemon
+.\gradlew.bat :app:assembleDebug --no-daemon
+adb install -r D:\gallery\Android\src\app\build\outputs\apk\debug\app-debug.apk
+adb shell am start -n selfgemma.talk/.MainActivity
+adb shell dumpsys activity activities | Select-String 'ResumedActivity|selfgemma.talk/.MainActivity'
+```
+
+Notes:
+
+- If a tab starts to manage multiple ST personas, the root page should show slot cards derived from the full draft profile, not only from the last saved profile. Otherwise list cards and editor fields drift apart as soon as the user makes unsaved edits and goes back.
+- The cheapest UI alignment with the role tab is to reuse the same pattern, not the same route graph: `LazyColumn + Card + top-right overflow menu` is enough to make the product feel consistent even when the editor stays inside the same screen composable.
+- This workspace still hits intermittent KAPT file-lock failures under `app\build\kotlin\kaptGenerateStubsDebugKotlin` and `app\build\tmp\kapt3\stubs\debug`. The fastest recovery path during focused verification is:
+  `.\gradlew.bat --stop`
+  delete the locked cache/stub directories
+  rerun the narrow command instead of a full clean build

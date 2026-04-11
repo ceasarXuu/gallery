@@ -15,8 +15,18 @@ import selfgemma.talk.domain.roleplay.model.StUserProfile
 
 private const val TAG = "MyProfileViewModel"
 
+data class PersonaSlotCardUiState(
+  val slotId: String,
+  val personaName: String,
+  val personaTitle: String,
+  val personaDescription: String,
+  val avatarUri: String? = null,
+  val isDefault: Boolean = false,
+  val isSelected: Boolean = false,
+)
+
 data class MyProfileUiState(
-  val availableSlotIds: List<String> = emptyList(),
+  val personaCards: List<PersonaSlotCardUiState> = emptyList(),
   val personaName: String = "",
   val personaTitle: String = "",
   val personaDescription: String = "",
@@ -78,7 +88,7 @@ constructor(
         .copy(userAvatarId = normalizedSlotId)
         .ensureDefaults()
     _uiState.value = workingProfile.toUiState(savedProfile)
-    Log.d(TAG, "selected persona slot avatarId=$normalizedSlotId dirty=${_uiState.value.dirty}")
+    debugLog("selected persona slot avatarId=$normalizedSlotId dirty=${_uiState.value.dirty}")
   }
 
   fun createAvatarSlot(slotId: String) {
@@ -92,7 +102,7 @@ constructor(
         .copy(userAvatarId = normalizedSlotId)
         .ensureDefaults()
     _uiState.value = workingProfile.toUiState(savedProfile)
-    Log.d(TAG, "created persona slot avatarId=$normalizedSlotId totalSlots=${_uiState.value.availableSlotIds.size}")
+    debugLog("created persona slot avatarId=$normalizedSlotId totalSlots=${_uiState.value.personaCards.size}")
   }
 
   fun saveProfile() {
@@ -101,8 +111,7 @@ constructor(
     savedProfile = updatedProfile
     workingProfile = updatedProfile
     _uiState.value = updatedProfile.toUiState(savedProfile)
-    Log.d(
-      TAG,
+    debugLog(
       "saved ST user persona avatarId=${updatedProfile.resolvedUserAvatarId()} name=${updatedProfile.userName} position=${updatedProfile.personaDescriptionPosition.rawValue}",
     )
   }
@@ -113,12 +122,13 @@ constructor(
     savedProfile = defaultProfile
     workingProfile = defaultProfile
     _uiState.value = defaultProfile.toUiState(savedProfile)
-    Log.d(TAG, "reset ST user persona profile to defaults")
+    debugLog("reset ST user persona profile to defaults")
   }
 
   private fun updateUiState(transform: (MyProfileUiState) -> MyProfileUiState) {
     val nextState = transform(_uiState.value)
-    _uiState.value = nextState.copy(dirty = buildProfileFromUiState(nextState) != savedProfile)
+    workingProfile = buildProfileFromUiState(nextState)
+    _uiState.value = workingProfile.toUiState(savedProfile)
   }
 
   private fun buildProfileFromUiState(state: MyProfileUiState): StUserProfile {
@@ -150,10 +160,14 @@ constructor(
   }
 }
 
+private fun debugLog(message: String) {
+  runCatching { Log.d(TAG, message) }
+}
+
 private fun StUserProfile.toUiState(savedProfile: StUserProfile): MyProfileUiState {
   val activeSlotId = resolvedUserAvatarId()
   return MyProfileUiState(
-    availableSlotIds = availableSlotIds(activeSlotId),
+    personaCards = personaCards(activeSlotId),
     personaName = userName,
     personaTitle = personaTitle,
     personaDescription = personaDescription,
@@ -166,14 +180,33 @@ private fun StUserProfile.toUiState(savedProfile: StUserProfile): MyProfileUiSta
   )
 }
 
+private fun StUserProfile.personaCards(activeSlotId: String): List<PersonaSlotCardUiState> {
+  return availableSlotIds(activeSlotId)
+    .map { slotId ->
+      val descriptor = personaDescriptions[slotId] ?: StPersonaDescriptor()
+      PersonaSlotCardUiState(
+        slotId = slotId,
+        personaName = personas[slotId].orEmpty().ifBlank { DEFAULT_ST_USER_NAME },
+        personaTitle = descriptor.title,
+        personaDescription = descriptor.description,
+        avatarUri = descriptor.avatarUri,
+        isDefault = defaultPersonaId == slotId,
+        isSelected = activeSlotId == slotId,
+      )
+    }.sortedWith(
+      compareByDescending<PersonaSlotCardUiState> { it.isSelected }
+        .thenByDescending { it.isDefault }
+        .thenBy { it.personaName.lowercase() }
+        .thenBy { it.slotId },
+    )
+}
+
 private fun StUserProfile.availableSlotIds(activeSlotId: String): List<String> {
   return buildSet {
     add(activeSlotId)
     addAll(personas.keys)
     addAll(personaDescriptions.keys)
-  }
-    .filter { it.isNotBlank() }
-    .sorted()
+  }.filter { it.isNotBlank() }
 }
 
 private fun StUserProfile.ensureSlot(slotId: String): StUserProfile {

@@ -34,8 +34,8 @@ class MyProfileViewModelTest {
     val slotBState = viewModel.uiState.value
     assertEquals("slot-b", slotBState.avatarSlotId)
     assertEquals(DEFAULT_ST_USER_NAME, slotBState.personaName)
-    assertTrue(slotBState.availableSlotIds.contains("slot-a"))
-    assertTrue(slotBState.availableSlotIds.contains("slot-b"))
+    assertTrue(slotBState.personaCards.any { it.slotId == "slot-a" })
+    assertTrue(slotBState.personaCards.any { it.slotId == "slot-b" })
 
     viewModel.selectAvatarSlot("slot-a")
 
@@ -75,5 +75,29 @@ class MyProfileViewModelTest {
     assertEquals("Bob", savedProfile.personas["slot-b"])
     assertEquals("traveler", savedProfile.personaDescriptions["slot-b"]?.description)
     assertEquals("Alice", savedProfile.personas["slot-a"])
+  }
+
+  @Test
+  fun updatingPersonaFields_refreshesCardSummariesFromDraftProfile() {
+    val viewModel =
+      MyProfileViewModel(
+        FakeDataStoreRepository(
+          stUserProfile =
+            StUserProfile(
+              userAvatarId = "slot-a",
+              personas = mapOf("slot-a" to "Alice"),
+              personaDescriptions = mapOf("slot-a" to StPersonaDescriptor()),
+            ).ensureDefaults(),
+        ),
+      )
+
+    viewModel.updatePersonaName("Alice Draft")
+    viewModel.updatePersonaTitle("Captain")
+    viewModel.updatePersonaDescription("keeps the crew calm")
+
+    val updatedCard = viewModel.uiState.value.personaCards.first { it.slotId == "slot-a" }
+    assertEquals("Alice Draft", updatedCard.personaName)
+    assertEquals("Captain", updatedCard.personaTitle)
+    assertEquals("keeps the crew calm", updatedCard.personaDescription)
   }
 }

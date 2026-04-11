@@ -11,15 +11,20 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -36,14 +41,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import selfgemma.talk.AppTopBar
 import selfgemma.talk.R
 import selfgemma.talk.data.AppBarAction
 import selfgemma.talk.data.AppBarActionType
 import selfgemma.talk.domain.roleplay.model.StPersonaDescriptionPosition
+import selfgemma.talk.feature.roleplay.common.RoleAvatar
+import selfgemma.talk.ui.common.TopBarOverflowMenuButton
 
 private const val TAG = "MyProfileScreen"
 
@@ -57,25 +64,65 @@ fun MyProfileScreen(
   viewModel: MyProfileViewModel = hiltViewModel(),
 ) {
   val uiState by viewModel.uiState.collectAsState()
-  var showSlotDialog by rememberSaveable { mutableStateOf(false) }
-  var selectedSlotId by rememberSaveable { mutableStateOf("") }
+  var editingSlotId by rememberSaveable { mutableStateOf<String?>(null) }
+  var showCreateDialog by rememberSaveable { mutableStateOf(false) }
   var newSlotId by rememberSaveable { mutableStateOf("") }
+  var showMenu by rememberSaveable { mutableStateOf(false) }
+  val isEditing = editingSlotId != null
   val handleNavigateUp: () -> Unit = {
-    Log.d(TAG, "navigate up from my profile")
-    navigateUp()
+    if (isEditing) {
+      Log.d(TAG, "return from persona editor to persona list")
+      editingSlotId = null
+    } else {
+      Log.d(TAG, "navigate up from my profile")
+      navigateUp()
+    }
   }
 
-  BackHandler(enabled = showNavigateUp) { handleNavigateUp() }
+  BackHandler(enabled = showNavigateUp || isEditing) { handleNavigateUp() }
 
   Scaffold(
     modifier = modifier,
     contentWindowInsets = WindowInsets(0, 0, 0, 0),
     topBar = {
       AppTopBar(
-        title = stringResource(R.string.tab_me),
+        title =
+          if (isEditing) {
+            uiState.personaName.ifBlank { editingSlotId ?: uiState.avatarSlotId.ifBlank { stringResource(R.string.tab_me) } }
+          } else {
+            stringResource(R.string.tab_me)
+          },
         leftAction =
-          if (showNavigateUp) {
+          if (showNavigateUp || isEditing) {
             AppBarAction(actionType = AppBarActionType.NAVIGATE_UP, actionFn = handleNavigateUp)
+          } else {
+            null
+          },
+        rightActionContent =
+          if (!isEditing) {
+            {
+              TopBarOverflowMenuButton(
+                expanded = showMenu,
+                onExpandedChange = { showMenu = it },
+              ) {
+                DropdownMenuItem(
+                  text = { Text(stringResource(R.string.create)) },
+                  onClick = {
+                    showMenu = false
+                    newSlotId = ""
+                    showCreateDialog = true
+                  },
+                )
+                DropdownMenuItem(
+                  text = { Text(stringResource(R.string.reset)) },
+                  onClick = {
+                    showMenu = false
+                    editingSlotId = null
+                    viewModel.resetProfile()
+                  },
+                )
+              }
+            }
           } else {
             null
           },
@@ -89,113 +136,264 @@ fun MyProfileScreen(
       end = contentPadding.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
     )
 
-    Column(
-      modifier =
-        Modifier
-          .fillMaxSize()
-          .padding(combinedPadding)
-          .verticalScroll(rememberScrollState())
-          .padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-      ClickableInfoCard(
-        title = stringResource(R.string.my_profile_avatar_slot_title),
-        value = uiState.avatarSlotId,
-        summary = stringResource(R.string.my_profile_avatar_slot_summary),
-        onClick = {
-          selectedSlotId = uiState.avatarSlotId
-          newSlotId = ""
-          showSlotDialog = true
+    if (isEditing) {
+      MyProfileEditorContent(
+        uiState = uiState,
+        contentPadding = combinedPadding,
+        onPersonaNameChange = viewModel::updatePersonaName,
+        onPersonaTitleChange = viewModel::updatePersonaTitle,
+        onPersonaDescriptionChange = viewModel::updatePersonaDescription,
+        onPersonaPositionChange = viewModel::updatePersonaPosition,
+        onPersonaDepthChange = viewModel::updatePersonaDepth,
+        onPersonaRoleChange = viewModel::updatePersonaRole,
+        onDefaultPersonaEnabledChange = viewModel::updateDefaultPersonaEnabled,
+        onSave = viewModel::saveProfile,
+      )
+    } else {
+      MyProfileListContent(
+        uiState = uiState,
+        contentPadding = combinedPadding,
+        onEditSlot = { slotId ->
+          viewModel.selectAvatarSlot(slotId)
+          editingSlotId = slotId
         },
       )
-      EditorCard(title = stringResource(R.string.my_profile_persona_name_title)) {
-        OutlinedTextField(
-          value = uiState.personaName,
-          onValueChange = viewModel::updatePersonaName,
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true,
-        )
-      }
-      EditorCard(title = stringResource(R.string.my_profile_persona_title_title)) {
-        OutlinedTextField(
-          value = uiState.personaTitle,
-          onValueChange = viewModel::updatePersonaTitle,
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true,
-        )
-      }
-      EditorCard(title = stringResource(R.string.my_profile_persona_description_title)) {
-        OutlinedTextField(
-          value = uiState.personaDescription,
-          onValueChange = viewModel::updatePersonaDescription,
-          modifier = Modifier.fillMaxWidth(),
-          minLines = 4,
-        )
-      }
-      PersonaPositionCard(
-        selected = uiState.personaPosition,
-        onSelected = viewModel::updatePersonaPosition,
-      )
-      if (uiState.personaPosition == StPersonaDescriptionPosition.AT_DEPTH) {
-        EditorCard(title = stringResource(R.string.my_profile_persona_depth_title)) {
-          OutlinedTextField(
-            value = uiState.personaDepth,
-            onValueChange = viewModel::updatePersonaDepth,
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-          )
-        }
-        PersonaRoleCard(
-          selectedRole = uiState.personaRole,
-          onSelected = viewModel::updatePersonaRole,
-        )
-      }
-      ToggleCard(
-        title = stringResource(R.string.my_profile_default_persona_title),
-        summary = stringResource(R.string.my_profile_default_persona_summary),
-        checked = uiState.defaultPersonaEnabled,
-        onCheckedChange = viewModel::updateDefaultPersonaEnabled,
-      )
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-      ) {
-        OutlinedButton(
-          modifier = Modifier.weight(1f),
-          onClick = viewModel::resetProfile,
-        ) {
-          Text(stringResource(R.string.my_profile_reset))
-        }
-        TextButton(
-          modifier = Modifier.weight(1f),
-          enabled = uiState.dirty,
-          onClick = viewModel::saveProfile,
-        ) {
-          Text(stringResource(R.string.my_profile_save))
-        }
-      }
     }
 
-    if (showSlotDialog) {
-      PersonaSlotDialog(
-        availableSlotIds = uiState.availableSlotIds,
-        selectedSlotId = selectedSlotId,
-        newSlotId = newSlotId,
-        onSelectedSlotChange = { selectedSlotId = it },
-        onNewSlotIdChange = { newSlotId = it },
-        onDismiss = { showSlotDialog = false },
-        onConfirmSelection = {
-          viewModel.selectAvatarSlot(selectedSlotId)
-          showSlotDialog = false
-        },
-        onCreateSlot = {
-          viewModel.createAvatarSlot(newSlotId)
-          showSlotDialog = false
+    if (showCreateDialog) {
+      CreatePersonaSlotDialog(
+        slotId = newSlotId,
+        onSlotIdChange = { newSlotId = it },
+        onDismiss = { showCreateDialog = false },
+        onCreate = {
+          val normalizedSlotId = newSlotId.trim()
+          if (normalizedSlotId.isNotBlank()) {
+            viewModel.createAvatarSlot(normalizedSlotId)
+            editingSlotId = normalizedSlotId
+            newSlotId = ""
+            showCreateDialog = false
+          }
         },
       )
     }
   }
+}
+
+@Composable
+private fun MyProfileListContent(
+  uiState: MyProfileUiState,
+  contentPadding: PaddingValues,
+  onEditSlot: (String) -> Unit,
+) {
+  LazyColumn(
+    modifier = Modifier.fillMaxSize().padding(contentPadding),
+    contentPadding = PaddingValues(16.dp),
+    verticalArrangement = Arrangement.spacedBy(12.dp),
+  ) {
+    items(uiState.personaCards, key = { it.slotId }) { persona ->
+      PersonaCardItem(
+        persona = persona,
+        onEdit = { onEditSlot(persona.slotId) },
+      )
+    }
+  }
+}
+
+@Composable
+private fun PersonaCardItem(
+  persona: PersonaSlotCardUiState,
+  onEdit: () -> Unit,
+) {
+  Card(
+    modifier = Modifier.fillMaxWidth().clickable(onClick = onEdit),
+  ) {
+    Column(
+      modifier = Modifier.fillMaxWidth().padding(16.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        RoleAvatar(
+          name = persona.personaName,
+          avatarUri = persona.avatarUri,
+          modifier = Modifier.size(52.dp),
+        )
+        Column(
+          modifier = Modifier.weight(1f),
+          verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+          Text(
+            text = persona.personaName,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+          if (persona.personaTitle.isNotBlank()) {
+            Text(
+              text = persona.personaTitle,
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis,
+            )
+          }
+        }
+      }
+      Text(
+        text = "${stringResource(R.string.my_profile_avatar_slot_title)}: ${persona.slotId}",
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+      if (persona.personaDescription.isNotBlank()) {
+        Text(
+          text = persona.personaDescription,
+          style = MaterialTheme.typography.bodyMedium,
+          maxLines = 3,
+          overflow = TextOverflow.Ellipsis,
+        )
+      }
+      if (persona.isDefault) {
+        Text(
+          text = stringResource(R.string.my_profile_default_persona_title),
+          style = MaterialTheme.typography.labelSmall,
+          color = MaterialTheme.colorScheme.secondary,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+      }
+      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        FilledTonalButton(onClick = onEdit) {
+          Text(stringResource(R.string.edit))
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun MyProfileEditorContent(
+  uiState: MyProfileUiState,
+  contentPadding: PaddingValues,
+  onPersonaNameChange: (String) -> Unit,
+  onPersonaTitleChange: (String) -> Unit,
+  onPersonaDescriptionChange: (String) -> Unit,
+  onPersonaPositionChange: (StPersonaDescriptionPosition) -> Unit,
+  onPersonaDepthChange: (String) -> Unit,
+  onPersonaRoleChange: (Int) -> Unit,
+  onDefaultPersonaEnabledChange: (Boolean) -> Unit,
+  onSave: () -> Unit,
+) {
+  Column(
+    modifier =
+      Modifier
+        .fillMaxSize()
+        .padding(contentPadding)
+        .verticalScroll(rememberScrollState())
+        .padding(16.dp),
+    verticalArrangement = Arrangement.spacedBy(12.dp),
+  ) {
+    InfoCard(
+      title = stringResource(R.string.my_profile_avatar_slot_title),
+      value = uiState.avatarSlotId,
+    )
+    EditorCard(title = stringResource(R.string.my_profile_persona_name_title)) {
+      OutlinedTextField(
+        value = uiState.personaName,
+        onValueChange = onPersonaNameChange,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+      )
+    }
+    EditorCard(title = stringResource(R.string.my_profile_persona_title_title)) {
+      OutlinedTextField(
+        value = uiState.personaTitle,
+        onValueChange = onPersonaTitleChange,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+      )
+    }
+    EditorCard(title = stringResource(R.string.my_profile_persona_description_title)) {
+      OutlinedTextField(
+        value = uiState.personaDescription,
+        onValueChange = onPersonaDescriptionChange,
+        modifier = Modifier.fillMaxWidth(),
+        minLines = 4,
+      )
+    }
+    PersonaPositionCard(
+      selected = uiState.personaPosition,
+      onSelected = onPersonaPositionChange,
+    )
+    if (uiState.personaPosition == StPersonaDescriptionPosition.AT_DEPTH) {
+      EditorCard(title = stringResource(R.string.my_profile_persona_depth_title)) {
+        OutlinedTextField(
+          value = uiState.personaDepth,
+          onValueChange = onPersonaDepthChange,
+          modifier = Modifier.fillMaxWidth(),
+          singleLine = true,
+          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        )
+      }
+      PersonaRoleCard(
+        selectedRole = uiState.personaRole,
+        onSelected = onPersonaRoleChange,
+      )
+    }
+    ToggleCard(
+      title = stringResource(R.string.my_profile_default_persona_title),
+      summary = stringResource(R.string.my_profile_default_persona_summary),
+      checked = uiState.defaultPersonaEnabled,
+      onCheckedChange = onDefaultPersonaEnabledChange,
+    )
+    FilledTonalButton(
+      modifier = Modifier.fillMaxWidth(),
+      enabled = uiState.dirty,
+      onClick = onSave,
+    ) {
+      Text(stringResource(R.string.my_profile_save))
+    }
+  }
+}
+
+@Composable
+private fun CreatePersonaSlotDialog(
+  slotId: String,
+  onSlotIdChange: (String) -> Unit,
+  onDismiss: () -> Unit,
+  onCreate: () -> Unit,
+) {
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = {
+      Text("${stringResource(R.string.create)} ${stringResource(R.string.my_profile_avatar_slot_title)}")
+    },
+    text = {
+      OutlinedTextField(
+        value = slotId,
+        onValueChange = onSlotIdChange,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        label = { Text(stringResource(R.string.my_profile_avatar_slot_new_label)) },
+      )
+    },
+    confirmButton = {
+      TextButton(
+        enabled = slotId.trim().isNotBlank(),
+        onClick = onCreate,
+      ) {
+        Text(stringResource(R.string.create))
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) {
+        Text(stringResource(R.string.cancel))
+      }
+    },
+  )
 }
 
 @Composable
@@ -314,20 +512,13 @@ private fun EditorCard(
 }
 
 @Composable
-private fun ClickableInfoCard(
+private fun InfoCard(
   title: String,
   value: String,
-  summary: String?,
-  onClick: () -> Unit,
-  enabled: Boolean = true,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(
-      modifier =
-        Modifier
-          .fillMaxWidth()
-          .clickable(enabled = enabled, onClick = onClick)
-          .padding(16.dp),
+      modifier = Modifier.fillMaxWidth().padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
       Text(text = title, style = MaterialTheme.typography.titleMedium)
@@ -336,76 +527,8 @@ private fun ClickableInfoCard(
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
-      if (!summary.isNullOrBlank()) {
-        Text(
-          text = summary,
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
     }
   }
-}
-
-@Composable
-private fun PersonaSlotDialog(
-  availableSlotIds: List<String>,
-  selectedSlotId: String,
-  newSlotId: String,
-  onSelectedSlotChange: (String) -> Unit,
-  onNewSlotIdChange: (String) -> Unit,
-  onDismiss: () -> Unit,
-  onConfirmSelection: () -> Unit,
-  onCreateSlot: () -> Unit,
-) {
-  AlertDialog(
-    onDismissRequest = onDismiss,
-    title = { Text(stringResource(R.string.my_profile_avatar_slot_dialog_title)) },
-    text = {
-      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Column(
-          modifier = Modifier.selectableGroup(),
-          verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-          availableSlotIds.forEach { slotId ->
-            PositionOptionRow(
-              label = slotId,
-              selected = slotId == selectedSlotId,
-              onClick = { onSelectedSlotChange(slotId) },
-            )
-          }
-        }
-        OutlinedTextField(
-          value = newSlotId,
-          onValueChange = onNewSlotIdChange,
-          modifier = Modifier.fillMaxWidth(),
-          singleLine = true,
-          label = { Text(stringResource(R.string.my_profile_avatar_slot_new_label)) },
-        )
-      }
-    },
-    confirmButton = {
-      TextButton(
-        enabled = selectedSlotId.isNotBlank(),
-        onClick = onConfirmSelection,
-      ) {
-        Text(stringResource(R.string.my_profile_avatar_slot_use_selected))
-      }
-    },
-    dismissButton = {
-      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        TextButton(
-          enabled = newSlotId.trim().isNotBlank(),
-          onClick = onCreateSlot,
-        ) {
-          Text(stringResource(R.string.create))
-        }
-        TextButton(onClick = onDismiss) {
-          Text(stringResource(R.string.cancel))
-        }
-      }
-    },
-  )
 }
 
 @Composable
