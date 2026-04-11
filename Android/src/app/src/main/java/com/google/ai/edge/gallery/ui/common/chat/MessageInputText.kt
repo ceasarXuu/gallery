@@ -78,11 +78,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.rounded.AudioFile
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FlipCameraAndroid
 import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Stop
@@ -390,16 +390,20 @@ fun MessageInputText(
                   shape = CircleShape,
                   color =
                     if (canRecordAudio) {
-                      MaterialTheme.colorScheme.secondaryContainer
+                      MaterialTheme.colorScheme.surfaceContainerLow
                     } else {
-                      MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f)
+                      MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.45f)
                     },
                   modifier =
-                    Modifier.size(ComposerButtonSize).shadow(
-                      elevation = if (canRecordAudio) 4.dp else 1.dp,
+                    Modifier.size(ComposerButtonSize).border(
+                      width = 1.dp,
+                      color =
+                        if (canRecordAudio) {
+                          MaterialTheme.colorScheme.outlineVariant
+                        } else {
+                          MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+                        },
                       shape = CircleShape,
-                      ambientColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f),
-                      spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
                     ),
                   onClick = {
                     if (!canRecordAudio) {
@@ -419,11 +423,11 @@ fun MessageInputText(
                   },
                 ) {
                   Icon(
-                    Icons.Rounded.Mic,
+                    Icons.Outlined.Mic,
                     contentDescription = stringResource(R.string.record_audio_clip),
                     tint =
                       if (canRecordAudio) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
+                        MaterialTheme.colorScheme.onSurfaceVariant
                       } else {
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                       },
@@ -509,10 +513,20 @@ fun MessageInputText(
                   Box {
                     Surface(
                       shape = CircleShape,
-                      color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.72f),
+                      color = MaterialTheme.colorScheme.surfaceContainerLow,
                       onClick = { if (canOpenAddMenu) showAddContentMenu = true },
                       enabled = canOpenAddMenu,
-                      modifier = Modifier.size(ComposerTrailingButtonSize),
+                      modifier =
+                        Modifier.size(ComposerTrailingButtonSize).border(
+                          width = 1.dp,
+                          color =
+                            if (canOpenAddMenu) {
+                              MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.9f)
+                            } else {
+                              MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+                            },
+                          shape = CircleShape,
+                        ),
                     ) {
                       Icon(
                         Icons.Outlined.Add,
@@ -638,11 +652,10 @@ fun MessageInputText(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.secondaryContainer,
                     modifier =
-                      Modifier.size(ComposerButtonSize).shadow(
-                        elevation = 4.dp,
+                      Modifier.size(ComposerButtonSize).border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
                         shape = CircleShape,
-                        ambientColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
-                        spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
                       ),
                     onClick = onStopButtonClicked,
                   ) {
@@ -659,20 +672,20 @@ fun MessageInputText(
                   shape = CircleShape,
                   color =
                     if (canSend) {
-                      getTaskIconColor(task = task)
+                      MaterialTheme.colorScheme.secondaryContainer
                     } else {
-                      getTaskIconColor(task = task).copy(alpha = 0.3f)
+                      MaterialTheme.colorScheme.surfaceContainerLow
                     },
                   modifier =
-                    Modifier.size(ComposerButtonSize).shadow(
-                      elevation = if (canSend) 6.dp else 2.dp,
+                    Modifier.size(ComposerButtonSize).border(
+                      width = 1.dp,
+                      color =
+                        if (canSend) {
+                          MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        } else {
+                          MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+                        },
                       shape = CircleShape,
-                      ambientColor =
-                        if (canSend) getTaskIconColor(task = task).copy(alpha = 0.3f)
-                        else Color.Transparent,
-                      spotColor =
-                        if (canSend) getTaskIconColor(task = task).copy(alpha = 0.2f)
-                        else Color.Transparent,
                     ),
                   onClick = {
                     if (canSend) {
@@ -693,7 +706,12 @@ fun MessageInputText(
                     Icons.AutoMirrored.Rounded.Send,
                     contentDescription = stringResource(R.string.cd_send_prompt_icon),
                     modifier = Modifier.size(ComposerIconSize),
-                    tint = Color.White,
+                    tint =
+                      if (canSend) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                      } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                      },
                   )
                 }
               }
