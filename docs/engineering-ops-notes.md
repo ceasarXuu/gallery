@@ -100,9 +100,11 @@ adb shell cat /sdcard/ui.xml | Select-String -Pattern '帮助|4/120|0/600|Person
 Notes:
 
 - For mobile persona editing, reuse the role editor's two lightweight patterns only: field help dialogs and character-count budgets. Do not copy the role editor's AI compression controls into the persona page unless the product explicitly asks for it.
+- Do not add a help entry to the avatar card unless the avatar behavior itself becomes ambiguous. The help surface is more valuable on text parameters whose prompt effect is harder to infer.
 - Put the help button inside the same header row as the field title. This keeps the card shape stable and makes the UI tree easy to verify with `uiautomator dump`.
 - Character counters should reuse the shared `role_editor_character_count_with_limit` and `role_editor_character_count_without_limit` strings so count formatting stays consistent across editors.
 - Current persona budgets are intentionally small and UI-driven: name `120`, description `600`, depth `4`. These are editor guidance limits, not a hard ST runtime schema.
+- The persona name help text should state explicitly that this name may become the way roles address the user during chat. Otherwise users cannot tell whether the field is cosmetic or runtime-relevant.
 - When validating on device, verify one help dialog opens end-to-end and that at least one populated and one empty field show counts, for example `4/120` and `0/600`. This catches both header wiring and supporting-text rendering regressions.
 
 ## 2026-04-11 Top app bar overflow menu anchor note

@@ -74,7 +74,6 @@ private data class PersonaTextFieldSpec(
 )
 
 private enum class PersonaHelpTopic(val titleRes: Int, val bodyRes: Int) {
-  AVATAR(R.string.my_profile_avatar_title, R.string.my_profile_help_avatar_body),
   NAME(R.string.my_profile_persona_name_title, R.string.my_profile_help_name_body),
   DESCRIPTION(R.string.my_profile_persona_description_title, R.string.my_profile_help_description_body),
   POSITION(R.string.my_profile_persona_position_title, R.string.my_profile_help_position_body),
@@ -422,8 +421,6 @@ private fun MyProfileEditorContent(
       avatarUri = uiState.avatarUri,
       onPickAvatar = onAvatarPick,
       onClearAvatar = onAvatarClear,
-      helpTopic = PersonaHelpTopic.AVATAR,
-      onShowHelp = onShowHelp,
     )
     EditorCard(
       title = stringResource(R.string.my_profile_persona_name_title),
@@ -649,8 +646,6 @@ private fun PersonaAvatarCard(
   avatarUri: String?,
   onPickAvatar: () -> Unit,
   onClearAvatar: () -> Unit,
-  helpTopic: PersonaHelpTopic,
-  onShowHelp: (PersonaHelpTopic) -> Unit,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(
@@ -658,10 +653,9 @@ private fun PersonaAvatarCard(
       verticalArrangement = Arrangement.spacedBy(12.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-      PersonaFieldHeader(
-        title = stringResource(R.string.my_profile_avatar_title),
-        helpTopic = helpTopic,
-        onShowHelp = onShowHelp,
+      Text(
+        text = stringResource(R.string.my_profile_avatar_title),
+        style = MaterialTheme.typography.titleMedium,
       )
       RoleAvatar(
         name = name,
