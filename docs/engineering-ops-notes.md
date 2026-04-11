@@ -1093,7 +1093,8 @@ adb logcat -d -v time | Select-String -Pattern 'RoleplayChatScreen|RoleplayChatV
 
 Notes:
 
-- Reuse `MessageInputText` for picker/record interactions, but do not assume a model marked `INITIALIZED` was initialized with image/audio backends. Roleplay entry must request a fresh multimodal initialization for the selected model.
+- Reuse `MessageInputText` for picker/record interactions, but do not assume a model marked `INITIALIZED` was initialized with image/audio backends. Roleplay model initialization should follow the outgoing message payload, not the screen entry.
+- Forcing image/audio backends as soon as the chat screen opens can regress plain text reply generation or make assistant bubbles stay empty; keep text chat on the normal path and only reinitialize when the current send actually contains media.
 - Persist outgoing chat attachments into app-private files before enqueueing the message. UI pickers can return transient `Bitmap`/PCM objects; without a durable file path, the roleplay timeline cannot survive process death or conversation reload.
 - Store audio clips as raw PCM plus `sampleRate` metadata if you want both playback and inference reuse. `AudioPlaybackPanel` wants PCM, while LiteRT LM audio input wants a WAV wrapper; wrapping PCM into WAV on demand keeps one source of truth.
 - Keep multimodal history visible to prompt assembly through short textual placeholders such as `Shared 2 image(s).` and `Shared an audio clip.`. Otherwise future turns lose the fact that the user already sent media.

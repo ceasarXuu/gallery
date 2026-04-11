@@ -105,9 +105,14 @@ import selfgemma.talk.domain.roleplay.model.MessageStatus
 import selfgemma.talk.domain.roleplay.model.RoleplayMessageAttachmentType
 import selfgemma.talk.domain.roleplay.model.roleplayMessageMediaPayload
 import selfgemma.talk.performance.TrackPerformanceState
+import selfgemma.talk.ui.common.chat.ChatMessage
+import selfgemma.talk.ui.common.chat.ChatMessageAudioClip
+import selfgemma.talk.ui.common.chat.ChatMessageImage
+import selfgemma.talk.ui.common.chat.ChatMessageText
 import selfgemma.talk.ui.common.chat.AudioPlaybackPanel
 import selfgemma.talk.ui.common.chat.MessageInputText
 import selfgemma.talk.ui.common.chat.rememberStreamingTokenSpeed
+import selfgemma.talk.ui.llmchat.LlmModelInstance
 import selfgemma.talk.ui.modelmanager.ModelInitializationStatusType
 import selfgemma.talk.ui.modelmanager.ModelManagerViewModel
 import androidx.compose.ui.res.stringResource
@@ -190,7 +195,6 @@ fun RoleplayChatScreen(
   var hasCompletedInitialPositioning by rememberSaveable(uiState.session?.id) { mutableStateOf(false) }
   var hasLoggedInitialPositioning by rememberSaveable(uiState.session?.id) { mutableStateOf(false) }
   var previousMessageCount by rememberSaveable(uiState.session?.id) { mutableStateOf(0) }
-  var hasRequestedMultimodalInit by rememberSaveable(activeModel?.name) { mutableStateOf(false) }
   var composerBoundsInWindow by remember { mutableStateOf<Rect?>(null) }
   val latestListItemIndex =
     remember(uiState.messages.size) {
@@ -240,24 +244,6 @@ fun RoleplayChatScreen(
       "intercept back to dismiss transient chat UI sessionId=${uiState.session?.id} showMenu=$showMenu showModelPicker=$showModelPicker",
     )
     handleNavigateUp()
-  }
-
-  LaunchedEffect(activeModel?.name, activeModelStatus, hasRequestedMultimodalInit) {
-    if (
-      activeModel != null &&
-        llmChatTask != null &&
-        !isActiveModelInitializing &&
-        !hasRequestedMultimodalInit
-    ) {
-      hasRequestedMultimodalInit = true
-      modelManagerViewModel.initializeLlmModel(
-        context = context,
-        model = activeModel,
-        supportImage = activeModel.llmSupportImage,
-        supportAudio = activeModel.llmSupportAudio,
-        force = true,
-      )
-    }
   }
 
   LaunchedEffect(activeModel?.name) {
@@ -487,20 +473,70 @@ fun RoleplayChatScreen(
               onValueChanged = viewModel::updateDraft,
               onSendMessage = { messages ->
                 activeModel?.let { currentModel ->
-                  messages
-                    .mapNotNull { message ->
-                      when (message) {
-                        is selfgemma.talk.ui.common.chat.ChatMessageText -> message.content.trim().takeIf(String::isNotBlank)
-                        else -> null
+                  val sendRequirements = resolveRoleplaySendRequirements(messages)
+                  val submitMessages: () -> Unit = {
+                    sendRequirements.primaryTextInput?.let(modelManagerViewModel::addTextInputHistory)
+                    viewModel.sendChatMessages(
+                      model = currentModel,
+                      messages = messages,
+                      clearDraft = true,
+                    )
+                  }
+                  val initializedInstance = currentModel.instance as? LlmModelInstance
+                  Log.d(
+                    TAG,
+                    "roleplay send requested sessionId=${uiState.session?.id} model=${currentModel.name} needsImage=${sendRequirements.needsImage} needsAudio=${sendRequirements.needsAudio} hasInitializedInstance=${initializedInstance != null} isModelInitializing=$isActiveModelInitializing",
+                  )
+
+                  when {
+                    sendRequirements.needsImage || sendRequirements.needsAudio -> {
+                      if (
+                        canReuseRoleplayModelSession(
+                          instance = initializedInstance,
+                          needsImage = sendRequirements.needsImage,
+                          needsAudio = sendRequirements.needsAudio,
+                        )
+                      ) {
+                        Log.d(
+                          TAG,
+                          "reuse existing multimodal-capable roleplay session sessionId=${uiState.session?.id} model=${currentModel.name}",
+                        )
+                        submitMessages()
+                      } else {
+                        Log.d(
+                          TAG,
+                          "reinitialize roleplay session for multimodal send sessionId=${uiState.session?.id} model=${currentModel.name} needsImage=${sendRequirements.needsImage} needsAudio=${sendRequirements.needsAudio}",
+                        )
+                        modelManagerViewModel.initializeLlmModel(
+                          context = context,
+                          model = currentModel,
+                          supportImage = sendRequirements.needsImage,
+                          supportAudio = sendRequirements.needsAudio,
+                          force = true,
+                          onDone = submitMessages,
+                        )
                       }
                     }
-                    .firstOrNull()
-                    ?.let(modelManagerViewModel::addTextInputHistory)
-                  viewModel.sendChatMessages(
-                    model = currentModel,
-                    messages = messages,
-                    clearDraft = true,
-                  )
+                    initializedInstance != null || isActiveModelInitialized || currentModel.initializing -> {
+                      Log.d(
+                        TAG,
+                        "dispatch roleplay text send with existing or warming session sessionId=${uiState.session?.id} model=${currentModel.name}",
+                      )
+                      submitMessages()
+                    }
+                    else -> {
+                      Log.d(
+                        TAG,
+                        "initialize text roleplay session before send sessionId=${uiState.session?.id} model=${currentModel.name}",
+                      )
+                      modelManagerViewModel.initializeModel(
+                        context = context,
+                        task = llmChatTask,
+                        model = currentModel,
+                        onDone = submitMessages,
+                      )
+                    }
+                  }
                 }
               },
               onAmplitudeChanged = {},
@@ -1100,4 +1136,47 @@ private fun String.looksLikeHtml(): Boolean {
 private fun String.looksLikeMarkdown(): Boolean {
   return Regex("""(?m)^\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```|~~~)|(\[[^]]+]\([^)]+\)|`[^`]+`|\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|_[^_\n]+_)""")
     .containsMatchIn(this)
+}
+
+private data class RoleplaySendRequirements(
+  val primaryTextInput: String? = null,
+  val needsImage: Boolean = false,
+  val needsAudio: Boolean = false,
+)
+
+private fun resolveRoleplaySendRequirements(messages: List<ChatMessage>): RoleplaySendRequirements {
+  return RoleplaySendRequirements(
+    primaryTextInput =
+      messages
+        .filterIsInstance<ChatMessageText>()
+        .map { it.content.trim() }
+        .firstOrNull(String::isNotBlank),
+    needsImage = messages.any { it is ChatMessageImage && it.bitmaps.isNotEmpty() },
+    needsAudio = messages.any { it is ChatMessageAudioClip },
+  )
+}
+
+private fun canReuseRoleplayModelSession(
+  instance: LlmModelInstance?,
+  needsImage: Boolean,
+  needsAudio: Boolean,
+): Boolean {
+  if (instance == null) {
+    return false
+  }
+  return canReuseRoleplayModelSession(
+    supportImage = instance.supportImage,
+    supportAudio = instance.supportAudio,
+    needsImage = needsImage,
+    needsAudio = needsAudio,
+  )
+}
+
+internal fun canReuseRoleplayModelSession(
+  supportImage: Boolean,
+  supportAudio: Boolean,
+  needsImage: Boolean,
+  needsAudio: Boolean,
+): Boolean {
+  return (!needsImage || supportImage) && (!needsAudio || supportAudio)
 }
