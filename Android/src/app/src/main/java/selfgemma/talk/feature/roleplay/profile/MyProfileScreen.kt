@@ -316,7 +316,6 @@ private fun MyProfileEditorContent(
     PersonaAvatarCard(
       name = uiState.personaName,
       avatarUri = uiState.avatarUri,
-      slotId = uiState.avatarSlotId,
       onPickAvatar = onAvatarPick,
       onClearAvatar = onAvatarClear,
     )
@@ -535,7 +534,6 @@ private fun EditorCard(
 private fun PersonaAvatarCard(
   name: String,
   avatarUri: String?,
-  slotId: String,
   onPickAvatar: () -> Unit,
   onClearAvatar: () -> Unit,
 ) {
@@ -543,40 +541,13 @@ private fun PersonaAvatarCard(
     Column(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),
+      horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-      Row(
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-      ) {
-        RoleAvatar(
-          name = name.ifBlank { slotId },
-          avatarUri = avatarUri,
-          modifier = Modifier.size(88.dp),
-        )
-        Column(
-          modifier = Modifier.weight(1f),
-          verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-          Text(
-            text = stringResource(R.string.role_editor_avatar_title),
-            style = MaterialTheme.typography.titleMedium,
-          )
-          Text(
-            text = "${stringResource(R.string.my_profile_avatar_slot_title)}: $slotId",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-          )
-          if (avatarUri.isNullOrBlank()) {
-            Text(
-              text = stringResource(R.string.role_editor_avatar_empty),
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-          }
-        }
-      }
+      RoleAvatar(
+        name = name,
+        avatarUri = avatarUri,
+        modifier = Modifier.size(96.dp),
+      )
       Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         FilledTonalButton(onClick = onPickAvatar) {
           Text(
