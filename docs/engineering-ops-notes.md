@@ -74,6 +74,7 @@ Notes:
 
 - The persona list card should expose only user-meaningful fields: avatar, persona name, optional title, optional description, and bottom actions. Do not render internal `slotId`, generated file names, or fallback asset names on the card face.
 - Use the whole persona card as the edit affordance instead of adding a separate `Edit` button. The bottom action area should stay focused on the secondary actions: `Delete` and `Set As Default`.
+- Keep the persona editor limited to fields users actually need in the chat path. If `personaTitle` is not part of the intended mobile workflow, hide that editor block instead of forcing an extra secondary field above the description.
 - The last remaining persona should not be deletable from the list. Disable the destructive action instead of allowing the delete flow to recreate a synthetic fallback slot behind the user's back.
 - Multi-language layout validation matters here because the row now holds three actions. Check at least `values`, `values-en`, `values-zh-rCN`, `values-ja`, and `values-ko` before shipping to device.
 

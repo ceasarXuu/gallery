@@ -389,14 +389,6 @@ private fun MyProfileEditorContent(
         singleLine = true,
       )
     }
-    EditorCard(title = stringResource(R.string.my_profile_persona_title_title)) {
-      OutlinedTextField(
-        value = uiState.personaTitle,
-        onValueChange = onPersonaTitleChange,
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-      )
-    }
     EditorCard(title = stringResource(R.string.my_profile_persona_description_title)) {
       OutlinedTextField(
         value = uiState.personaDescription,
